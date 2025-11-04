@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at top, #5f88e6ff, #111);
+            color: #fff;
+            text-align: center;
+            padding: 40px;
+        }
+        h1 {
+            color: #00ff88;
+        }
+        input {
+            width: 60px;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            margin: 5px;
+            border-radius: 8px;
+            border: 2px solid #00ff88;
+            background: #111;
+            color: #fff;
+        }
+        button {
+            background-color: #00ff88;
+            border: none;
+            color: #111;
+            padding: 10px 25px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #00cc6f;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+    </style>
+    <title>Lottery Game</title>
+  </head>
+<body>
+    <h1>🎲 Lottery Game 🎲</h1>
+    <p>Pick three numbers between 1 and 5:</p>
+
+    <form action="/play" method="post">
+        <input type="number" name="num1" min="1" max="5" required>
+        <input type="number" name="num2" min="1" max="5" required>
+        <input type="number" name="num3" min="1" max="5" required><br>
+        <button type="submit">Play</button>
+    </form>
+
+    {% if result %}
+        <div class="result">{{ result }}</div>
+    {% endif %}
+</body>
+</html>
+
