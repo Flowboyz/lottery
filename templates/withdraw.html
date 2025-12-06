@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Withdraw</title>
+</head>
+<body>
+<h2>Withdraw Funds</h2>
+
+<form action="/withdraw" method="post">
+
+    <label>Amount:</label>
+    <input type="number" name="amount" min="10" required>
+
+    <p>Withdraw Method</p>
+    <select name="method">
+        <option value="bank">Bank</option>
+        <option value="crypto">Crypto</option>
+        <option value="paypal">Paypal</option>
+    </select>
+
+    <br><br>
+    <input type="submit" value="Withdraw">
+</form>
+
+</body>
+</html>

@@ -172,8 +172,11 @@
     <!-- 🟢 Top Bar -->
     <div class="top-bar">
         <div class="left-controls">
-            <a href="{{ url_for('demo_funds') }}">💰 Get Demo Funds</a>
-            <a href="{{ url_for('reset_balance') }}">🔄 Reset</a>
+        <a href="/deposit-page">💰 Deposit</a>
+        <a href="/withdraw-page">🏧 Withdraw</a>
+        <a href="/admin">📊 Admin</a>
+        <a href="/reset">♻ Reset</a>
+
         </div>
         <div class="balance">Balance: ${{ "%.2f"|format(balance) }}</div>
     </div>

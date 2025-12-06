@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEPOSIT</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            justify-content: center;
+            justify-items: center;
+            width: 100%;
+        
+         }
+
+        h1{
+            background-color: rgb(73, 161, 161);
+            color: #222;
+            font-weight: 20px;
+            width: 200px;
+            font-style: italic;
+            border: 2px dotted white;
+            border-radius: 5px;
+        
+         }
+
+         span{
+            font-style: italic;
+            text-decoration: underline;
+         }
+         form{
+            border: 2px solid rgb(73, 161, 161);
+            padding: 20px 70px;
+            border-radius: 5px;
+            gap: 20px;
+            background-color: darkslategray;
+            width: 200px;
+            box-shadow: 0px 0px 0px #fff;
+            position: relative;
+         }
+
+         label{
+              color: rgb(185, 179, 179);  
+        }
+
+        input{
+            border-radius: 5px;
+        }
+        p{
+            color: rgb(227, 139, 139);
+        }
+
+
+    </style>
+</head>
+<body>
+    <h1>DITTO-DINKY LOTTERY</h1>
+    <p>fill in your details and click <span>deposit</span></p>
+    
+    <form action="/deposit" method="post">
+
+        <label for="name">Name: </label>
+        <input type="text" id="name" name="name" required>
+
+        <label for="amount">Amount: </label>
+        <input type="number" name="amount" id="amount" min="10" required>
+
+        <p>Are you over the age of 18?</p>
+        <label>Yes</label>
+        <input type="radio" name="age" value="yes" required>
+
+        <label>No</label>
+        <input type="radio" name="age" value="no" required>
+
+        <p>Pick how you want to deposit</p>
+        <select name="payment" id="payment" required>
+            <option value="bank transfer">Bank transfer</option>
+            <option value="bank card">Bank card</option>
+            <option value="crypto">Crypto</option>
+        </select>
+
+        <input type="submit" value="Deposit">
+    </form>
+
+</body>
+</html>

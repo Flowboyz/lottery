@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+
+<h1>Admin Panel</h1>
+
+<h2>Current Balance: ${{ balance }}</h2>
+
+<h3>Transaction History</h3>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>Action</th>
+        <th>Amount</th>
+        <th>Method</th>
+        <th>Date</th>
+    </tr>
+
+    {% for item in history[::-1] %}
+    <tr>
+        <td>{{ item.action }}</td>
+        <td>${{ item.amount }}</td>
+        <td>{{ item.method or '-' }}</td>
+        <td>{{ item.time }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>

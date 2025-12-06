@@ -1,70 +1,86 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, session
 import random
-import sys
+
+# Import blueprints
+from deposit import deposit_bp
+from withdraw import withdraw_bp
+from admin_route import *
+
 
 app = Flask(__name__)
-app.secret_key = "secret_key_here"  # Needed for session tracking
+app.secret_key = "super-secret-key"
 
+# Register blueprints
+app.register_blueprint(deposit_bp)
+app.register_blueprint(withdraw_bp)
+app.register_blueprint(admin_bp)
+
+
+# ========== HOME ==========
 @app.route("/")
 def home():
-    # Initialize balance if not set
-    if "balance" not in session:
-        session["balance"] = 0.00
-    return render_template("index.html", balance=session["balance"])
 
+    if "balance" not in session:
+        session["balance"] = 0
+
+    if "history" not in session:
+        session["history"] = []
+
+    return render_template(
+        "index.html",
+        balance=session["balance"],
+        history=session["history"]
+    )
+
+
+# ========== GAME ==========
 @app.route("/play", methods=["POST"])
 def play():
-    try:
-        num1 = int(request.form["num1"])
-        num2 = int(request.form["num2"])
-        num3 = int(request.form["num3"])
 
-        # Validate inputs
-        for n in [num1, num2, num3]:
-            if n < 1 or n > 5:
-                return render_template("index.html", 
-                                       result="⚠️ Numbers must be between 1 and 5!", 
-                                       result_class="warning",
-                                       balance=session["balance"])
+    if session.get("balance", 0) < 10:
+        return render_template(
+            "index.html",
+            balance=session["balance"],
+            result="❌ You must deposit before playing"
+        )
 
-        # Game logic
-        total = num1 + num2 + num3
-        lucky_number = random.randint(3, 15)
+    num1 = int(request.form["num1"])
+    num2 = int(request.form["num2"])
+    num3 = int(request.form["num3"])
 
-        if total == lucky_number:
-            session["balance"] += 100
-            result = f"🎉 You won $100! Your total: {total}, Lucky number: {lucky_number}"
-            result_class = "win"
-        elif session["balance"] <= 10:
-            result = f"you dont have enough balance, click get demo funds to add balance"
-            result_class = "Warning"
-        else:
-            session["balance"] = max(0, session["balance"] - 10)
-            result = f"😢 You lost $10. Your total: {total}, Lucky number: {lucky_number}"
-            result_class = "lose"
+    total = num1 + num2 + num3
+    lucky = random.randint(3, 15)
 
-        return render_template("index.html", 
-                               result=result, 
-                               result_class=result_class, 
-                               balance=session["balance"])
+    if total == lucky:
+        session["balance"] += 100
 
-    except Exception as e:
-        return render_template("index.html", 
-                               result=f"❌ Error: {str(e)}", 
-                               result_class="warning", 
-                               balance=session["balance"])
+        session["history"].append({
+            "action": "WIN",
+            "amount": 100
+        })
 
-@app.route("/demo-funds")
-def demo_funds():
-    if "balance" not in session:
-        session["balance"] = 0.00
-    session["balance"] += 100
-    return redirect(url_for("home"))
+        result = f"🎉 YOU WON $100 | Total: {total} | Lucky: {lucky}"
 
-@app.route("/reset")
-def reset_balance():
-    session["balance"] = 0.00
-    return redirect(url_for("home"))
+    else:
+        session["balance"] -= 10
+
+        if session["balance"] < 0:
+            session["balance"] = 0
+
+        session["history"].append({
+            "action": "LOSS",
+            "amount": -10
+        })
+
+        result = f"❌ You Lost $10 | Total: {total} | Lucky: {lucky}"
+
+    return render_template(
+        "index.html",
+        balance=session["balance"],
+        result=result,
+        history=session["history"]
+    )
+
 
 if __name__ == "__main__":
     app.run(debug=True)
