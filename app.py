@@ -81,6 +81,15 @@ def play():
         history=session["history"]
     )
 
+@app.route("/reset")
+def reset():
+    if ("reset"):
+        session["balance"] == 0,
+        return render_template("deposit.html",
+                               result = "you have cleared your balance")
+        
+    
+    
 
 if __name__ == "__main__":
     app.run(debug=True)

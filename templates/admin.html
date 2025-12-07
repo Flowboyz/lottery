@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
 </head>
 <body>
-
+    
 <h1>Admin Panel</h1>
 
 <h2>Current Balance: ${{ balance }}</h2>
@@ -12,12 +14,12 @@
 <h3>Transaction History</h3>
 
 <table border="1" cellpadding="10">
-    <tr>
+    <thead>
         <th>Action</th>
         <th>Amount</th>
         <th>Method</th>
         <th>Date</th>
-    </tr>
+    </thead>
 
     {% for item in history[::-1] %}
     <tr>
