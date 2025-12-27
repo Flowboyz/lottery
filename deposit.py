@@ -4,11 +4,12 @@ from datetime import datetime
 deposit_bp = Blueprint("deposit", __name__)
 
 # ========= Helper function =========
-def add_transaction(action, amount, method=None):
+def add_transaction(name, action, amount, method=None):
     if "history" not in session:
         session["history"] = []
 
     session["history"].append({
+        "name": name,
         "action": action,
         "amount": amount,
         "method": method,
@@ -25,7 +26,7 @@ def deposit_page():
 # ========= Deposit Logic =========
 @deposit_bp.route("/deposit", methods=["POST"])
 def deposit():
-
+    
     amount = request.form.get("amount")
     age = request.form.get("age")
     payment = request.form.get("payment")

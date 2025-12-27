@@ -83,10 +83,15 @@ def play():
 
 @app.route("/reset")
 def reset():
-    if ("reset"):
-        session["balance"] == 0,
-        return render_template("deposit.html",
-                               result = "you have cleared your balance")
+    
+    session["balance"] -= session["balance"]
+    session["history"] == []
+    print("your balance and history has been reset")
+        
+    return render_template ("index.html",
+                            balance=session["balance"],
+                            history=[session["history"]])
+    
         
     
     

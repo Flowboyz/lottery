@@ -15,6 +15,7 @@
 
 <table border="1" cellpadding="10">
     <thead>
+        <th>name</th>
         <th>Action</th>
         <th>Amount</th>
         <th>Method</th>
@@ -23,6 +24,7 @@
 
     {% for item in history[::-1] %}
     <tr>
+        <td>{{ item.name }}</td>
         <td>{{ item.action }}</td>
         <td>${{ item.amount }}</td>
         <td>{{ item.method or '-' }}</td>

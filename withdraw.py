@@ -3,11 +3,12 @@ from datetime import datetime
 
 withdraw_bp = Blueprint("withdraw", __name__)
 
-def add_transaction(action, amount, method=None):
+def add_transaction(name, action, amount, method=None):
     if "history" not in session:
         session["history"] = []
 
     session["history"].append({
+        "name": name,
         "action": action,
         "amount": amount,
         "method": method,
