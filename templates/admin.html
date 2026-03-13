@@ -1,34 +1,122 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 40px;
+            color: #38bdf8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: #020617;
+        }
+
+        th, td {
+            border: 1px solid #1e293b;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #020617;
+            color: #22c55e;
+        }
+
+        input[type="number"] {
+            width: 100px;
+            padding: 6px;
+            background: #020617;
+            color: white;
+            border: 1px solid #334155;
+        }
+
+        button {
+            padding: 6px 12px;
+            background: #22c55e;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
-    
-<h1>Admin Panel</h1>
 
-<h2>Current Balance: ${{ balance }}</h2>
+<h1>🛠 Admin Dashboard</h1>
+<p>Logged in as: <b>{{ role }}</b></p>
 
-<h3>Transaction History</h3>
+<!-- ================= USERS TABLE ================= -->
+<h2>👥 Users</h2>
 
-<table border="1" cellpadding="10">
-    <thead>
-        <th>name</th>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Balance</th>
+        <th>Role</th>
+        {% if role == "superadmin" %}
+            <th>Edit</th>
+        {% endif %}
+    </tr>
+
+    {% for u in users %}
+    <tr>
+        <td>{{ u[0] }}</td>
+        <td>{{ u[1] }}</td>
+
+        {% if role == "superadmin" %}
+        <form method="post" action="/admin/update-balance">
+            <td>
+                <input type="number" name="balance" step="0.01" value="{{ u[2] }}">
+                <input type="hidden" name="user_id" value="{{ u[0] }}">
+            </td>
+            <td>{{ u[3] }}</td>
+            <td>
+                <button>Save</button>
+            </td>
+        </form>
+        {% else %}
+            <td>{{ u[2] }}</td>
+            <td>{{ u[3] }}</td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- ================= TRANSACTIONS ================= -->
+<h2>📜 Transactions</h2>
+
+<table>
+    <tr>
+        <th>User</th>
         <th>Action</th>
         <th>Amount</th>
         <th>Method</th>
-        <th>Date</th>
-    </thead>
+        <th>Time</th>
+    </tr>
 
-    {% for item in history[::-1] %}
+    {% for t in transactions %}
     <tr>
-        <td>{{ item.name }}</td>
-        <td>{{ item.action }}</td>
-        <td>${{ item.amount }}</td>
-        <td>{{ item.method or '-' }}</td>
-        <td>{{ item.time }}</td>
+        <td>{{ t[0] }}</td>
+        <td>{{ t[1] }}</td>
+        <td>{{ t[2] }}</td>
+        <td>{{ t[3] }}</td>
+        <td>{{ t[4] }}</td>
     </tr>
     {% endfor %}
 </table>

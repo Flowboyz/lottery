@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My History</title>
+    <style>
+        body {
+            background: #020617;
+            color: #e5e7eb;
+            font-family: Arial;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #1e293b;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #020617;
+            color: #22c55e;
+        }
+    </style>
+</head>
+<body>
+
+<h2>📊 My Transaction History</h2>
+<a href="/home">Bet Page</a>
+<table>
+    <tr>
+        <th>Action</th>
+        <th>Amount</th>
+        <th>Method</th>
+        <th>Date</th>
+    </tr>
+
+    {% for h in history %}
+    <tr>
+        <td>{{ h[0] }}</td>
+        <td>{{ h[1] }}</td>
+        <td>{{ h[2] }}</td>
+        <td>{{ h[3] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>

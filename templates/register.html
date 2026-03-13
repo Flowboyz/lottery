@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DITTO LOTTERY</title>
+    <style>
+        body{
+            height: 100%;
+            background-color: #222;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            justify-content: center;
+            justify-items: center;
+            border: 20px solid rgb(73, 161, 161);
+            border-top: 0px;
+         }
+
+        h1{
+            background-color: rgb(228, 228, 15);
+            color: #222;
+            font-weight: 20px;
+            margin: 10px 20px 30px 10px;
+            font-style: italic;
+            border: 4px dotted rgb(73, 161, 161);
+            border-radius: 5px;
+            text-align: center;
+            padding: 10px 10px 10px 10px;
+         }
+         span{
+            font-style: italic;
+            text-decoration: underline;
+            color: rgb(228, 228, 15);
+         }
+         form{
+            border: 2px solid rgb(234, 243, 243);
+            padding: 20px 70px;
+            border-radius: 5px;
+            gap: 20px;
+            background-color: darkslategray;
+            width: 200px;
+            box-shadow: 0px 0px 0px #fff;
+            position: relative;
+            text-align: center;
+            margin-bottom: 60px;
+         }
+    </style>
+</head>
+<body>
+    <h1>DITTO-DINKY LOTTERY</h1>
+    <h2>Create Account</h2>
+
+    <form method="post">
+        <label for="username">Username: </label>
+        <input name="username" placeholder="Username" id="username" required>
+        <label for="password">Password: </label>
+        <input name="password" type="password" placeholder="Password" id="password" required>
+        <label for="password">Repeat Password: </label>
+        <input name="password" type="password" placeholder="Password" id="password" required>
+        <button>Create Account</button>
+    </form>
+
+    <p>Already have an account? <a href="/login">Login</a></p>
+
+    
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+</body>
+</html>

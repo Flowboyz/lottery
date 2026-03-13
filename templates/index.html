@@ -1,201 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottery Game</title>
-    <style>
-    /* ===== Global Styles ===== */
-        html, body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            background-color: #222;
-            color: #fff;
-            font-family: Arial, sans-serif;
-        }
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DITTO DINKY CASINO</title>
+        <link rel="stylesheet" href="/static/css/styles.css">
+    </head>
+    <body>
 
-        /* ===== Top Bar (fixed header) ===== */
-        .top-bar {
-            width: 100%;
-            background-color: #111;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px; /* increased padding for breathing space */
-            position: fixed;
-            top: 0;
-            left: 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-            z-index: 1000;
-            flex-wrap: wrap; /* allow items to wrap on smaller screens */
-            box-sizing: border-box;
-        }
+        <!-- 🟢 Top Bar -->
+        <div class="top-bar">
+            <div class="left-controls">
+            <a href="/deposit-page">💰 Deposit</a>
+            <a href="/withdraw-page">🏧 Withdraw</a>
+            {% if session.role in ["admin", "superadmin"] %}
+            <a href="/admin">Admin</a>
+            {% endif %}
+            <a href="/history">🧾history</a>
+            <a href="/logout">Logout</a>
 
-        .left-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px; /* spacing between buttons */
-        }
-
-        .top-bar a {
-            text-decoration: none;
-            background-color: #28a745;
-            color: white;
-            padding: 8px 15px;
-            font-size: 16px;
-            border-radius: 6px;
-            white-space: nowrap; /* keep text in one line */
-        }
-
-        .top-bar a:hover {
-            background-color: #218838;
-        }
-
-        .left-controls a:nth-child(2) {
-            background-color: #dc3545;
-        }
-
-        form {
-            margin-top: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px; /* adds small spacing between inputs and button */
-        }
-
-
-        .balance {
-            font-weight: bold;
-            font-size: 18px;
-            color: #00ff99;
-            white-space: nowrap;
-            margin-top: 8px; /* slight vertical alignment fix */
-        }
-
-        /* ===== Full-Page Layout ===== */
-        .content {
-            min-height: calc(100vh - 80px); /* full height minus top bar height */
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start; /* push content to the top */
-            align-items: center;
-            padding-top: 120px; /* space for the fixed top bar */
-            box-sizing: border-box;
-            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-        }
-
-        input {
-            width: 60px;
-            padding: 10px;
-            margin: 10px;
-            font-size: 18px;
-            text-align: center;
-            border-radius: 5px;
-            border: none;
-            outline: none;
-        }
-
-        button {
-            padding: 10px 25px;
-            background-color: #28a745;
-            border: none;
-            color: white;
-            font-size: 18px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #218838;
-        }
-
-        /* ===== Result Boxes ===== */
-        .result {
-            margin-top: 25px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 8px;
-            padding: 15px;
-            width: 60%;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        .win {
-            background-color: #28a745;
-            color: #fff;
-            border: 2px solid #00ff99;
-        }
-
-        .lose {
-            background-color: #dc3545;
-            color: #fff;
-            border: 2px solid #ff6666;
-        }
-
-        .warning {
-            background-color: #ffc107;
-            color: #111;
-            border: 2px solid #ffeb3b;
-        }
-
-        /* ===== Mobile Fixes ===== */
-        @media (max-width: 600px) {
-            .balance {
-                width: 100%;
-                text-align: center;
-                margin-top: 10px;
-            }
-
-            .top-bar {
-                flex-direction: column;
-                align-items: center;
-                padding: 10px 15px;
-            }
-
-            .left-controls {
-                justify-content: center;
-            }
-
-            .content {
-                padding-top: 160px;
-            }
-        }
-
-    </style>
-</head>
-<body>
-
-    <!-- 🟢 Top Bar -->
-    <div class="top-bar">
-        <div class="left-controls">
-        <a href="/deposit-page">💰 Deposit</a>
-        <a href="/withdraw-page">🏧 Withdraw</a>
-        <a href="/admin">📊 Admin</a>
-        <a href="/reset">♻ Reset</a>
-
+            </div>
+            <div class="balance">Balance: ${{ "%.2f"|format(balance) }}</div>
         </div>
-        <div class="balance">Balance: ${{ "%.2f"|format(balance) }}</div>
-    </div>
 
-    <!-- 🎲 Main Game -->
-    <div class="content">
-        <h1>🎲 Lottery Game 🎲</h1>
-        <p>Select three numbers between 1 and 5</p>
-        <form action="/play" method="post">
-            <input type="number" name="num1" min="1" max="5" required>
-            <input type="number" name="num2" min="1" max="5" required>
-            <input type="number" name="num3" min="1" max="5" required><br>
-            <button type="submit">Play</button>
-        </form>
+        <!-- 🎲 Main Game -->
+        <div class="content">
+            <div class="casino-board">
+                <h3>🎰 Last Lucky Numbers</h3>
 
-        {% if result %}
-            <div class="result {{ result_class }}">{{ result }}</div>
-        {% endif %}
-    </div>
+                <div class="lucky-row">
+                    {% for num in recent_lucky %}
+                    <div class="lucky-box">{{ num }}</div>
+                    {% endfor %}
+                </div>
+            </div>
 
-</body>
+
+            <form action="/play" method="post" id="lotteryForm">
+                <div class="inputs">
+                    <input type="text" name="num1" readonly>
+                    <input type="text" name="num2" readonly>
+                    <input type="text" name="num3" readonly>
+                </div>
+
+                <div id="cooldownDisplay" class="cooldown-box"></div>
+
+                <div class="controls">
+                    <button type="submit" id="playBtn">Play</button>
+                    <button type="button" id="resetBtn">Reset</button>
+                </div>
+
+                <div class="number-picker">
+                    <button type="button" class="num-btn" data-num="1">1</button>
+                    <button type="button" class="num-btn" data-num="2">2</button>
+                    <button type="button" class="num-btn" data-num="3">3</button>
+                    <button type="button" class="num-btn" data-num="4">4</button>
+                    <button type="button" class="num-btn" data-num="5">5</button>
+                </div>
+                <div class="betInput">
+                    <label for="">Bet Amount</label>
+                    <input type="number" 
+                        name="bet" 
+                        min="1" step="1"  
+                        placeholder="Enter Bet Amount" 
+                        required>
+                </div>
+            </form>
+            
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            {% set data = messages[0] %}
+                
+                <div class="result-banner">
+                    <div class="numbers">
+                        <div class="box">
+                            <small>Your Total</small>
+                            <span>{{ data.total }}</span>
+                        </div>
+
+                        <div class="vs">VS</div>
+
+                        <div class="box lucky">
+                            <small>Lucky Number</small>
+                            <span>{{ data.lucky }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-text">
+                    {{ data.result }}
+                </div>
+
+            {% endif %}
+            {% endwith %}       
+        </div>
+            
+
+
+
+    <script src="/static/js/button.js"></script>
+    <script src="/static/js/luckyNumnber.js"></script>
+    <script> const remainingCooldown = {{ remaining_cooldown | default(0) }};</script>
+    <script src="{{ url_for('static', filename='js/cooldown.js') }}"></script>
+    </body>
 </html>

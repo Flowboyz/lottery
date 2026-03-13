@@ -1,19 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
-from datetime import datetime
+import sqlite3
 
 withdraw_bp = Blueprint("withdraw", __name__)
-
-def add_transaction(name, action, amount, method=None):
-    if "history" not in session:
-        session["history"] = []
-
-    session["history"].append({
-        "name": name,
-        "action": action,
-        "amount": amount,
-        "method": method,
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
 
 
 # ========= Withdraw Page =========
@@ -26,20 +14,37 @@ def withdraw_page():
 @withdraw_bp.route("/withdraw", methods=["POST"])
 def withdraw():
 
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+
     amount = request.form.get("amount")
     method = request.form.get("method")
-
-    if "balance" not in session:
-        session["balance"] = 0
 
     if not amount or float(amount) < 10:
         return "❌ Minimum withdrawal is $10"
 
-    if float(amount) > session["balance"]:
+    conn = sqlite3.connect("lottery.db")
+    cur = conn.cursor()
+
+    # get current balance
+    cur.execute("SELECT balance FROM users WHERE id=?", (session["user_id"],))
+    balance = cur.fetchone()[0]
+
+    if float(amount) > balance:
+        conn.close()
         return "❌ Insufficient balance"
 
-    session["balance"] -= float(amount)
+    # update balance
+    new_balance = balance - float(amount)
+    cur.execute("UPDATE users SET balance=? WHERE id=?", (new_balance, session["user_id"]))
 
-    add_transaction("WITHDRAW", float(amount), method)
+    # save transaction for admin
+    cur.execute(
+        "INSERT INTO transactions (user_id, action, amount) VALUES (?, ?, ?)",
+        (session["user_id"], "WITHDRAW", -float(amount))
+    )
+
+    conn.commit()
+    conn.close()
 
     return redirect(url_for("home"))
