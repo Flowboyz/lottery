@@ -1,54 +1,254 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My History</title>
+    <title>Transaction History - DITTO DINKY CASINO</title>
     <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-card: #1a1f3a;
+            --bg-elevated: #232946;
+            --text-primary: #ffffff;
+            --text-secondary: #b8c1ec;
+            --text-muted: #6b7a99;
+            --accent-primary: #00d4aa;
+            --accent-gold: #fbbf24;
+            --accent-danger: #ef4444;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background: #020617;
-            color: #e5e7eb;
-            font-family: Arial;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        h2 {
+            font-size: 32px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-link {
+            padding: 12px 24px;
+            background: var(--accent-primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.3);
+        }
+
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-subtle);
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
         }
 
-        th, td {
-            border: 1px solid #1e293b;
-            padding: 10px;
-            text-align: center;
+        thead {
+            background: var(--bg-elevated);
         }
 
         th {
-            background: #020617;
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-elevated);
+        }
+
+        .action-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .action-deposit {
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--accent-primary);
+        }
+
+        .action-withdraw {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-danger);
+        }
+
+        .action-bet {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-gold);
+        }
+
+        .action-win {
+            background: rgba(34, 197, 94, 0.15);
             color: #22c55e;
+        }
+
+        .amount-positive {
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .amount-negative {
+            color: var(--accent-danger);
+            font-weight: 700;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 12px;
+            }
+
+            h2 {
+                font-size: 26px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .table-container {
+                padding: 16px;
+            }
+
+            th, td {
+                padding: 12px 10px;
+                font-size: 13px;
+            }
+
+            .action-badge {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
         }
     </style>
 </head>
 <body>
 
-<h2>📊 My Transaction History</h2>
-<a href="/home">Bet Page</a>
-<table>
-    <tr>
-        <th>Action</th>
-        <th>Amount</th>
-        <th>Method</th>
-        <th>Date</th>
-    </tr>
+<div class="container">
+    <div class="header">
+        <h2>📊 Transaction History</h2>
+        <a href="/" class="back-link">← Back to Game</a>
+    </div>
 
-    {% for h in history %}
-    <tr>
-        <td>{{ h[0] }}</td>
-        <td>{{ h[1] }}</td>
-        <td>{{ h[2] }}</td>
-        <td>{{ h[3] }}</td>
-    </tr>
-    {% endfor %}
-</table>
+    <div class="table-container">
+        {% if history %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Date & Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in history %}
+                <tr>
+                    <td>
+                        <span class="action-badge action-{{ h[0] }}">
+                            {% if h[0] == 'deposit' %}
+                                💰 Deposit
+                            {% elif h[0] == 'withdraw' %}
+                                🏧 Withdraw
+                            {% elif h[0] == 'bet' %}
+                                🎲 Bet
+                            {% elif h[0] == 'win' %}
+                                🏆 Win
+                            {% else %}
+                                {{ h[0] }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td class="{% if h[0] in ['deposit', 'win'] %}amount-positive{% else %}amount-negative{% endif %}">
+                        {% if h[0] in ['deposit', 'win'] %}+{% else %}-{% endif %}${{ h[1] }}
+                    </td>
+                    <td>{{ h[2] }}</td>
+                    <td style="color: var(--text-muted); font-size: 14px;">{{ h[3] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3>No transactions yet</h3>
+            <p>Your transaction history will appear here once you start playing!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
 
 </body>
 </html>

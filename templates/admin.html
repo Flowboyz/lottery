@@ -3,123 +3,312 @@
 <head>
     <title>Admin Dashboard</title>
     <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-card: #1a1f3a;
+            --bg-elevated: #232946;
+            --text-primary: #ffffff;
+            --text-secondary: #b8c1ec;
+            --text-muted: #6b7a99;
+            --accent-primary: #00d4aa;
+            --accent-gold: #fbbf24;
+            --accent-danger: #ef4444;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .user-info {
+            background: var(--bg-card);
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            border: 1px solid var(--border-subtle);
+            display: inline-block;
+        }
+
+        .user-info b {
+            color: var(--accent-primary);
         }
 
         h2 {
-            margin-top: 40px;
-            color: #38bdf8;
+            font-size: 24px;
+            margin: 48px 0 24px;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-subtle);
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            background: #020617;
         }
 
         th, td {
-            border: 1px solid #1e293b;
-            padding: 10px;
-            text-align: center;
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
         }
 
         th {
-            background: #020617;
-            color: #22c55e;
+            background: var(--bg-elevated);
+            color: var(--accent-primary);
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: var(--bg-elevated);
         }
 
         input[type="number"] {
-            width: 100px;
-            padding: 6px;
-            background: #020617;
-            color: white;
-            border: 1px solid #334155;
+            width: 140px;
+            padding: 10px 14px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-subtle);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-primary);
         }
 
         button {
-            padding: 6px 12px;
-            background: #22c55e;
+            padding: 10px 20px;
+            background: var(--accent-primary);
             border: none;
+            color: white;
+            font-weight: 700;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #00a389;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
 
         button:disabled {
             background: #475569;
             cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge.admin {
+            background: var(--accent-gold);
+            color: #78350f;
+        }
+
+        .badge.superadmin {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .badge.user {
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+        }
+
+        .amount-positive {
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .amount-negative {
+            color: var(--accent-danger);
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 12px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .table-container {
+                padding: 16px;
+            }
+
+            th, td {
+                padding: 12px 10px;
+                font-size: 13px;
+            }
+
+            input[type="number"] {
+                width: 100px;
+                padding: 8px 10px;
+            }
+
+            button {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
         }
     </style>
 </head>
 <body>
 
-<h1>🛠 Admin Dashboard</h1>
-<p>Logged in as: <b>{{ role }}</b></p>
+<div class="container">
+    <h1>🛠 Admin Dashboard</h1>
+    <div class="user-info">
+        Logged in as: <b>{{ role }}</b>
+    </div>
 
-<!-- ================= USERS TABLE ================= -->
-<h2>👥 Users</h2>
+    <!-- ================= USERS TABLE ================= -->
+    <h2>👥 Users Management</h2>
 
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Username</th>
-        <th>Balance</th>
-        <th>Role</th>
-        {% if role == "superadmin" %}
-            <th>Edit</th>
-        {% endif %}
-    </tr>
+    <div class="table-container">
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Balance</th>
+                <th>Role</th>
+                {% if role == "superadmin" %}
+                    <th>Actions</th>
+                {% endif %}
+            </tr>
 
-    {% for u in users %}
-    <tr>
-        <td>{{ u[0] }}</td>
-        <td>{{ u[1] }}</td>
+            {% for u in users %}
+            <tr>
+                <td>#{{ u[0] }}</td>
+                <td><strong>{{ u[1] }}</strong></td>
 
-        {% if role == "superadmin" %}
-        <form method="post" action="/admin/update-balance">
-            <td>
-                <input type="number" name="balance" step="0.01" value="{{ u[2] }}">
-                <input type="hidden" name="user_id" value="{{ u[0] }}">
-            </td>
-            <td>{{ u[3] }}</td>
-            <td>
-                <button>Save</button>
-            </td>
-        </form>
-        {% else %}
-            <td>{{ u[2] }}</td>
-            <td>{{ u[3] }}</td>
-        {% endif %}
-    </tr>
-    {% endfor %}
-</table>
+                {% if role == "superadmin" %}
+                <form method="post" action="/admin/update-balance" style="display: contents;">
+                    <td>
+                        <input type="number" name="balance" step="0.01" value="{{ u[2] }}">
+                        <input type="hidden" name="user_id" value="{{ u[0] }}">
+                    </td>
+                    <td>
+                        <span class="badge {{ u[3] }}">{{ u[3] }}</span>
+                    </td>
+                    <td>
+                        <button>💾 Save</button>
+                    </td>
+                </form>
+                {% else %}
+                    <td class="amount-positive">${{ "%.2f"|format(u[2]) }}</td>
+                    <td>
+                        <span class="badge {{ u[3] }}">{{ u[3] }}</span>
+                    </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 
-<!-- ================= TRANSACTIONS ================= -->
-<h2>📜 Transactions</h2>
+    <!-- ================= TRANSACTIONS ================= -->
+    <h2>📜 Transaction History</h2>
 
-<table>
-    <tr>
-        <th>User</th>
-        <th>Action</th>
-        <th>Amount</th>
-        <th>Method</th>
-        <th>Time</th>
-    </tr>
+    <div class="table-container">
+        <table>
+            <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Timestamp</th>
+            </tr>
 
-    {% for t in transactions %}
-    <tr>
-        <td>{{ t[0] }}</td>
-        <td>{{ t[1] }}</td>
-        <td>{{ t[2] }}</td>
-        <td>{{ t[3] }}</td>
-        <td>{{ t[4] }}</td>
-    </tr>
-    {% endfor %}
-</table>
+            {% for t in transactions %}
+            <tr>
+                <td><strong>{{ t[0] }}</strong></td>
+                <td>
+                    {% if t[1] == 'deposit' %}
+                        💰 Deposit
+                    {% elif t[1] == 'withdraw' %}
+                        🏧 Withdraw
+                    {% elif t[1] == 'bet' %}
+                        🎲 Bet
+                    {% elif t[1] == 'win' %}
+                        🏆 Win
+                    {% else %}
+                        {{ t[1] }}
+                    {% endif %}
+                </td>
+                <td class="{% if t[1] in ['deposit', 'win'] %}amount-positive{% else %}amount-negative{% endif %}">
+                    ${{ "%.2f"|format(t[2]) }}
+                </td>
+                <td>{{ t[3] }}</td>
+                <td style="color: var(--text-muted); font-size: 13px;">{{ t[4] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
 
 </body>
 </html>

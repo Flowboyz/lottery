@@ -1,3 +1,5 @@
+from itertools import count
+
 from flask import Flask, flash, render_template, request, session, redirect, url_for
 import random
 import sqlite3
@@ -51,6 +53,7 @@ def home():
     """, (session["user_id"],))
     
     recent_lucky = [row[0] for row in cur.fetchall()]
+    recent_actions = [row[0] for row in cur.fetchall()]
     
     current_time = int(time.time())
 
@@ -63,15 +66,48 @@ def home():
         elapsed = current_time - last_play
         if elapsed < COOLDOWN_SECONDS:
             remaining_cooldown = COOLDOWN_SECONDS - elapsed
+        
+            
+    cur.execute("SELECT last_claim_time FROM users WHERE id=?", (session["user_id"],))
+    last_claim = cur.fetchone()[0]
+    
 
+    claim_remaining = 0
+
+    if last_claim:
+        elapsed = current_time - last_claim
+        if elapsed < 86400:
+            claim_remaining = 86400 - elapsed
+    conn.commit()
     conn.close()
+    
+    streak = None
+    count = 0
+
+    if recent_actions:
+        first = recent_actions[0]
+
+        for action in recent_actions:
+            if action == first:
+                count += 1
+            else:
+                break
+
+        if count >= 3:
+            if first == "WIN":
+                streak = f"🔥 HOT STREAK ({count} wins)"
+            else:
+                streak = f"❄ COLD STREAK ({count} losses)"
+    
 
     return render_template( "index.html", 
                             balance=balance, 
                             history=[],
                             win_probability=int(WIN_PROBABILITY * 100),
                             remaining_cooldown=remaining_cooldown,
-                            recent_lucky=recent_lucky
+                            recent_lucky=recent_lucky,
+                            claim_remaining=claim_remaining,
+                            streak = streak
                         )
 
 #play route from the index
@@ -190,6 +226,50 @@ def history():
     conn.close()
 
     return render_template("history.html", history=history)
+
+
+@app.route("/claim")
+def claim():
+
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+
+    conn = sqlite3.connect("lottery.db")
+    cur = conn.cursor()
+
+    current_time = int(time.time())
+
+    cur.execute("SELECT balance, last_claim_time FROM users WHERE id=?", (session["user_id"],))
+    user = cur.fetchone()
+
+    balance = user[0]
+    last_claim = user[1]
+
+    # ⛔ Check 24-hour restriction
+    if last_claim and current_time - last_claim < 86400:
+        remaining = 86400 - (current_time - last_claim)
+        hours = remaining // 3600
+        minutes = (remaining % 3600) // 60
+
+        flash(f"⏳ Come back in {hours}h {minutes}m", "error")
+        conn.close()
+        return redirect(url_for("home"))
+
+    # ✅ Give reward
+    reward = 1000
+    balance += reward
+
+    cur.execute(
+        "UPDATE users SET balance=?, last_claim_time=? WHERE id=?",
+        (balance, current_time, session["user_id"])
+    )
+
+    conn.commit()
+    conn.close()
+
+    flash(f"🎁 You claimed ${reward}!", "success")
+
+    return redirect(url_for("home"))
 
 
 

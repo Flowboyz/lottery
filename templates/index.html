@@ -18,11 +18,26 @@
             {% endif %}
             <a href="/history">🧾history</a>
             <a href="/logout">Logout</a>
+            <a href="/claim" class="claim-btn">🎁 Claim $1000</a>
+            <button id="themeToggle">🌙</button>
 
             </div>
             <div class="balance">Balance: ${{ "%.2f"|format(balance) }}</div>
         </div>
 
+        {% if claim_remaining > 0 %}
+        <div class="claim-timer">
+            ⏳ Next reward in {{ claim_remaining // 3600 }}h 
+            {{ (claim_remaining % 3600) // 60 }}m
+        </div>
+        {% endif %}
+
+        
+        {% if streak %}
+        <div class="streak-box">
+            {{ streak }}
+        </div>
+        {% endif %}
         <!-- 🎲 Main Game -->
         <div class="content">
             <div class="casino-board">
@@ -45,10 +60,6 @@
 
                 <div id="cooldownDisplay" class="cooldown-box"></div>
 
-                <div class="controls">
-                    <button type="submit" id="playBtn">Play</button>
-                    <button type="button" id="resetBtn">Reset</button>
-                </div>
 
                 <div class="number-picker">
                     <button type="button" class="num-btn" data-num="1">1</button>
@@ -65,6 +76,20 @@
                         placeholder="Enter Bet Amount" 
                         required>
                 </div>
+                <div class="input-amount">
+                    <button type="button" class="inp-btn" data-inp="1">$1</button>
+                    <button type="button" class="inp-btn" data-inp="10">$10</button>
+                    <button type="button" class="inp-btn" data-inp="20">$20</button>
+                    <button type="button" class="inp-btn" data-inp="50">$50</button>
+                    <button type="button" class="inp-btn" data-inp="100">$100</button>
+
+                    <button type="button" id="clearBet" class="clear-btn">Clear</button>
+                </div>
+                <div class="controls">
+                    <button type="submit" id="playBtn">Play</button>
+                    <button type="button" id="resetBtn">Reset</button>
+                </div>
+
             </form>
             
             {% with messages = get_flashed_messages() %}
@@ -94,6 +119,7 @@
             {% endif %}
             {% endwith %}       
         </div>
+
             
 
 
@@ -102,5 +128,7 @@
     <script src="/static/js/luckyNumnber.js"></script>
     <script> const remainingCooldown = {{ remaining_cooldown | default(0) }};</script>
     <script src="{{ url_for('static', filename='js/cooldown.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/amount.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     </body>
 </html>
