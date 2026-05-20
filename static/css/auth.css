@@ -116,3 +116,273 @@
         font-size: 24px;
     }
 }
+/* =============================================================
+   DITTO DINKY — Auth Pages CSS
+   Drop-in replacement for static/css/auth.css.
+   Uses the exact classes from auth/login.html, register.html, etc.:
+   .container, .header, .logo, .subtitle, .form-group, .footer-links, .flash-msg
+   ============================================================= */
+
+:root {
+    --bg-primary: #0a0e27;
+    --bg-secondary: #131829;
+    --bg-card: #1a1f3a;
+    --bg-elevated: #232946;
+    --text-primary: #ffffff;
+    --text-secondary: #b8c1ec;
+    --text-muted: #6b7a99;
+    --accent-primary: #00d4aa;
+    --accent-primary-soft: rgba(0, 212, 170, 0.12);
+    --accent-secondary: #7c3aed;
+    --accent-secondary-soft: rgba(124, 58, 237, 0.16);
+    --accent-gold: #fbbf24;
+    --accent-gold-soft: rgba(251, 191, 36, 0.14);
+    --accent-danger: #ef4444;
+    --accent-danger-soft: rgba(239, 68, 68, 0.14);
+    --accent-success: #22c55e;
+    --accent-success-soft: rgba(34, 197, 94, 0.14);
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.12);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.18);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45), 0 6px 12px rgba(0, 0, 0, 0.25);
+    --shadow-glow: 0 0 0 1px rgba(0, 212, 170, 0.35), 0 8px 24px rgba(0, 212, 170, 0.2);
+    --font-display: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+*::selection { background: var(--accent-primary-soft); color: var(--text-primary); }
+
+html, body {
+    min-height: 100vh;
+    font-family: var(--font-display);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.55;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow-x: hidden;
+    background-image:
+        radial-gradient(700px 500px at 20% 10%, var(--accent-secondary-soft), transparent 60%),
+        radial-gradient(600px 500px at 80% 90%, var(--accent-primary-soft), transparent 60%),
+        linear-gradient(160deg, var(--bg-secondary), var(--bg-primary));
+}
+body::before {
+    content: "";
+    position: fixed;
+    inset: -200px;
+    background: repeating-linear-gradient(45deg, transparent 0 18px, rgba(255, 255, 255, 0.012) 18px 19px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===== Card wrapper (.container in auth templates) ===== */
+.container {
+    width: 100%;
+    max-width: 440px;
+    background: var(--bg-card);
+    border-radius: 22px;
+    padding: 40px 34px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-subtle);
+    position: relative;
+    z-index: 1;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* ===== Header (logo + title + subtitle) ===== */
+.header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+.logo {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    border-radius: 18px;
+    background: conic-gradient(from 220deg, var(--accent-primary), var(--accent-secondary), var(--accent-gold), var(--accent-primary));
+    display: grid;
+    place-items: center;
+    font-size: 30px;
+    box-shadow: 0 10px 28px rgba(0, 212, 170, 0.25), inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+    position: relative;
+}
+/* Allow either an emoji glyph or a DD monogram fallback */
+.logo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
+.header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, var(--accent-primary), var(--text-primary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    margin: 0;
+}
+
+/* ===== Flash messages ===== */
+.flash-msg {
+    padding: 11px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 14px;
+    border: 1px solid transparent;
+    animation: fadeIn 0.3s ease;
+}
+.flash-msg.flash-success { background: var(--accent-success-soft); color: var(--accent-success); border-color: rgba(34, 197, 94, 0.3); }
+.flash-msg.flash-error   { background: var(--accent-danger-soft);  color: var(--accent-danger);  border-color: rgba(239, 68, 68, 0.3); }
+.flash-msg.flash-info    { background: var(--accent-secondary-soft); color: var(--accent-secondary); border-color: rgba(124, 58, 237, 0.3); }
+.flash-msg.flash-warning { background: var(--accent-gold-soft);    color: var(--accent-gold);    border-color: rgba(251, 191, 36, 0.35); }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Form ===== */
+form { display: flex; flex-direction: column; gap: 0; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+}
+.form-group input,
+.form-group select {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    font-size: 14.5px;
+    border-radius: 12px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+.form-group input::placeholder { color: var(--text-muted); }
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-glow);
+}
+
+/* Submit button (the form's bare <button type="submit">) */
+form button[type="submit"],
+form > button {
+    width: 100%;
+    height: 50px;
+    font-size: 14.5px;
+    font-weight: 700;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--accent-primary), #00a389);
+    color: #042b22;
+    margin-top: 6px;
+    transition: all 0.15s ease;
+    box-shadow: 0 6px 18px rgba(0, 212, 170, 0.28);
+    font-family: inherit;
+    letter-spacing: 0.2px;
+}
+form button[type="submit"]:hover,
+form > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 212, 170, 0.36);
+}
+form button[type="submit"]:active,
+form > button:active { transform: translateY(0); }
+
+/* ===== Footer links ===== */
+.footer-links {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+.footer-links + .footer-links { margin-top: 8px; }
+.footer-links a {
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-weight: 700;
+    transition: color 0.15s ease;
+}
+.footer-links a:hover {
+    color: var(--accent-secondary);
+    text-decoration: underline;
+}
+
+/* ===== Accessibility ===== */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+    body { padding: 16px; align-items: flex-start; padding-top: 28px; }
+    .container { padding: 30px 22px; border-radius: 18px; }
+    .header h1 { font-size: 22px; }
+    .logo { width: 56px; height: 56px; font-size: 26px; }
+}
+
+/* ===== Larger screens: split-pane treatment ===== */
+@media (min-width: 980px) {
+    body { padding: 0; }
+    body::after {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 44%;
+        background:
+            radial-gradient(500px 400px at 30% 30%, var(--accent-secondary-soft), transparent 60%),
+            radial-gradient(500px 500px at 70% 80%, var(--accent-primary-soft), transparent 60%),
+            linear-gradient(160deg, var(--bg-secondary), var(--bg-primary));
+        border-right: 1px solid var(--border-subtle);
+        z-index: 0;
+        pointer-events: none;
+    }
+    body { justify-content: flex-end; padding-right: 8%; }
+    .container { margin-right: 4%; }
+}
