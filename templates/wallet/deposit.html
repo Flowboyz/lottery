@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Deposit - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Deposit Funds</h2>
+        <p class="page-subtitle">Fund your wallet to start playing. Min deposit: ₦500</p>
+
+        <form method="POST" action="{{ url_for('wallet.initialize_deposit') }}" class="deposit-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label for="amount">Amount (₦)</label>
+                <input type="number" name="amount" id="amount" min="500" step="100" 
+                       placeholder="Enter amount" required class="form-input">
+            </div>
+
+            <div class="quick-amounts">
+                <button type="button" class="quick-btn" data-amount="500">₦500</button>
+                <button type="button" class="quick-btn" data-amount="1000">₦1,000</button>
+                <button type="button" class="quick-btn" data-amount="2000">₦2,000</button>
+                <button type="button" class="quick-btn" data-amount="5000">₦5,000</button>
+                <button type="button" class="quick-btn" data-amount="10000">₦10,000</button>
+                <button type="button" class="quick-btn" data-amount="20000">₦20,000</button>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                Proceed to Payment
+            </button>
+        </form>
+
+        <div class="info-box">
+            <p>Payments are processed securely via <strong>Paystack</strong>.</p>
+            <p>Your wallet will be credited instantly after payment confirmation.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const amountInput = document.getElementById("amount");
+    document.querySelectorAll(".quick-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            amountInput.value = btn.dataset.amount;
+            document.querySelectorAll(".quick-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+        });
+    });
+});
+</script>
+{% endblock %}

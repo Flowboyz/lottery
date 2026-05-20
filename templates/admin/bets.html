@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Bet History - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Betting History</h2>
+
+        {% if bets.items %}
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Numbers</th>
+                        <th>Total</th>
+                        <th>Lucky #</th>
+                        <th>Bet</th>
+                        <th>Payout</th>
+                        <th>Result</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bet in bets.items %}
+                    <tr>
+                        <td>{{ bet.id }}</td>
+                        <td>{{ bet.user.username }}</td>
+                        <td>{{ bet.num1 }}, {{ bet.num2 }}, {{ bet.num3 }}</td>
+                        <td>{{ bet.picked_total }}</td>
+                        <td>{{ bet.lucky_number }}</td>
+                        <td>{{ naira(bet.bet_amount) }}</td>
+                        <td>{{ naira(bet.payout) if bet.payout else '—' }}</td>
+                        <td><span class="result-badge result-{{ bet.result }}">{{ bet.result }}</span></td>
+                        <td>{{ bet.created_at.strftime('%d %b, %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if bets.pages > 1 %}
+        <div class="pagination">
+            {% if bets.has_prev %}
+            <a href="{{ url_for('admin.betting_history', page=bets.prev_num) }}" class="page-link">← Prev</a>
+            {% endif %}
+            <span class="page-info">Page {{ bets.page }} of {{ bets.pages }}</span>
+            {% if bets.has_next %}
+            <a href="{{ url_for('admin.betting_history', page=bets.next_num) }}" class="page-link">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state"><p>No bets placed yet.</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

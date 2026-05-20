@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Admin Dashboard</h2>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Users</div>
+                <div class="stat-value">{{ stats.total_users }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Deposits</div>
+                <div class="stat-value">{{ naira(stats.total_deposits) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Bets</div>
+                <div class="stat-value">{{ stats.total_bets }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Wagered</div>
+                <div class="stat-value">{{ naira(stats.total_wagered) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Payouts</div>
+                <div class="stat-value">{{ naira(stats.total_payouts) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pending Withdrawals</div>
+                <div class="stat-value">{{ stats.pending_withdrawals }}</div>
+            </div>
+        </div>
+
+        <div class="admin-nav">
+            <a href="{{ url_for('admin.users') }}" class="admin-link">Manage Users</a>
+            <a href="{{ url_for('admin.withdrawals') }}" class="admin-link">Withdrawals</a>
+            <a href="{{ url_for('admin.betting_history') }}" class="admin-link">Bet History</a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="admin-link">Audit Logs</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

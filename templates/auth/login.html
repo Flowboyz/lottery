@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Login - DITTO DINKY{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎰</div>
+            <h1>DITTO DINKY</h1>
+            <p class="subtitle">Welcome back! Ready to win?</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('auth.login') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input name="username" id="username" placeholder="Enter your username" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input name="password" type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" class ="btn-gold">Login</button>
+        </form>
+
+        <p class="footer-links">
+            Don't have an account? <a href="{{ url_for('auth.register') }}">Create one now</a>
+        </p>
+        <p class="footer-links">
+            <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+        </p>
+    </div>
+{% endblock %}
+
+

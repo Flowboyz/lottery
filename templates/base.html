@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DITTO DINKY{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="left-controls">
+            <a href="{{ url_for('wallet.deposit_page') }}">Deposit</a>
+            <a href="{{ url_for('wallet.withdraw_page') }}">Withdraw</a>
+            {% if current_user.role in ["admin", "superadmin"] %}
+            <a href="{{ url_for('admin.dashboard') }}">Admin</a>
+            {% endif %}
+            <a href="{{ url_for('wallet.history') }}">History</a>
+            <a href="{{ url_for('notifications.inbox') }}" class="notif-link">
+                Alerts
+                {% if unread_count is defined and unread_count > 0 %}
+                <span class="notif-badge">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+            <a href="{{ url_for('game.claim') }}" class="claim-btn">Claim ₦500</a>
+            <button id="themeToggle"></button>
+        </div>
+        <div class="balance">Balance: {{ naira(current_user.balance) }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+        {% if category != "game_result" %}
+        <div class="flash-message flash-{{ category }}">
+            {{ message }}
+        </div>
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    {% if current_user.is_authenticated %}
+    <!-- Footer Navigation -->
+    <nav class="footer-nav">
+        <a href="{{ url_for('game.home') }}" class="footer-nav-item {% if request.endpoint == 'game.home' %}active{% endif %}">
+            <span class="footer-icon">🎰</span>
+            <span class="footer-label">Lottery</span>
+        </a>
+        <a href="{{ url_for('wallet.deposit_page') }}" class="footer-nav-item {% if request.endpoint == 'wallet.deposit_page' %}active{% endif %}">
+            <span class="footer-icon">💰</span>
+            <span class="footer-label">Deposit</span>
+        </a>
+        <a href="{{ url_for('wallet.history') }}" class="footer-nav-item {% if request.endpoint == 'wallet.history' %}active{% endif %}">
+            <span class="footer-icon">📋</span>
+            <span class="footer-label">History</span>
+        </a>
+        <a href="{{ url_for('notifications.inbox') }}" class="footer-nav-item {% if request.endpoint == 'notifications.inbox' %}active{% endif %}">
+            <span class="footer-icon">🔔</span>
+            <span class="footer-label">Alerts</span>
+        </a>
+        <a href="{{ url_for('game.how_to_play') }}" class="footer-nav-item {% if request.endpoint == 'game.how_to_play' %}active{% endif %}">
+            <span class="footer-icon">❓</span>
+            <span class="footer-label">Help</span>
+        </a>
+    </nav>
+    {% endif %}
+
+    {% block extra_js %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

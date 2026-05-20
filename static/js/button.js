@@ -7,13 +7,14 @@ let currentIndex = 0;
 buttons.forEach(button => {
     button.addEventListener("click", () => {
         if (currentIndex >= inputs.length) return;
-
         inputs[currentIndex].value = button.dataset.num;
+        button.classList.add("selected");
         currentIndex++;
     });
 });
 
 resetBtn.addEventListener("click", () => {
     inputs.forEach(input => input.value = "");
+    buttons.forEach(btn => btn.classList.remove("selected"));
     currentIndex = 0;
 });

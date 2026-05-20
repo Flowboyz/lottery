@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}How To Play - DITTO DINKY{% endblock %}
+
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card">
+        <h1 class="page-title">How To Play</h1>
+
+        <div class="help-section">
+            <h3>🎲 The Game</h3>
+            <p>Ditto Dinky is a pick-3 lottery game. Choose 3 numbers (1-5), place your bet, and match the Lucky Number to win <strong>5x</strong> your bet!</p>
+        </div>
+
+        <div class="help-section">
+            <h3>🔢 Lucky Number System</h3>
+            <p>Your 3 picked numbers are added together to get your total (e.g., 2+3+4 = 9). A Lucky Number between 3-15 is generated. If the Lucky Number matches your total, you win!</p>
+        </div>
+
+        <div class="help-section">
+            <h3>💰 Payout System</h3>
+            <p><strong>Win:</strong> Your bet amount × 5. Bet ₦1,000, win ₦5,000!</p>
+            <p><strong>Loss:</strong> Your bet amount is deducted from your balance.</p>
+            <p><strong>Win probability:</strong> 10% per play.</p>
+        </div>
+
+        <div class="help-section">
+            <h3>💳 Deposits</h3>
+            <p>Fund your wallet instantly using Paystack (card, bank transfer, or USSD). Minimum deposit: ₦500.</p>
+        </div>
+
+        <div class="help-section">
+            <h3>🏦 Withdrawals</h3>
+            <p>Request a withdrawal to your bank account. Minimum: ₦1,000. All withdrawals are reviewed and approved by our admin team within 24-48 hours.</p>
+        </div>
+
+        <div class="help-section">
+            <h3>🎁 Daily Reward</h3>
+            <p>Claim ₦500 for free every 24 hours! Just tap the "Claim ₦500" button.</p>
+        </div>
+
+        <div class="help-section">
+            <h3>👥 Referral Program</h3>
+            <p>Share your referral code with friends. When they sign up, you earn ₦200 and they get ₦100 as a welcome bonus!</p>
+            {% if current_user.is_authenticated %}
+            <p class="referral-code">Your referral code: <strong>{{ current_user.referral_code }}</strong></p>
+            {% endif %}
+        </div>
+
+        <div class="help-section">
+            <h3>⚠️ Responsible Gambling</h3>
+            <p>Play responsibly. Daily betting limit: ₦50,000. You can self-exclude from our <a href="{{ url_for('legal.responsible_gambling') }}">Responsible Gambling</a> page.</p>
+        </div>
+
+        <a href="{{ url_for('game.home') }}" class="back-link">← Back to Game</a>
+    </div>
+</div>
+{% endblock %}

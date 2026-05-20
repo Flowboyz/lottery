@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Transaction History - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Transaction History</h2>
+        <p class="page-subtitle">Current Balance: {{ naira(current_user.balance) }}</p>
+
+        {% if transactions.items %}
+        <div class="txn-list">
+            {% for txn in transactions.items %}
+            <div class="txn-item txn-{{ txn.action|lower }}">
+                <div class="txn-left">
+                    <div class="txn-type-badge {% if txn.action in ['DEPOSIT', 'WIN', 'BONUS', 'REFERRAL', 'CLAIM', 'WITHDRAWAL_REFUND', 'ADMIN_ADJUST'] %}credit{% else %}debit{% endif %}">
+                        {{ txn.action }}
+                    </div>
+                    <div class="txn-desc">{{ txn.description or '—' }}</div>
+                    <div class="txn-date">{{ txn.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+                </div>
+                <div class="txn-right">
+                    <div class="txn-amount {% if txn.action in ['DEPOSIT', 'WIN', 'BONUS', 'REFERRAL', 'CLAIM', 'WITHDRAWAL_REFUND', 'ADMIN_ADJUST'] %}credit{% else %}debit{% endif %}">
+                        {% if txn.action in ['DEPOSIT', 'WIN', 'BONUS', 'REFERRAL', 'CLAIM', 'WITHDRAWAL_REFUND', 'ADMIN_ADJUST'] %}+{% else %}-{% endif %}{{ naira(txn.amount) }}
+                    </div>
+                    <div class="txn-balance">Bal: {{ naira(txn.balance_after) }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if transactions.pages > 1 %}
+        <div class="pagination">
+            {% if transactions.has_prev %}
+            <a href="{{ url_for('wallet.history', page=transactions.prev_num) }}" class="page-link">← Prev</a>
+            {% endif %}
+            <span class="page-info">Page {{ transactions.page }} of {{ transactions.pages }}</span>
+            {% if transactions.has_next %}
+            <a href="{{ url_for('wallet.history', page=transactions.next_num) }}" class="page-link">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <p>No transactions yet. Make a deposit to get started!</p>
+            <a href="{{ url_for('wallet.deposit_page') }}" class="submit-btn" style="display:inline-block;margin-top:16px;">Make a Deposit</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

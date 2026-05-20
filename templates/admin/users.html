@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Users - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Manage Users</h2>
+
+        <form method="GET" class="search-form">
+            <input type="text" name="q" value="{{ q or '' }}" placeholder="Search username or email..." class="form-input">
+            <button type="submit" class="submit-btn" style="margin-top:0;">Search</button>
+        </form>
+
+        {% if users.items %}
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Balance</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                        {% if current_user.role == 'superadmin' %}
+                        <th>Action</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users.items %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email or '—' }}</td>
+                        <td>{{ naira(user.balance) }}</td>
+                        <td><span class="role-badge role-{{ user.role }}">{{ user.role }}</span></td>
+                        <td>{{ user.created_at.strftime('%d %b %Y') }}</td>
+                        {% if current_user.role == 'superadmin' %}
+                        <td>
+                            <form method="POST" action="{{ url_for('admin.update_balance', user_id=user.id) }}" class="inline-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="number" name="amount" step="0.01" placeholder="Amount" class="small-input" required>
+                                <select name="action" class="small-input">
+                                    <option value="credit">Credit</option>
+                                    <option value="debit">Debit</option>
+                                </select>
+                                <button type="submit" class="small-btn">Go</button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if users.pages > 1 %}
+        <div class="pagination">
+            {% if users.has_prev %}
+            <a href="{{ url_for('admin.users', page=users.prev_num, q=q) }}" class="page-link">← Prev</a>
+            {% endif %}
+            <span class="page-info">Page {{ users.page }} of {{ users.pages }}</span>
+            {% if users.has_next %}
+            <a href="{{ url_for('admin.users', page=users.next_num, q=q) }}" class="page-link">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state"><p>No users found.</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

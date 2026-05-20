@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card legal-page">
+        <h2 class="page-heading">Terms of Service</h2>
+        <p class="legal-updated">Last updated: {{ now.strftime('%B %Y') if now is defined else 'May 2026' }}</p>
+
+        <div class="legal-section">
+            <h3>1. Acceptance of Terms</h3>
+            <p>By accessing or using Ditto Dinky ("the Platform"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>2. Eligibility</h3>
+            <p>You must be at least 18 years old to use this Platform. By registering, you confirm you meet this age requirement and are legally permitted to participate in online gaming in your jurisdiction.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>3. Account Registration</h3>
+            <p>You are responsible for maintaining the confidentiality of your account credentials. Each person may only register one account. Multiple accounts may be suspended without notice.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>4. Deposits & Withdrawals</h3>
+            <p>All deposits and withdrawals are processed in Nigerian Naira (₦). Deposits are credited upon payment confirmation. Withdrawals are subject to admin approval and typically processed within 24 hours.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>5. Game Rules & Fair Play</h3>
+            <p>All game outcomes are determined using cryptographically secure random number generation. The Platform reserves the right to void bets suspected of fraud or system manipulation.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>6. Responsible Gambling</h3>
+            <p>We encourage responsible gambling. Daily betting limits are enforced. You may self-exclude from playing at any time through your account settings. See our <a href="{{ url_for('legal.responsible_gambling') }}">Responsible Gambling</a> page for support resources.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>7. Limitation of Liability</h3>
+            <p>The Platform is provided "as is." We are not liable for losses arising from service interruptions, technical failures, or unauthorized account access due to your negligence.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>8. Modifications</h3>
+            <p>We reserve the right to modify these terms at any time. Continued use of the Platform constitutes acceptance of updated terms.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>9. Contact</h3>
+            <p>For questions about these terms, contact us at support@dittodinky.com.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

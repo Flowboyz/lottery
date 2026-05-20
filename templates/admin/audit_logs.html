@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Audit Logs</h2>
+
+        {% if logs.items %}
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td>{{ log.created_at.strftime('%d %b %Y, %H:%M') }}</td>
+                        <td>{{ log.user.username if log.user else 'System' }}</td>
+                        <td>{{ log.action }}</td>
+                        <td class="detail-cell">{{ log.details or '—' }}</td>
+                        <td>{{ log.ip_address or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if logs.pages > 1 %}
+        <div class="pagination">
+            {% if logs.has_prev %}
+            <a href="{{ url_for('admin.audit_logs', page=logs.prev_num) }}" class="page-link">← Prev</a>
+            {% endif %}
+            <span class="page-info">Page {{ logs.page }} of {{ logs.pages }}</span>
+            {% if logs.has_next %}
+            <a href="{{ url_for('admin.audit_logs', page=logs.next_num) }}" class="page-link">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state"><p>No audit logs yet.</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

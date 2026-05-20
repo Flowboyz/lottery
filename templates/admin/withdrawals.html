@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Withdrawals - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Withdrawal Requests</h2>
+
+        {% if withdrawals.items %}
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Amount</th>
+                        <th>Bank</th>
+                        <th>Account</th>
+                        <th>Account Name</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for wr in withdrawals.items %}
+                    <tr>
+                        <td>{{ wr.id }}</td>
+                        <td>{{ wr.user.username }}</td>
+                        <td>{{ naira(wr.amount) }}</td>
+                        <td>{{ wr.bank_name or '—' }}</td>
+                        <td>{{ wr.account_number or '—' }}</td>
+                        <td>{{ wr.account_name or '—' }}</td>
+                        <td><span class="status-badge status-{{ wr.status }}">{{ wr.status }}</span></td>
+                        <td>{{ wr.created_at.strftime('%d %b %Y') }}</td>
+                        <td>
+                            {% if wr.status == 'pending' %}
+                            <form method="POST" action="{{ url_for('admin.process_withdrawal', wr_id=wr.id) }}" class="inline-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button name="action" value="approve" class="small-btn btn-approve">Approve</button>
+                                <button name="action" value="reject" class="small-btn btn-reject">Reject</button>
+                            </form>
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if withdrawals.pages > 1 %}
+        <div class="pagination">
+            {% if withdrawals.has_prev %}
+            <a href="{{ url_for('admin.withdrawals', page=withdrawals.prev_num) }}" class="page-link">← Prev</a>
+            {% endif %}
+            <span class="page-info">Page {{ withdrawals.page }} of {{ withdrawals.pages }}</span>
+            {% if withdrawals.has_next %}
+            <a href="{{ url_for('admin.withdrawals', page=withdrawals.next_num) }}" class="page-link">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state"><p>No withdrawal requests.</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

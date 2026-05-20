@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card legal-page">
+        <h2 class="page-heading">Privacy Policy</h2>
+        <p class="legal-updated">Last updated: {{ now.strftime('%B %Y') if now is defined else 'May 2026' }}</p>
+
+        <div class="legal-section">
+            <h3>1. Information We Collect</h3>
+            <p>We collect information you provide during registration (username, email, password hash), payment information processed through Paystack, gameplay data, and technical data such as IP addresses and browser information.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>2. How We Use Your Information</h3>
+            <p>Your information is used to operate your account, process transactions, prevent fraud, enforce responsible gambling limits, comply with legal requirements, and improve our services.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>3. Data Security</h3>
+            <p>Passwords are hashed using industry-standard algorithms. Payment processing is handled by PCI-compliant third-party providers. We implement CSRF protection and secure session handling.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>4. Data Sharing</h3>
+            <p>We do not sell your personal data. Information may be shared with payment processors to facilitate transactions, law enforcement when required by law, and fraud prevention services.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>5. Data Retention</h3>
+            <p>Account data is retained for the duration of your account plus any legally required retention period. Transaction records are kept for a minimum of 5 years for compliance purposes.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>6. Your Rights</h3>
+            <p>You may request access to your personal data, correction of inaccurate data, or account deletion (subject to legal retention requirements) by contacting support@dittodinky.com.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>7. Cookies</h3>
+            <p>We use essential session cookies to maintain your login state and theme preferences. No third-party tracking cookies are used.</p>
+        </div>
+
+        <div class="legal-section">
+            <h3>8. Contact</h3>
+            <p>For privacy concerns, contact our data protection team at privacy@dittodinky.com.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

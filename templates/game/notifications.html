@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Notifications - DITTO DINKY{% endblock %}
+
+{% block content %}
+<div class="content-page-content">
+    <div class="page-card">
+        <div class="header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <h2 class="page-title" style="margin:0;">Notifications</h2>
+            <a href="{{ url_for('notifications.mark_all_read') }}" class="btn-small">Mark all read</a>
+        </div>
+
+        {% if notifications.items %}
+        {% for n in notifications.items %}
+        <div class="notif-item {% if not n.is_read %}notif-unread{% endif %}"
+             onclick="window.location='{{ url_for('notifications.mark_read', notif_id=n.id) }}'">
+            <div class="notif-category notif-cat-{{ n.category }}">{{ n.category|upper }}</div>
+            <div class="notif-title">{{ n.title }}</div>
+            <div class="notif-message">{{ n.message }}</div>
+            <div class="notif-time">{{ n.created_at.strftime('%b %d, %Y %H:%M') }}</div>
+        </div>
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% if notifications.has_prev or notifications.has_next %}
+        <div class="pagination">
+            {% if notifications.has_prev %}
+            <a href="?page={{ notifications.prev_num }}" class="btn-small">← Prev</a>
+            {% endif %}
+            <span class="page-info">Page {{ notifications.page }} of {{ notifications.pages }}</span>
+            {% if notifications.has_next %}
+            <a href="?page={{ notifications.next_num }}" class="btn-small">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size:48px;margin-bottom:12px;">🔔</div>
+            <h3>No notifications yet</h3>
+            <p>Your notifications will appear here.</p>
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('game.home') }}" class="back-link">← Back to Game</a>
+    </div>
+</div>
+{% endblock %}

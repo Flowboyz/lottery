@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}DITTO DINKY - Play{% endblock %}
+
+{% block content %}
+    {% if claim_remaining is defined and claim_remaining > 0 %}
+    <div class="claim-timer">
+        Next reward in {{ claim_remaining // 3600 }}h
+        {{ (claim_remaining % 3600) // 60 }}m
+    </div>
+    {% endif %}
+
+    {% if streak %}
+    <div class="streak-box">
+        {{ streak }}
+    </div>
+    {% endif %}
+
+    <!-- Main Game -->
+    <div class="content">
+        <div class="casino-board">
+            <h3>Last Lucky Numbers</h3>
+            <div class="lucky-row">
+                {% for num in recent_lucky %}
+                <div class="lucky-box">{{ num }}</div>
+                {% endfor %}
+                {% if not recent_lucky %}
+                <p style="color: var(--text-muted); font-size: 14px;">Play to see numbers here!</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <form action="{{ url_for('game.play') }}" method="post" id="lotteryForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="inputs">
+                <input type="text" name="num1" readonly>
+                <input type="text" name="num2" readonly>
+                <input type="text" name="num3" readonly>
+            </div>
+
+            <div id="cooldownDisplay" class="cooldown-box"></div>
+
+            <div class="number-picker">
+                <button type="button" class="num-btn" data-num="1">1</button>
+                <button type="button" class="num-btn" data-num="2">2</button>
+                <button type="button" class="num-btn" data-num="3">3</button>
+                <button type="button" class="num-btn" data-num="4">4</button>
+                <button type="button" class="num-btn" data-num="5">5</button>
+            </div>
+
+            <div class="betInput">
+                <label>Bet Amount</label>
+                <input type="number" name="bet" min="1" step="1" placeholder="Enter Bet Amount" required>
+            </div>
+
+            <div class="input-amount">
+                <button type="button" class="inp-btn" data-inp="100">₦100</button>
+                <button type="button" class="inp-btn" data-inp="500">₦500</button>
+                <button type="button" class="inp-btn" data-inp="1000">₦1K</button>
+                <button type="button" class="inp-btn" data-inp="2000">₦2K</button>
+                <button type="button" class="inp-btn" data-inp="5000">₦5K</button>
+                <button type="button" id="clearBet" class="clear-btn">Clear</button>
+            </div>
+
+            <div class="controls">
+                <button type="submit" id="playBtn">Play</button>
+                <button type="button" id="resetBtn">Reset</button>
+            </div>
+        </form>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, data in messages %}
+            {% if category == "game_result" %}
+            <div class="result-banner">
+                <div class="numbers">
+                    <div class="box">
+                        <small>Your Total</small>
+                        <span>{{ data.total }}</span>
+                    </div>
+                    <div class="vs">VS</div>
+                    <div class="box lucky">
+                        <small>Lucky Number</small>
+                        <span id="luckyNumber">{{ data.lucky }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-text {% if data.is_win %}result-win{% else %}result-loss{% endif %}">
+                {{ data.result }}
+            </div>
+            {% endif %}
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Daily Bet Limit Info -->
+        <div class="info-strip">
+            Win chance: {{ win_probability }}% | Payout: 5x | Daily limit: ₦50,000
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{{ url_for('static', filename='js/button.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/luckyNumber.js') }}"></script>
+    <script>const remainingCooldown = {{ remaining_cooldown | default(0) }};</script>
+    <script src="{{ url_for('static', filename='js/cooldown.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/amount.js') }}"></script>
+{% endblock %}
