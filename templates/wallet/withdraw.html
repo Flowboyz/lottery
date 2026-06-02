@@ -28,22 +28,49 @@
                 </select>
             </div>
 
+            <!-- Saved Bank Account Selector -->
+            {% if saved_banks %}
             <div class="form-group">
-                <label for="bank_name">Bank Name</label>
-                <input type="text" name="bank_name" id="bank_name" required
-                       placeholder="e.g. GTBank, Access Bank" class="form-input">
+                <label for="saved_bank">Select Saved Account</label>
+                <select id="saved_bank" class="form-input" onchange="fillBank(this)">
+                    <option value="">-- Choose a saved account --</option>
+                    {% for bank in saved_banks %}
+                    <option value="{{ bank.id }}"
+                            data-bank="{{ bank.bank_name }}"
+                            data-number="{{ bank.account_number }}"
+                            data-name="{{ bank.account_name }}"
+                            {% if bank.is_default %}selected{% endif %}>
+                        {{ bank.bank_name }} - {{ bank.account_number }} ({{ bank.account_name }})
+                        {% if bank.is_default %}★{% endif %}
+                    </option>
+                    {% endfor %}
+                    <option value="new">Enter new account details</option>
+                </select>
             </div>
-
-            <div class="form-group">
-                <label for="account_number">Account Number</label>
-                <input type="text" name="account_number" id="account_number" required
-                       placeholder="10-digit account number" maxlength="10" pattern="[0-9]{10}" class="form-input">
+            {% else %}
+            <div class="info-box" style="margin-bottom:16px;">
+                <p>No saved bank accounts. <a href="{{ url_for('profile.index') }}" style="color:var(--accent-primary);">Add one in your Profile</a> for quicker withdrawals.</p>
             </div>
+            {% endif %}
 
-            <div class="form-group">
-                <label for="account_name">Account Name</label>
-                <input type="text" name="account_name" id="account_name" required
-                       placeholder="Account holder name" class="form-input">
+            <div id="bankFields">
+                <div class="form-group">
+                    <label for="bank_name">Bank Name</label>
+                    <input type="text" name="bank_name" id="bank_name" required
+                           placeholder="e.g. GTBank, Access Bank" class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label for="account_number">Account Number</label>
+                    <input type="text" name="account_number" id="account_number" required
+                           placeholder="10-digit account number" maxlength="10" pattern="[0-9]{10}" class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label for="account_name">Account Name</label>
+                    <input type="text" name="account_name" id="account_name" required
+                           placeholder="Account holder name" class="form-input">
+                </div>
             </div>
 
             <button type="submit" class="submit-btn">Submit Withdrawal</button>
@@ -55,4 +82,39 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fillBank(select) {
+    const opt = select.options[select.selectedIndex];
+    const bankName = document.getElementById("bank_name");
+    const accountNumber = document.getElementById("account_number");
+    const accountName = document.getElementById("account_name");
+
+    if (select.value === "" || select.value === "new") {
+        bankName.value = "";
+        accountNumber.value = "";
+        accountName.value = "";
+        bankName.readOnly = false;
+        accountNumber.readOnly = false;
+        accountName.readOnly = false;
+    } else {
+        bankName.value = opt.dataset.bank;
+        accountNumber.value = opt.dataset.number;
+        accountName.value = opt.dataset.name;
+        bankName.readOnly = true;
+        accountNumber.readOnly = true;
+        accountName.readOnly = true;
+    }
+}
+
+// Auto-fill default on page load
+document.addEventListener("DOMContentLoaded", function() {
+    const savedBank = document.getElementById("saved_bank");
+    if (savedBank && savedBank.value && savedBank.value !== "" && savedBank.value !== "new") {
+        fillBank(savedBank);
+    }
+});
+</script>
 {% endblock %}

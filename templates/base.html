@@ -18,6 +18,7 @@
             <a href="{{ url_for('admin.dashboard') }}">Admin</a>
             {% endif %}
             <a href="{{ url_for('wallet.history') }}">History</a>
+            <a href="{{ url_for('profile.index') }}">Profile</a>
             <a href="{{ url_for('notifications.inbox') }}" class="notif-link">
                 Alerts
                 {% if unread_count is defined and unread_count > 0 %}
@@ -66,9 +67,9 @@
             <span class="footer-icon">🔔</span>
             <span class="footer-label">Alerts</span>
         </a>
-        <a href="{{ url_for('game.how_to_play') }}" class="footer-nav-item {% if request.endpoint == 'game.how_to_play' %}active{% endif %}">
-            <span class="footer-icon">❓</span>
-            <span class="footer-label">Help</span>
+        <a href="{{ url_for('profile.index') }}" class="footer-nav-item {% if request.endpoint == 'profile.index' %}active{% endif %}">
+            <span class="footer-icon">👤</span>
+            <span class="footer-label">Profile</span>
         </a>
     </nav>
     {% endif %}

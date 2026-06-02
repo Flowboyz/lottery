@@ -239,3 +239,23 @@ class AuditLog(db.Model):
     details = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Bank Account (saved beneficiary accounts)
+# ---------------------------------------------------------------------------
+class BankAccount(db.Model):
+    __tablename__ = "bank_accounts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    bank_name = db.Column(db.String(100), nullable=False)
+    account_number = db.Column(db.String(20), nullable=False)
+    account_name = db.Column(db.String(100), nullable=False)
+    is_default = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref("bank_accounts", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<BankAccount {self.bank_name} - {self.account_number}>"

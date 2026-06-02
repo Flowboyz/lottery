@@ -1306,6 +1306,125 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
 .how-section li { margin-bottom: 4px; }
 .how-section li::marker { color: var(--accent-primary); font-weight: 700; }
 
+/* ===== Profile Page ===== */
+.profile-section { margin-bottom: 28px; }
+.section-title {
+    font-size: 17px; font-weight: 700; color: var(--accent-primary);
+    margin-bottom: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);
+}
+.section-desc { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+.form-subtitle {
+    font-size: 15px; font-weight: 600; color: var(--text-secondary);
+    margin: 20px 0 12px;
+}
+.profile-details { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.detail-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; background: var(--bg-elevated); border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+}
+.detail-label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.detail-value { font-size: 14px; color: var(--text-primary); font-weight: 600; }
+.balance-text { color: var(--accent-primary); }
+
+.bank-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.bank-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; background: var(--bg-elevated); border-radius: 12px;
+    border: 1px solid var(--border-subtle); gap: 12px; flex-wrap: wrap;
+}
+.bank-item.bank-default { border-color: var(--accent-primary); }
+.bank-info { flex: 1; min-width: 150px; }
+.bank-name { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+.bank-number { font-size: 13px; color: var(--text-secondary); font-family: monospace; }
+.bank-acct-name { font-size: 12px; color: var(--text-muted); }
+.default-badge {
+    display: inline-block; margin-top: 4px; padding: 2px 8px;
+    background: var(--accent-primary); color: white; border-radius: 6px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+}
+.bank-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.add-bank-form {
+    margin-top: 16px; padding: 20px; background: var(--bg-elevated);
+    border-radius: 14px; border: 1px solid var(--border-subtle);
+}
+
+/* ===== Floating Help Button ===== */
+.help-fab {
+    position: fixed; bottom: 80px; right: 20px; z-index: 999;
+    width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent-secondary), #6d28d9);
+    color: white; font-size: 24px; font-weight: 700;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    transition: all 0.2s ease;
+}
+.help-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5); }
+
+/* ===== Help Modal ===== */
+.help-modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); z-index: 2000;
+    justify-content: center; align-items: center; padding: 20px;
+}
+.help-modal {
+    background: var(--bg-card); border-radius: 20px; width: 100%; max-width: 440px;
+    max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-subtle); animation: fadeIn 0.3s ease;
+}
+.help-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 24px; border-bottom: 1px solid var(--border-subtle);
+}
+.help-modal-header h3 { font-size: 20px; font-weight: 700; color: var(--accent-primary); margin: 0; }
+.help-modal-close {
+    background: none; border: none; color: var(--text-muted); font-size: 22px;
+    cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: all 0.2s ease;
+}
+.help-modal-close:hover { color: var(--accent-danger); background: var(--bg-elevated); }
+.help-modal-body { padding: 20px 24px; }
+.help-step {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.help-step:last-child { border-bottom: none; }
+.help-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+.help-step strong { display: block; font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
+.help-step p { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+
+/* ===== Referral Section ===== */
+.referral-box {
+    margin-top: 12px; padding: 20px; background: var(--bg-elevated);
+    border-radius: 14px; border: 1px solid var(--border-subtle); text-align: center;
+}
+.referral-code-display { margin-bottom: 14px; }
+.referral-label {
+    display: block; font-size: 12px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+}
+.referral-code {
+    display: inline-block; font-size: 28px; font-weight: 800; color: var(--accent-gold);
+    letter-spacing: 4px; padding: 8px 20px; background: var(--bg-card);
+    border-radius: 12px; border: 2px dashed var(--accent-gold);
+}
+.referral-actions { display: flex; justify-content: center; gap: 10px; margin-bottom: 14px; }
+.referral-stats { font-size: 13px; color: var(--text-muted); }
+
+/* ===== Form Divider ===== */
+.form-divider {
+    display: flex; align-items: center; margin: 20px 0 16px; gap: 12px;
+}
+.form-divider::before, .form-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+}
+.form-divider span { font-size: 13px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+
+/* ===== How to Play ===== */
+.how-section { margin-bottom: 24px; }
+.how-section h3 { font-size: 16px; font-weight: 700; color: var(--accent-primary); margin-bottom: 8px; }
+.how-section p, .how-section li { color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+.how-section ol, .how-section ul { padding-left: 20px; }
+.how-section li { margin-bottom: 6px; }
+
 /* ===== Accessibility ===== */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

@@ -14,7 +14,7 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Transaction, PaymentRecord, WithdrawalRequest
-from app.utils import credit_wallet, debit_wallet, notify_user, generate_reference, format_money
+from app.utils import credit_wallet, debit_wallet, notify_user, generate_reference, format_money, send_email
 
 wallet_bp = Blueprint("wallet", __name__, url_prefix="/wallet")
 
@@ -67,6 +67,12 @@ def initialize_deposit():
         db.session.commit()
         notify_user(current_user.id, "Deposit Successful",
                     f"Your deposit of {format_money(amount)} was successful!", "deposit")
+        send_email(current_user.email, "Deposit Successful - Ditto Dinky",
+                   f"Hi {current_user.username},\n\n"
+                   f"Your deposit of {format_money(amount)} has been credited to your wallet.\n\n"
+                   f"New Balance: {format_money(current_user.balance)}\n"
+                   f"Reference: {reference}\n\n"
+                   f"Thank you for playing!\n- Ditto Dinky Team")
         flash(f"Deposited {format_money(amount)} successfully! (Test mode)", "success")
         return redirect(url_for("game.home"))
 
@@ -138,6 +144,12 @@ def verify_deposit():
             db.session.commit()
             notify_user(current_user.id, "Deposit Successful",
                         f"Your deposit of {format_money(amount)} was successful!", "deposit")
+            send_email(current_user.email, "Deposit Successful - Ditto Dinky",
+                       f"Hi {current_user.username},\n\n"
+                       f"Your deposit of {format_money(amount)} has been credited to your wallet.\n\n"
+                       f"New Balance: {format_money(current_user.balance)}\n"
+                       f"Reference: {reference}\n\n"
+                       f"Thank you for playing!\n- Ditto Dinky Team")
             flash(f"Deposited {format_money(amount)} successfully!", "success")
         else:
             record.status = "failed"
@@ -181,6 +193,12 @@ def paystack_webhook():
                 db.session.commit()
                 notify_user(user.id, "Deposit Confirmed",
                             f"Your deposit of {format_money(amount)} has been confirmed.", "deposit")
+                send_email(user.email, "Deposit Confirmed - Ditto Dinky",
+                           f"Hi {user.username},\n\n"
+                           f"Your deposit of {format_money(amount)} has been confirmed and credited.\n\n"
+                           f"New Balance: {format_money(user.balance)}\n"
+                           f"Reference: {reference}\n\n"
+                           f"- Ditto Dinky Team")
 
     return jsonify({"status": "ok"}), 200
 
@@ -192,7 +210,12 @@ def withdraw_page():
     pending = WithdrawalRequest.query.filter_by(
         user_id=current_user.id, status="pending"
     ).count()
-    return render_template("wallet/withdraw.html", pending_withdrawals=pending)
+    from app.models import BankAccount
+    saved_banks = BankAccount.query.filter_by(user_id=current_user.id).order_by(
+        BankAccount.is_default.desc(), BankAccount.created_at.desc()
+    ).all()
+    return render_template("wallet/withdraw.html",
+                           pending_withdrawals=pending, saved_banks=saved_banks)
 
 
 # ────────────────────────── SUBMIT WITHDRAWAL ──────────────────────────
@@ -241,6 +264,16 @@ def submit_withdrawal():
 
     notify_user(current_user.id, "Withdrawal Submitted",
                 f"Your withdrawal of {format_money(amount)} is pending approval.", "withdrawal")
+    send_email(current_user.email, "Withdrawal Request Submitted - Ditto Dinky",
+               f"Hi {current_user.username},\n\n"
+               f"Your withdrawal request has been submitted.\n\n"
+               f"Amount: {format_money(amount)}\n"
+               f"Bank: {bank_name}\n"
+               f"Account: {account_number}\n"
+               f"Account Name: {account_name}\n\n"
+               f"Your request will be reviewed within 24 hours. "
+               f"Funds have been held from your balance until approval.\n\n"
+               f"- Ditto Dinky Team")
     flash(f"Withdrawal of {format_money(amount)} submitted for approval.", "success")
     return redirect(url_for("game.home"))
 

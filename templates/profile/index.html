@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}My Profile - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">My Profile</h2>
+
+        <!-- User Details -->
+        <div class="profile-section">
+            <h3 class="section-title">Account Details</h3>
+            <div class="profile-details">
+                <div class="detail-row">
+                    <span class="detail-label">Username</span>
+                    <span class="detail-value">{{ current_user.username }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Email</span>
+                    <span class="detail-value">{{ current_user.email or 'Not set' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Phone</span>
+                    <span class="detail-value">{{ current_user.phone or 'Not set' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Balance</span>
+                    <span class="detail-value balance-text">{{ naira(current_user.balance) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Member Since</span>
+                    <span class="detail-value">{{ current_user.created_at.strftime('%d %B %Y') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral Section -->
+        <div class="profile-section">
+            <h3 class="section-title">Refer & Earn</h3>
+            <p class="section-desc">Share your code with friends. You earn ₦200 and they get ₦100 when they sign up!</p>
+            <div class="referral-box">
+                <div class="referral-code-display">
+                    <span class="referral-label">Your Referral Code</span>
+                    <span class="referral-code" id="refCode">{{ current_user.referral_code or '—' }}</span>
+                </div>
+                {% if current_user.referral_code %}
+                <div class="referral-actions">
+                    <button class="small-btn" onclick="copyCode()">Copy Code</button>
+                    <button class="small-btn" onclick="shareCode()">Share Link</button>
+                </div>
+                {% endif %}
+                <div class="referral-stats">
+                    <span>People referred: <strong>{{ referral_count }}</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile -->
+        <div class="profile-section">
+            <h3 class="section-title">Edit Profile</h3>
+            <div class="add-bank-form">
+                <form method="POST" action="{{ url_for('profile.edit_profile') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="form-group">
+                        <label for="edit_email">Email</label>
+                        <input type="email" name="email" id="edit_email" class="form-input"
+                               value="{{ current_user.email or '' }}" placeholder="your@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit_phone">Phone Number</label>
+                        <input type="tel" name="phone" id="edit_phone" class="form-input"
+                               value="{{ current_user.phone or '' }}" placeholder="e.g. 08012345678">
+                    </div>
+
+                    <div class="form-divider">
+                        <span>Change Password (optional)</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="current_password">Current Password</label>
+                        <input type="password" name="current_password" id="current_password" class="form-input"
+                               placeholder="Enter current password">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new_password">New Password</label>
+                        <input type="password" name="new_password" id="new_password" class="form-input"
+                               placeholder="Min 6 characters" minlength="6">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm New Password</label>
+                        <input type="password" name="confirm_password" id="confirm_password" class="form-input"
+                               placeholder="Re-enter new password">
+                    </div>
+
+                    <button type="submit" class="submit-btn">Save Changes</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Saved Bank Accounts -->
+        <div class="profile-section">
+            <h3 class="section-title">Saved Bank Accounts</h3>
+            <p class="section-desc">These accounts will appear automatically when you make a withdrawal.</p>
+
+            {% if banks %}
+            <div class="bank-list">
+                {% for bank in banks %}
+                <div class="bank-item {% if bank.is_default %}bank-default{% endif %}">
+                    <div class="bank-info">
+                        <div class="bank-name">{{ bank.bank_name }}</div>
+                        <div class="bank-number">{{ bank.account_number }}</div>
+                        <div class="bank-acct-name">{{ bank.account_name }}</div>
+                        {% if bank.is_default %}
+                        <span class="default-badge">Default</span>
+                        {% endif %}
+                    </div>
+                    <div class="bank-actions">
+                        {% if not bank.is_default %}
+                        <form method="POST" action="{{ url_for('profile.set_default_bank', bank_id=bank.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="small-btn">Set Default</button>
+                        </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('profile.delete_bank', bank_id=bank.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="small-btn btn-reject" onclick="return confirm('Remove this bank account?')">Remove</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:20px 0;">
+                <p>No bank accounts saved yet. Add one below.</p>
+            </div>
+            {% endif %}
+
+            <!-- Add Bank Form -->
+            <div class="add-bank-form">
+                <h4 class="form-subtitle">Add New Bank Account</h4>
+                <form method="POST" action="{{ url_for('profile.add_bank') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="form-group">
+                        <label for="bank_name">Bank Name</label>
+                        <select name="bank_name" id="bank_name" required class="form-input">
+                            <option value="">Select your bank</option>
+                            <option value="Access Bank">Access Bank</option>
+                            <option value="Citibank">Citibank</option>
+                            <option value="Ecobank">Ecobank</option>
+                            <option value="Fidelity Bank">Fidelity Bank</option>
+                            <option value="First Bank">First Bank of Nigeria</option>
+                            <option value="First City Monument Bank">FCMB</option>
+                            <option value="Globus Bank">Globus Bank</option>
+                            <option value="GTBank">GTBank</option>
+                            <option value="Heritage Bank">Heritage Bank</option>
+                            <option value="Jaiz Bank">Jaiz Bank</option>
+                            <option value="Keystone Bank">Keystone Bank</option>
+                            <option value="Kuda Bank">Kuda Bank</option>
+                            <option value="Moniepoint">Moniepoint</option>
+                            <option value="OPay">OPay</option>
+                            <option value="PalmPay">PalmPay</option>
+                            <option value="Polaris Bank">Polaris Bank</option>
+                            <option value="Providus Bank">Providus Bank</option>
+                            <option value="Stanbic IBTC">Stanbic IBTC</option>
+                            <option value="Standard Chartered">Standard Chartered</option>
+                            <option value="Sterling Bank">Sterling Bank</option>
+                            <option value="SunTrust Bank">SunTrust Bank</option>
+                            <option value="Titan Trust Bank">Titan Trust Bank</option>
+                            <option value="Union Bank">Union Bank</option>
+                            <option value="United Bank for Africa">UBA</option>
+                            <option value="Unity Bank">Unity Bank</option>
+                            <option value="VFD Microfinance Bank">VFD MFB</option>
+                            <option value="Wema Bank">Wema Bank</option>
+                            <option value="Zenith Bank">Zenith Bank</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="account_number">Account Number</label>
+                        <input type="text" name="account_number" id="account_number" required
+                               placeholder="10-digit account number" maxlength="10" pattern="[0-9]{10}" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="account_name">Account Name</label>
+                        <input type="text" name="account_name" id="account_name" required
+                               placeholder="Name on the account" class="form-input">
+                    </div>
+
+                    <button type="submit" class="submit-btn">Save Bank Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyCode() {
+    const code = document.getElementById("refCode").innerText;
+    navigator.clipboard.writeText(code).then(() => {
+        alert("Referral code copied: " + code);
+    }).catch(() => {
+        prompt("Copy this code:", code);
+    });
+}
+
+function shareCode() {
+    const code = document.getElementById("refCode").innerText;
+    const url = window.location.origin + "/auth/register?ref=" + code;
+    const text = "Join me on Ditto Dinky and get ₦100 free! Use my referral code: " + code + "\n" + url;
+
+    if (navigator.share) {
+        navigator.share({ title: "Join Ditto Dinky", text: text, url: url });
+    } else {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Share link copied to clipboard!");
+        }).catch(() => {
+            prompt("Copy and share this:", text);
+        });
+    }
+}
+</script>
+{% endblock %}

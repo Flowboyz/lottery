@@ -100,6 +100,28 @@ def notify_user(user_id, title, message, category="info"):
 
 
 # ---------------------------------------------------------------------------
+# Email Helper
+# ---------------------------------------------------------------------------
+def send_email(to_email, subject, body):
+    """Send an email. Fails silently if mail is not configured."""
+    if not to_email:
+        return
+    try:
+        from flask_mail import Message
+        from app.extensions import mail
+        msg = Message(
+            subject=subject,
+            recipients=[to_email],
+            body=body,
+            sender=current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@dittodinky.com"),
+        )
+        mail.send(msg)
+    except Exception as e:
+        # Log but don't crash if email fails
+        current_app.logger.warning(f"Email send failed to {to_email}: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Audit Logger
 # ---------------------------------------------------------------------------
 def log_audit(action, details=None, user_id=None):

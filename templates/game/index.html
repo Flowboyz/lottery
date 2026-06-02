@@ -99,6 +99,63 @@
             Win chance: {{ win_probability }}% | Payout: 5x | Daily limit: ₦50,000
         </div>
     </div>
+
+    <!-- Floating Help Button -->
+    <button class="help-fab" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
+
+    <!-- How to Play Modal -->
+    <div class="help-modal-overlay" id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <h3>How To Play</h3>
+                <button class="help-modal-close" onclick="document.getElementById('helpModal').style.display='none'">✕</button>
+            </div>
+            <div class="help-modal-body">
+                <div class="help-step">
+                    <span class="help-icon">🎲</span>
+                    <div>
+                        <strong>Pick 3 Numbers</strong>
+                        <p>Choose 3 numbers from 1-5. They get added together to make your total (e.g. 2+3+4 = 9).</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-icon">💰</span>
+                    <div>
+                        <strong>Place Your Bet</strong>
+                        <p>Enter your bet amount in Naira. Use the quick buttons or type your own amount.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-icon">🎯</span>
+                    <div>
+                        <strong>Match the Lucky Number</strong>
+                        <p>A Lucky Number (3-15) is generated. If it matches your total, you win <strong>5× your bet!</strong></p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-icon">🏆</span>
+                    <div>
+                        <strong>Win Big</strong>
+                        <p>Bet ₦1,000 → Win ₦5,000! 10% win chance per play.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-icon">🎁</span>
+                    <div>
+                        <strong>Daily Reward</strong>
+                        <p>Claim ₦500 free every 24 hours from the top bar.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-icon">👥</span>
+                    <div>
+                        <strong>Refer Friends</strong>
+                        <p>Share your referral code from your Profile. You earn ₦200 and they get ₦100!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
