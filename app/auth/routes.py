@@ -157,7 +157,13 @@ def forgot_password():
             code = OTP.generate(user.id, "reset_password",
                                 current_app.config.get("OTP_EXPIRY_MINUTES", 10))
             # In production, send via email. For now, flash it.
-            flash(f"Your password reset OTP is: {code} (in production this would be emailed)", "info")
+            from app.utils import send_email
+            send_email(email, "Password Reset - Ditto Dinky",
+                    f"Hi,\n\nYour password reset code is: {code}\n\n"
+                    f"This code expires in 10 minutes.\n\n"
+                    f"If you did not request this, please ignore this email.\n\n"
+                    f"- Ditto Dinky Team")
+            flash("A reset code has been sent to your email.", "info")
             return redirect(url_for("auth.reset_password", user_id=user.id))
         flash("If that email exists, an OTP has been sent.", "info")
 
