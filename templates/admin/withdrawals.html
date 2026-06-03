@@ -5,6 +5,7 @@
     <div class="page-card">
         <h2 class="page-heading">Withdrawal Requests</h2>
 
+        <a href="{{ url_for('admin.dashboard') }}" class="back-link">← Back to Admin Dashboard</a>
         {% if withdrawals.items %}
         <div class="table-wrap">
             <table class="admin-table">

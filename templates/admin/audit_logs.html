@@ -5,45 +5,83 @@
     <div class="page-card">
         <h2 class="page-heading">Audit Logs</h2>
 
-        {% if logs.items %}
-        <div class="table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Details</th>
-                        <th>IP</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs.items %}
-                    <tr>
-                        <td><span class="local-time" data-utc="{{ log.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ log.created_at.strftime('%d %b %Y, %H:%M') }}</span></td>
-                        <td>{{ log.user.username if log.user else 'System' }}</td>
-                        <td>{{ log.action }}</td>
-                        <td class="detail-cell">{{ log.details or '—' }}</td>
-                        <td>{{ log.ip_address or '—' }}</td>
-                    </tr>
+        <!-- Filters -->
+        <form method="GET" class="bet-filters">
+            <div class="filter-row">
+                <select name="user" class="form-input filter-select">
+                    <option value="">All Users</option>
+                    {% for username in user_list %}
+                    <option value="{{ username }}" {% if user_filter == username %}selected{% endif %}>{{ username }}</option>
                     {% endfor %}
-                </tbody>
-            </table>
+                </select>
+
+                <select name="action" class="form-input filter-select">
+                    <option value="">All Actions</option>
+                    {% for act in action_list %}
+                    <option value="{{ act }}" {% if action_filter == act %}selected{% endif %}>{{ act }}</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="small-btn">Filter</button>
+                {% if user_filter or action_filter %}
+                <a href="{{ url_for('admin.audit_logs') }}" class="small-btn btn-reject">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if user_filter or action_filter %}
+        <div class="active-filter">
+            {% if user_filter %}User: <strong>{{ user_filter }}</strong>{% endif %}
+            {% if user_filter and action_filter %} | {% endif %}
+            {% if action_filter %}Action: <strong>{{ action_filter }}</strong>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if logs.items %}
+        <div class="audit-list">
+            {% set current_user_display = namespace(name='') %}
+            {% for log in logs.items %}
+
+            {# Show user header when user changes #}
+            {% set log_username = log.user.username if log.user else 'System' %}
+            {% if log_username != current_user_display.name %}
+            {% set current_user_display.name = log_username %}
+            <div class="bet-user-header">
+                <span class="bet-user-icon">{% if log.user %}👤{% else %}⚙️{% endif %}</span>
+                <span class="bet-user-name">{{ log_username }}</span>
+            </div>
+            {% endif %}
+
+            <div class="audit-card">
+                <div class="audit-card-top">
+                    <span class="audit-action-badge">{{ log.action }}</span>
+                    <span class="audit-time"><span class="local-time" data-utc="{{ log.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ log.created_at.strftime('%d %b %Y, %H:%M') }}</span></span>
+                </div>
+                {% if log.details %}
+                <div class="audit-details">{{ log.details }}</div>
+                {% endif %}
+                {% if log.ip_address %}
+                <div class="audit-ip">IP: {{ log.ip_address }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
 
+        <!-- Pagination -->
         {% if logs.pages > 1 %}
         <div class="pagination">
             {% if logs.has_prev %}
-            <a href="{{ url_for('admin.audit_logs', page=logs.prev_num) }}" class="page-link">← Prev</a>
+            <a href="{{ url_for('admin.audit_logs', page=logs.prev_num, user=user_filter, action=action_filter) }}" class="page-link">← Prev</a>
             {% endif %}
             <span class="page-info">Page {{ logs.page }} of {{ logs.pages }}</span>
             {% if logs.has_next %}
-            <a href="{{ url_for('admin.audit_logs', page=logs.next_num) }}" class="page-link">Next →</a>
+            <a href="{{ url_for('admin.audit_logs', page=logs.next_num, user=user_filter, action=action_filter) }}" class="page-link">Next →</a>
             {% endif %}
         </div>
         {% endif %}
+
         {% else %}
-        <div class="empty-state"><p>No audit logs yet.</p></div>
+        <div class="empty-state"><p>No audit logs found{% if user_filter %} for "{{ user_filter }}"{% endif %}.</p></div>
         {% endif %}
     </div>
 </div>

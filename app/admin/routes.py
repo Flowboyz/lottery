@@ -189,7 +189,29 @@ def betting_history():
 @superadmin_required
 def audit_logs():
     page = request.args.get("page", 1, type=int)
-    logs = AuditLog.query.order_by(
+    user_filter = request.args.get("user", "", type=str).strip()
+    action_filter = request.args.get("action", "", type=str).strip()
+
+    query = AuditLog.query.outerjoin(User, AuditLog.user_id == User.id)
+
+    if user_filter:
+        query = query.filter(User.username.ilike(f"%{user_filter}%"))
+    if action_filter:
+        query = query.filter(AuditLog.action == action_filter)
+
+    logs = query.order_by(
         AuditLog.created_at.desc()
     ).paginate(page=page, per_page=30, error_out=False)
-    return render_template("admin/audit_logs.html", logs=logs)
+
+    # Get distinct actions and users for dropdowns
+    all_actions = db.session.query(AuditLog.action).distinct().order_by(AuditLog.action).all()
+    action_list = [a[0] for a in all_actions]
+
+    log_users = db.session.query(User.username).join(
+        AuditLog, User.id == AuditLog.user_id
+    ).distinct().order_by(User.username).all()
+    user_list = [u[0] for u in log_users]
+
+    return render_template("admin/audit_logs.html", logs=logs,
+                           user_filter=user_filter, action_filter=action_filter,
+                           action_list=action_list, user_list=user_list)

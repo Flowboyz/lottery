@@ -5,6 +5,7 @@
     <div class="page-card">
         <h2 class="page-heading">Manage Users</h2>
 
+        <a href="{{ url_for('admin.dashboard') }}" class="back-link">← Back to Admin Dashboard</a>
         <form method="GET" class="search-form">
             <input type="text" name="q" value="{{ q or '' }}" placeholder="Search username or email..." class="form-input">
             <button type="submit" class="submit-btn" style="margin-top:0;">Search</button>
