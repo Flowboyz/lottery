@@ -23,8 +23,10 @@ wallet_bp = Blueprint("wallet", __name__, url_prefix="/wallet")
 @wallet_bp.route("/deposit", methods=["GET"])
 @login_required
 def deposit_page():
-    return render_template("wallet/deposit.html",
-                           paystack_key=current_app.config["PAYSTACK_PUBLIC_KEY"])
+    flash("Deposits are temporarily disabled. We'll be back shortly!", "info")
+    return redirect(url_for("game.home"))
+    # return render_template("wallet/deposit.html",
+    #                        paystack_key=current_app.config["PAYSTACK_PUBLIC_KEY"])
 
 
 # ────────────────────────── INITIALIZE PAYSTACK PAYMENT ──────────────────────────
