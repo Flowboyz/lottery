@@ -20,7 +20,7 @@
                 <tbody>
                     {% for log in logs.items %}
                     <tr>
-                        <td>{{ log.created_at.strftime('%d %b %Y, %H:%M') }}</td>
+                        <td><span class="local-time" data-utc="{{ log.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ log.created_at.strftime('%d %b %Y, %H:%M') }}</span></td>
                         <td>{{ log.user.username if log.user else 'System' }}</td>
                         <td>{{ log.action }}</td>
                         <td class="detail-cell">{{ log.details or '—' }}</td>

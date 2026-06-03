@@ -15,7 +15,7 @@
                         {{ txn.action }}
                     </div>
                     <div class="txn-desc">{{ txn.description or '—' }}</div>
-                    <div class="txn-date">{{ txn.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+                    <div class="txn-date"><span class="local-time" data-utc="{{ txn.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ txn.created_at.strftime('%d %b %Y, %I:%M %p') }}</span></div>
                 </div>
                 <div class="txn-right">
                     <div class="txn-amount {% if txn.action in ['DEPOSIT', 'WIN', 'BONUS', 'REFERRAL', 'CLAIM', 'WITHDRAWAL_REFUND', 'ADMIN_ADJUST'] %}credit{% else %}debit{% endif %}">

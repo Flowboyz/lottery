@@ -122,6 +122,19 @@ def send_email(to_email, subject, body):
 
 
 # ---------------------------------------------------------------------------
+# Real IP Helper (PythonAnywhere / reverse proxy support)
+# ---------------------------------------------------------------------------
+def get_real_ip():
+    """Get the real client IP behind a reverse proxy."""
+    if request:
+        forwarded = request.headers.get("X-Forwarded-For", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.remote_addr
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Audit Logger
 # ---------------------------------------------------------------------------
 def log_audit(action, details=None, user_id=None):
@@ -129,7 +142,7 @@ def log_audit(action, details=None, user_id=None):
         user_id=user_id or (current_user.id if current_user and current_user.is_authenticated else None),
         action=action,
         details=details,
-        ip_address=request.remote_addr if request else None,
+        ip_address=get_real_ip(),
     )
     db.session.add(entry)
     db.session.commit()

@@ -1425,6 +1425,51 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
 .how-section ol, .how-section ul { padding-left: 20px; }
 .how-section li { margin-bottom: 6px; }
 
+/* ===== Admin Bet History ===== */
+.bet-filters { margin-bottom: 16px; }
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filter-select { flex: 1; min-width: 120px; height: 42px; }
+.active-filter {
+    padding: 10px 16px; background: var(--bg-elevated); border-radius: 10px;
+    color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;
+    border: 1px solid var(--accent-primary);
+}
+.bet-list { display: flex; flex-direction: column; gap: 8px; }
+.bet-user-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; margin-top: 8px;
+    background: var(--bg-elevated); border-radius: 10px;
+    border-left: 4px solid var(--accent-primary);
+}
+.bet-user-icon { font-size: 18px; }
+.bet-user-name { font-weight: 700; font-size: 15px; color: var(--accent-primary); }
+.bet-card {
+    padding: 14px 16px; background: var(--bg-elevated); border-radius: 12px;
+    border: 1px solid var(--border-subtle); margin-left: 12px;
+}
+.bet-card.bet-win { border-left: 3px solid #22c55e; }
+.bet-card.bet-loss { border-left: 3px solid var(--accent-danger); }
+.bet-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.bet-nums { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bet-num {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card); border-radius: 8px; font-weight: 700; font-size: 14px;
+    color: var(--accent-gold); border: 1px solid var(--border-subtle);
+}
+.bet-equals { font-weight: 700; font-size: 14px; color: var(--text-secondary); }
+.bet-vs { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.bet-lucky {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card); border-radius: 8px; font-weight: 700; font-size: 14px;
+    color: var(--accent-danger); border: 1px solid var(--accent-danger);
+}
+.bet-card-bottom {
+    display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap;
+}
+.bet-stake { font-weight: 600; color: var(--text-secondary); }
+.bet-payout { font-weight: 700; color: #22c55e; }
+.bet-time { margin-left: auto; }
+
 /* ===== Accessibility ===== */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

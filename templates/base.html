@@ -76,5 +76,20 @@
 
     {% block extra_js %}{% endblock %}
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script>
+    // Convert all UTC dates to user's local timezone
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".local-time").forEach(function(el) {
+            var utc = el.getAttribute("data-utc");
+            if (utc) {
+                var d = new Date(utc + "Z"); // append Z to treat as UTC
+                el.textContent = d.toLocaleString(undefined, {
+                    day: "2-digit", month: "short", year: "numeric",
+                    hour: "2-digit", minute: "2-digit", hour12: true
+                });
+            }
+        });
+    });
+    </script>
 </body>
 </html>

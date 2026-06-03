@@ -5,53 +5,88 @@
     <div class="page-card">
         <h2 class="page-heading">Betting History</h2>
 
-        {% if bets.items %}
-        <div class="table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>User</th>
-                        <th>Numbers</th>
-                        <th>Total</th>
-                        <th>Lucky #</th>
-                        <th>Bet</th>
-                        <th>Payout</th>
-                        <th>Result</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for bet in bets.items %}
-                    <tr>
-                        <td>{{ bet.id }}</td>
-                        <td>{{ bet.user.username }}</td>
-                        <td>{{ bet.num1 }}, {{ bet.num2 }}, {{ bet.num3 }}</td>
-                        <td>{{ bet.picked_total }}</td>
-                        <td>{{ bet.lucky_number }}</td>
-                        <td>{{ naira(bet.bet_amount) }}</td>
-                        <td>{{ naira(bet.payout) if bet.payout else '—' }}</td>
-                        <td><span class="result-badge result-{{ bet.result }}">{{ bet.result }}</span></td>
-                        <td>{{ bet.created_at.strftime('%d %b, %H:%M') }}</td>
-                    </tr>
+        <!-- Filters -->
+        <form method="GET" class="bet-filters">
+            <div class="filter-row">
+                <select name="user" class="form-input filter-select">
+                    <option value="">All Users</option>
+                    {% for username in bet_usernames %}
+                    <option value="{{ username }}" {% if user_filter == username %}selected{% endif %}>{{ username }}</option>
                     {% endfor %}
-                </tbody>
-            </table>
+                </select>
+
+                <select name="result" class="form-input filter-select">
+                    <option value="all" {% if result_filter == 'all' %}selected{% endif %}>All Results</option>
+                    <option value="win" {% if result_filter == 'win' %}selected{% endif %}>Wins Only</option>
+                    <option value="loss" {% if result_filter == 'loss' %}selected{% endif %}>Losses Only</option>
+                </select>
+
+                <button type="submit" class="small-btn">Filter</button>
+                {% if user_filter or result_filter != 'all' %}
+                <a href="{{ url_for('admin.betting_history') }}" class="small-btn btn-reject">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if user_filter %}
+        <div class="active-filter">
+            Showing bets for: <strong>{{ user_filter }}</strong>
+            {% if result_filter != 'all' %} | Result: <strong>{{ result_filter|upper }}</strong>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if bets.items %}
+        <div class="bet-list">
+            {% set current_user_display = namespace(name='') %}
+            {% for bet in bets.items %}
+
+            {# Show user header when user changes #}
+            {% if bet.user.username != current_user_display.name %}
+            {% set current_user_display.name = bet.user.username %}
+            <div class="bet-user-header">
+                <span class="bet-user-icon">👤</span>
+                <span class="bet-user-name">{{ bet.user.username }}</span>
+            </div>
+            {% endif %}
+
+            <div class="bet-card bet-{{ bet.result|lower }}">
+                <div class="bet-card-top">
+                    <div class="bet-nums">
+                        <span class="bet-num">{{ bet.num1 }}</span>
+                        <span class="bet-num">{{ bet.num2 }}</span>
+                        <span class="bet-num">{{ bet.num3 }}</span>
+                        <span class="bet-equals">= {{ bet.picked_total }}</span>
+                        <span class="bet-vs">vs</span>
+                        <span class="bet-lucky">{{ bet.lucky_number }}</span>
+                    </div>
+                    <span class="result-badge result-{{ bet.result|lower }}">{{ bet.result }}</span>
+                </div>
+                <div class="bet-card-bottom">
+                    <span class="bet-stake">Bet: {{ naira(bet.bet_amount) }}</span>
+                    {% if bet.payout %}
+                    <span class="bet-payout">Won: {{ naira(bet.payout) }}</span>
+                    {% endif %}
+                    <span class="bet-time"><span class="local-time" data-utc="{{ bet.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ bet.created_at.strftime('%d %b, %H:%M') }}</span></span>
+                </div>
+            </div>
+            {% endfor %}
         </div>
 
+        <!-- Pagination -->
         {% if bets.pages > 1 %}
         <div class="pagination">
             {% if bets.has_prev %}
-            <a href="{{ url_for('admin.betting_history', page=bets.prev_num) }}" class="page-link">← Prev</a>
+            <a href="{{ url_for('admin.betting_history', page=bets.prev_num, user=user_filter, result=result_filter) }}" class="page-link">← Prev</a>
             {% endif %}
             <span class="page-info">Page {{ bets.page }} of {{ bets.pages }}</span>
             {% if bets.has_next %}
-            <a href="{{ url_for('admin.betting_history', page=bets.next_num) }}" class="page-link">Next →</a>
+            <a href="{{ url_for('admin.betting_history', page=bets.next_num, user=user_filter, result=result_filter) }}" class="page-link">Next →</a>
             {% endif %}
         </div>
         {% endif %}
+
         {% else %}
-        <div class="empty-state"><p>No bets placed yet.</p></div>
+        <div class="empty-state"><p>No bets found{% if user_filter %} for "{{ user_filter }}"{% endif %}.</p></div>
         {% endif %}
     </div>
 </div>

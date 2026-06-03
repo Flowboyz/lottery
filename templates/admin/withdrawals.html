@@ -31,7 +31,7 @@
                         <td>{{ wr.account_number or '—' }}</td>
                         <td>{{ wr.account_name or '—' }}</td>
                         <td><span class="status-badge status-{{ wr.status }}">{{ wr.status }}</span></td>
-                        <td>{{ wr.created_at.strftime('%d %b %Y') }}</td>
+                        <td><span class="local-time" data-utc="{{ wr.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ wr.created_at.strftime('%d %b %Y') }}</span></td>
                         <td>
                             {% if wr.status == 'pending' %}
                             <form method="POST" action="{{ url_for('admin.process_withdrawal', wr_id=wr.id) }}" class="inline-form">

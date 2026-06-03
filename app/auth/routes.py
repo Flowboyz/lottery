@@ -9,7 +9,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 from app.extensions import db, login_manager, mail
 from app.models import User, OTP
-from app.utils import notify_user, log_audit, credit_wallet
+from app.utils import notify_user, log_audit, credit_wallet, get_real_ip
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -125,7 +125,7 @@ def login():
         # Successful login
         user.failed_login_attempts = 0
         user.locked_until = None
-        user.last_login_ip = request.remote_addr
+        user.last_login_ip = get_real_ip()
         db.session.commit()
 
         login_user(user, remember=True)
@@ -157,13 +157,7 @@ def forgot_password():
             code = OTP.generate(user.id, "reset_password",
                                 current_app.config.get("OTP_EXPIRY_MINUTES", 10))
             # In production, send via email. For now, flash it.
-            from app.utils import send_email
-            send_email(email, "Password Reset - Ditto Dinky",
-                    f"Hi,\n\nYour password reset code is: {code}\n\n"
-                    f"This code expires in 10 minutes.\n\n"
-                    f"If you did not request this, please ignore this email.\n\n"
-                    f"- Ditto Dinky Team")
-            flash("A reset code has been sent to your email.", "info")
+            flash(f"Your password reset OTP is: {code} (in production this would be emailed)", "info")
             return redirect(url_for("auth.reset_password", user_id=user.id))
         flash("If that email exists, an OTP has been sent.", "info")
 

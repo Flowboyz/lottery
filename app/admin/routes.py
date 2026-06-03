@@ -160,10 +160,27 @@ def process_withdrawal(wr_id):
 @admin_required
 def betting_history():
     page = request.args.get("page", 1, type=int)
-    bets_page = Bet.query.order_by(
+    user_filter = request.args.get("user", "", type=str).strip()
+    result_filter = request.args.get("result", "all", type=str)
+
+    query = Bet.query.join(User)
+
+    if user_filter:
+        query = query.filter(User.username.ilike(f"%{user_filter}%"))
+    if result_filter != "all":
+        query = query.filter(Bet.result == result_filter.upper())
+
+    bets_page = query.order_by(
         Bet.created_at.desc()
     ).paginate(page=page, per_page=30, error_out=False)
-    return render_template("admin/bets.html", bets=bets_page)
+
+    # Get all users who have placed bets (for the dropdown)
+    bet_users = db.session.query(User.username).join(Bet).distinct().order_by(User.username).all()
+    bet_usernames = [u[0] for u in bet_users]
+
+    return render_template("admin/bets.html", bets=bets_page,
+                           user_filter=user_filter, result_filter=result_filter,
+                           bet_usernames=bet_usernames)
 
 
 # ────────────────────────── AUDIT LOGS ──────────────────────────
