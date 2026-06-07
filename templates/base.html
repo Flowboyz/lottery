@@ -46,6 +46,15 @@
     {% endif %}
     {% endwith %}
 
+    <!-- Announcement Banner -->
+    {% if announcements %}
+    {% for ann in announcements %}
+    <div class="announcement-banner">
+        <strong>{{ ann.title }}</strong> — {{ ann.message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
     {% block content %}{% endblock %}
 
     {% if current_user.is_authenticated %}

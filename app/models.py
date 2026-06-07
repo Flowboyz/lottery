@@ -28,6 +28,12 @@ class User(UserMixin, db.Model):
     is_email_verified = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
 
+    # Suspend / Ban
+    is_suspended = db.Column(db.Boolean, default=False)
+    suspended_until = db.Column(db.DateTime, nullable=True)
+    is_banned = db.Column(db.Boolean, default=False)
+    ban_reason = db.Column(db.String(200), nullable=True)
+
     # Wallet
     balance = db.Column(db.Float, default=0.0)
 
@@ -73,6 +79,20 @@ class User(UserMixin, db.Model):
             return True
         return False
 
+    @property
+    def account_status(self):
+        if self.is_banned:
+            return "banned"
+        if self.is_suspended:
+            if self.suspended_until and self.suspended_until > datetime.utcnow():
+                return "suspended"
+            else:
+                self.is_suspended = False
+                self.suspended_until = None
+                db.session.commit()
+                return "active"
+        return "active"
+
     def __repr__(self):
         return f"<User {self.username}>"
 
@@ -86,7 +106,7 @@ class OTP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     code = db.Column(db.String(6), nullable=False)
-    purpose = db.Column(db.String(20), nullable=False)  # verify_email | reset_password
+    purpose = db.Column(db.String(20), nullable=False)  # verify_email | reset_password | admin_2fa
     is_used = db.Column(db.Boolean, default=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -118,15 +138,14 @@ class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     action = db.Column(db.String(30), nullable=False)
-    # DEPOSIT, WITHDRAWAL, BET, WIN, LOSS, BONUS, REFERRAL, CLAIM, ADMIN_ADJUST
     amount = db.Column(db.Float, nullable=False)
     balance_before = db.Column(db.Float, nullable=False)
     balance_after = db.Column(db.Float, nullable=False)
     reference = db.Column(db.String(100), nullable=True, index=True)
     description = db.Column(db.String(255), nullable=True)
-    status = db.Column(db.String(20), default="completed")  # pending | completed | failed | cancelled
-    method = db.Column(db.String(30), nullable=True)  # paystack | bank | admin
-    meta = db.Column(db.Text, nullable=True)  # JSON extra data
+    status = db.Column(db.String(20), default="completed")
+    method = db.Column(db.String(30), nullable=True)
+    meta = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     def __repr__(self):
@@ -142,7 +161,7 @@ class LotteryRound(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     round_number = db.Column(db.Integer, unique=True, nullable=False)
     lucky_number = db.Column(db.Integer, nullable=True)
-    status = db.Column(db.String(20), default="open")  # open | closed | settled
+    status = db.Column(db.String(20), default="open")
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     closed_at = db.Column(db.DateTime, nullable=True)
     settled_at = db.Column(db.DateTime, nullable=True)
@@ -166,31 +185,31 @@ class Bet(db.Model):
     bet_amount = db.Column(db.Float, nullable=False)
     lucky_number = db.Column(db.Integer, nullable=True)
     payout = db.Column(db.Float, default=0.0)
-    result = db.Column(db.String(10), nullable=True)  # WIN | LOSS
+    result = db.Column(db.String(10), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 # ---------------------------------------------------------------------------
-# Payment Record (Paystack / Flutterwave)
+# Payment Record
 # ---------------------------------------------------------------------------
 class PaymentRecord(db.Model):
     __tablename__ = "payment_records"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    provider = db.Column(db.String(20), nullable=False)  # paystack | flutterwave
-    payment_type = db.Column(db.String(20), nullable=False)  # deposit | withdrawal
+    provider = db.Column(db.String(20), nullable=False)
+    payment_type = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     reference = db.Column(db.String(100), unique=True, nullable=False)
     provider_reference = db.Column(db.String(100), nullable=True)
-    status = db.Column(db.String(20), default="pending")  # pending | success | failed
+    status = db.Column(db.String(20), default="pending")
     meta = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 # ---------------------------------------------------------------------------
-# Withdrawal Request (admin approval flow)
+# Withdrawal Request
 # ---------------------------------------------------------------------------
 class WithdrawalRequest(db.Model):
     __tablename__ = "withdrawal_requests"
@@ -202,7 +221,7 @@ class WithdrawalRequest(db.Model):
     bank_name = db.Column(db.String(100), nullable=True)
     account_number = db.Column(db.String(20), nullable=True)
     account_name = db.Column(db.String(100), nullable=True)
-    status = db.Column(db.String(20), default="pending")  # pending | approved | rejected
+    status = db.Column(db.String(20), default="pending")
     admin_note = db.Column(db.String(255), nullable=True)
     reviewed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -223,7 +242,7 @@ class Notification(db.Model):
     title = db.Column(db.String(100), nullable=False)
     message = db.Column(db.String(500), nullable=False)
     is_read = db.Column(db.Boolean, default=False)
-    category = db.Column(db.String(20), default="info")  # info | win | deposit | withdrawal | system
+    category = db.Column(db.String(20), default="info")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -244,7 +263,7 @@ class AuditLog(db.Model):
 
 
 # ---------------------------------------------------------------------------
-# Bank Account (saved beneficiary accounts)
+# Bank Account
 # ---------------------------------------------------------------------------
 class BankAccount(db.Model):
     __tablename__ = "bank_accounts"
@@ -259,5 +278,33 @@ class BankAccount(db.Model):
 
     user = db.relationship("User", backref=db.backref("bank_accounts", lazy="dynamic"))
 
-    def __repr__(self):
-        return f"<BankAccount {self.bank_name} - {self.account_number}>"
+
+# ---------------------------------------------------------------------------
+# Game Settings (dynamic config from admin panel)
+# ---------------------------------------------------------------------------
+class GameSettings(db.Model):
+    __tablename__ = "game_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.String(200), nullable=False)
+    label = db.Column(db.String(100), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Announcement
+# ---------------------------------------------------------------------------
+class Announcement(db.Model):
+    __tablename__ = "announcements"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=True)
+
+    author = db.relationship("User", backref="announcements")

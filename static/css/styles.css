@@ -1486,6 +1486,54 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
 .audit-details { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 .audit-ip { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-family: monospace; }
 
+/* ===== Announcement Banner ===== */
+.announcement-banner {
+    position: fixed; top: 72px; left: 0; width: 100%; z-index: 998;
+    padding: 10px 20px; background: linear-gradient(135deg, #78350f, #92400e);
+    color: #fde68a; font-size: 13px; text-align: center;
+    border-bottom: 1px solid #f59e0b; font-weight: 500;
+}
+.announcement-banner + .announcement-banner { top: 108px; }
+
+/* ===== Dashboard Sections ===== */
+.dash-section { margin-bottom: 24px; }
+
+/* Stat card color variants */
+.stat-green { border-left: 3px solid #22c55e; }
+.stat-red { border-left: 3px solid var(--accent-danger); }
+.stat-gold { border-left: 3px solid var(--accent-gold); }
+.stat-blue { border-left: 3px solid #3b82f6; }
+
+/* Export row */
+.export-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ===== Settings Grid ===== */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-hint { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* ===== Announcements List ===== */
+.ann-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.ann-item {
+    padding: 16px; background: var(--bg-elevated); border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+}
+.ann-item.ann-active { border-left: 3px solid #22c55e; }
+.ann-item.ann-inactive { border-left: 3px solid var(--text-muted); opacity: 0.7; }
+.ann-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ann-message { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
+.ann-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+.ann-actions { display: flex; gap: 8px; }
+
+/* ===== Action Buttons ===== */
+.action-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.inline-action-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* ===== Info Strip ===== */
+.info-strip {
+    text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);
+    background: var(--bg-elevated); border-radius: 10px; margin-top: 12px;
+}
+
 /* ===== Accessibility ===== */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

@@ -56,12 +56,18 @@ def create_app(config_name=None):
     def inject_helpers():
         from app.utils import naira
         from flask_login import current_user as cu
+        from datetime import datetime
         ctx = dict(naira=naira)
         if cu.is_authenticated:
-            from app.models import Notification
+            from app.models import Notification, Announcement
             ctx["unread_count"] = Notification.query.filter_by(
                 user_id=cu.id, is_read=False
             ).count()
+        # Active announcements for all users
+        from app.models import Announcement
+        ctx["announcements"] = Announcement.query.filter_by(is_active=True).filter(
+            db.or_(Announcement.expires_at.is_(None), Announcement.expires_at > datetime.utcnow())
+        ).order_by(Announcement.created_at.desc()).limit(3).all()
         return ctx
 
     # Create tables on first request if they don't exist
@@ -69,7 +75,7 @@ def create_app(config_name=None):
         from app.models import (
             User, OTP, Transaction, LotteryRound, Bet,
             PaymentRecord, WithdrawalRequest, Notification, AuditLog,
-            BankAccount
+            BankAccount, GameSettings, Announcement
         )
         db.create_all()
 

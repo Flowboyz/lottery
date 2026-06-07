@@ -6,7 +6,7 @@ import string
 from datetime import datetime, date
 from functools import wraps
 
-from flask import current_app, flash, redirect, url_for, request
+from flask import current_app, flash, redirect, url_for, request, session
 from flask_login import current_user
 
 from app.extensions import db
@@ -17,21 +17,33 @@ from app.models import Transaction, Notification, AuditLog
 # Currency Formatting
 # ---------------------------------------------------------------------------
 def format_money(amount):
-    """Format a number as Nigerian Naira."""
     symbol = current_app.config.get("CURRENCY_SYMBOL", "₦")
     return f"{symbol}{amount:,.2f}"
 
 
 def naira(amount):
-    """Shorthand for Jinja templates."""
     return f"₦{amount:,.2f}"
+
+
+# ---------------------------------------------------------------------------
+# Game Settings (DB-backed with config fallback)
+# ---------------------------------------------------------------------------
+def get_setting(key, default=None):
+    """Get a game setting from DB, falling back to app config, then default."""
+    from app.models import GameSettings
+    setting = GameSettings.query.filter_by(key=key).first()
+    if setting:
+        try:
+            return float(setting.value)
+        except (ValueError, TypeError):
+            return setting.value
+    return current_app.config.get(key.upper(), default)
 
 
 # ---------------------------------------------------------------------------
 # Wallet Operations (ledger-safe)
 # ---------------------------------------------------------------------------
 def credit_wallet(user, amount, action, description="", method=None, reference=None):
-    """Add money to user wallet with ledger record."""
     balance_before = user.balance
     user.balance += amount
     balance_after = user.balance
@@ -53,7 +65,6 @@ def credit_wallet(user, amount, action, description="", method=None, reference=N
 
 
 def debit_wallet(user, amount, action, description="", method=None, reference=None):
-    """Remove money from user wallet with ledger record."""
     if user.balance < amount:
         return None
     balance_before = user.balance
@@ -103,7 +114,6 @@ def notify_user(user_id, title, message, category="info"):
 # Email Helper
 # ---------------------------------------------------------------------------
 def send_email(to_email, subject, body):
-    """Send an email. Fails silently if mail is not configured."""
     if not to_email:
         return
     try:
@@ -117,15 +127,35 @@ def send_email(to_email, subject, body):
         )
         mail.send(msg)
     except Exception as e:
-        # Log but don't crash if email fails
         current_app.logger.warning(f"Email send failed to {to_email}: {e}")
 
 
 # ---------------------------------------------------------------------------
-# Real IP Helper (PythonAnywhere / reverse proxy support)
+# Admin Alert (email superadmin on critical actions)
+# ---------------------------------------------------------------------------
+def admin_alert(action, details):
+    """Send email to all superadmins about critical admin actions."""
+    from app.models import User
+    superadmins = User.query.filter_by(role="superadmin").all()
+    for sa in superadmins:
+        if sa.email:
+            send_email(
+                sa.email,
+                f"Admin Alert: {action} - Ditto Dinky",
+                f"ADMIN ALERT\n\n"
+                f"Action: {action}\n"
+                f"By: {current_user.username if current_user.is_authenticated else 'Unknown'}\n"
+                f"Details: {details}\n"
+                f"Time: {datetime.utcnow().strftime('%d %b %Y, %H:%M UTC')}\n"
+                f"IP: {get_real_ip()}\n\n"
+                f"- Ditto Dinky Security"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Real IP Helper
 # ---------------------------------------------------------------------------
 def get_real_ip():
-    """Get the real client IP behind a reverse proxy."""
     if request:
         forwarded = request.headers.get("X-Forwarded-For", "")
         if forwarded:
@@ -159,6 +189,18 @@ def admin_required(f):
         if current_user.role not in ("admin", "superadmin"):
             flash("Access denied.", "error")
             return redirect(url_for("game.home"))
+        # Admin session timeout check
+        last_active = session.get("admin_last_active")
+        if last_active:
+            from datetime import datetime
+            elapsed = (datetime.utcnow() - datetime.fromisoformat(last_active)).total_seconds()
+            timeout = current_app.config.get("ADMIN_SESSION_TIMEOUT", 1200)  # 20 min
+            if elapsed > timeout:
+                session.pop("admin_last_active", None)
+                session.pop("admin_2fa_verified", None)
+                flash("Admin session expired. Please login again.", "error")
+                return redirect(url_for("auth.logout"))
+        session["admin_last_active"] = datetime.utcnow().isoformat()
         return f(*args, **kwargs)
     return decorated
 
@@ -171,6 +213,7 @@ def superadmin_required(f):
         if current_user.role != "superadmin":
             flash("Access denied.", "error")
             return redirect(url_for("game.home"))
+        session["admin_last_active"] = datetime.utcnow().isoformat()
         return f(*args, **kwargs)
     return decorated
 
@@ -179,11 +222,10 @@ def superadmin_required(f):
 # Daily Bet Limit Check
 # ---------------------------------------------------------------------------
 def check_daily_bet_limit(user, bet_amount):
-    """Returns True if bet is within daily limit."""
     today = date.today()
     if user.daily_bet_date != today:
         user.daily_bet_total = 0.0
         user.daily_bet_date = today
         db.session.commit()
-    max_daily = current_app.config.get("MAX_DAILY_BET", 50000)
+    max_daily = get_setting("MAX_DAILY_BET", 50000)
     return (user.daily_bet_total + bet_amount) <= max_daily

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Game Settings - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Game Settings</h2>
+        <p class="page-subtitle">Changes take effect immediately. No restart needed.</p>
+
+        <form method="POST" action="{{ url_for('admin.game_settings') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label>Win Probability (0-1)</label>
+                    <input type="number" name="win_probability" value="{{ settings.WIN_PROBABILITY }}" step="0.01" min="0" max="1" class="form-input">
+                    <small class="form-hint">0.10 = 10% chance to win</small>
+                </div>
+                <div class="form-group">
+                    <label>Payout Multiplier</label>
+                    <input type="number" name="payout_multiplier" value="{{ settings.PAYOUT_MULTIPLIER }}" step="0.5" min="1" class="form-input">
+                    <small class="form-hint">Win = bet × this number</small>
+                </div>
+                <div class="form-group">
+                    <label>Max Daily Bet (₦)</label>
+                    <input type="number" name="max_daily_bet" value="{{ settings.MAX_DAILY_BET|int }}" step="1000" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Daily Claim Amount (₦)</label>
+                    <input type="number" name="daily_claim_amount" value="{{ settings.DAILY_CLAIM_AMOUNT|int }}" step="100" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Cooldown (seconds)</label>
+                    <input type="number" name="cooldown_seconds" value="{{ settings.COOLDOWN_SECONDS|int }}" min="0" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Signup Bonus (₦)</label>
+                    <input type="number" name="signup_bonus" value="{{ settings.SIGNUP_BONUS|int }}" step="50" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Referral Bonus (₦)</label>
+                    <input type="number" name="referral_bonus" value="{{ settings.REFERRAL_BONUS|int }}" step="50" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Min Deposit (₦)</label>
+                    <input type="number" name="min_deposit" value="{{ settings.MIN_DEPOSIT|int }}" step="100" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Min Withdrawal (₦)</label>
+                    <input type="number" name="min_withdrawal" value="{{ settings.MIN_WITHDRAWAL|int }}" step="100" class="form-input">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top:16px;">
+                <label>Your Password (required to save)</label>
+                <input type="password" name="admin_password" placeholder="Enter your password" class="form-input" required>
+            </div>
+
+            <button type="submit" class="submit-btn">Save Settings</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

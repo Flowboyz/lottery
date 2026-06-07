@@ -12,7 +12,7 @@ from app.extensions import db
 from app.models import Bet, LotteryRound
 from app.utils import (
     credit_wallet, debit_wallet, notify_user, log_audit,
-    check_daily_bet_limit, format_money,
+    check_daily_bet_limit, format_money, get_setting,
 )
 
 game_bp = Blueprint("game", __name__)
@@ -25,7 +25,7 @@ def home():
     current_time = int(time.time())
 
     # Cooldown
-    cooldown = current_app.config["COOLDOWN_SECONDS"]
+    cooldown = get_setting('COOLDOWN_SECONDS', 10)
     remaining_cooldown = 0
     if user.last_play_time:
         elapsed = current_time - user.last_play_time
@@ -34,7 +34,7 @@ def home():
 
     # Daily claim countdown
     claim_remaining = 0
-    claim_cooldown = current_app.config["DAILY_CLAIM_COOLDOWN"]
+    claim_cooldown = get_setting('DAILY_CLAIM_COOLDOWN', 86400)
     if user.last_claim_time:
         elapsed = current_time - user.last_claim_time
         if elapsed < claim_cooldown:
@@ -73,7 +73,7 @@ def home():
     return render_template(
         "game/index.html",
         balance=user.balance,
-        win_probability=int(current_app.config["WIN_PROBABILITY"] * 100),
+        win_probability=int(get_setting('WIN_PROBABILITY', 0.10) * 100),
         remaining_cooldown=remaining_cooldown,
         recent_lucky=recent_lucky,
         claim_remaining=claim_remaining,
@@ -95,7 +95,7 @@ def play():
 
     # Cooldown check
     current_time = int(time.time())
-    cooldown = config["COOLDOWN_SECONDS"]
+    cooldown = get_setting('COOLDOWN_SECONDS', 10)
     if user.last_play_time and current_time - user.last_play_time < cooldown:
         flash(f"Wait {cooldown} seconds before playing again.", "error")
         return redirect(url_for("game.home"))
@@ -130,8 +130,8 @@ def play():
     picked_total = num1 + num2 + num3
 
     # Determine outcome using cryptographic randomness
-    win_prob = config["WIN_PROBABILITY"]
-    payout_mult = config["PAYOUT_MULTIPLIER"]
+    win_prob = get_setting('WIN_PROBABILITY', 0.10)
+    payout_mult = get_setting('PAYOUT_MULTIPLIER', 5)
 
     # Use secrets for fair randomness
     win = secrets.randbelow(1000) < int(win_prob * 1000)
@@ -190,8 +190,8 @@ def play():
 def claim():
     user = current_user
     current_time = int(time.time())
-    claim_cooldown = current_app.config["DAILY_CLAIM_COOLDOWN"]
-    reward = current_app.config["DAILY_CLAIM_AMOUNT"]
+    claim_cooldown = get_setting('DAILY_CLAIM_COOLDOWN', 86400)
+    reward = get_setting('DAILY_CLAIM_AMOUNT', 500)
 
     if user.last_claim_time and current_time - user.last_claim_time < claim_cooldown:
         remaining = claim_cooldown - (current_time - user.last_claim_time)

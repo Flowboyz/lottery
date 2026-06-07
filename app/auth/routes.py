@@ -1,15 +1,15 @@
 """
-Authentication blueprint - register, login, logout, OTP, password reset.
+Authentication blueprint - register, login, logout, OTP, password reset, admin 2FA.
 """
 import time
 from datetime import datetime, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 
 from app.extensions import db, login_manager, mail
 from app.models import User, OTP
-from app.utils import notify_user, log_audit, credit_wallet, get_real_ip
+from app.utils import notify_user, log_audit, credit_wallet, get_real_ip, send_email
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -32,7 +32,6 @@ def register():
         password2 = request.form.get("password2", "")
         referral = request.form.get("referral_code", "").strip()
 
-        # Validation
         errors = []
         if len(username) < 3:
             errors.append("Username must be at least 3 characters.")
@@ -56,13 +55,11 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # Signup bonus
         bonus = current_app.config.get("SIGNUP_BONUS", 100)
         if bonus > 0:
             credit_wallet(user, bonus, "BONUS", description="Welcome signup bonus")
             notify_user(user.id, "Welcome Bonus!", f"You received ₦{bonus:,.0f} as a signup bonus!", "info")
 
-        # Referral handling
         if referral:
             referrer = User.query.filter_by(referral_code=referral).first()
             if referrer and referrer.id != user.id:
@@ -97,7 +94,6 @@ def login():
             flash("Invalid username or password.", "error")
             return render_template("auth/login.html")
 
-        # Check lockout
         if user.is_locked:
             remaining = int((user.locked_until - datetime.utcnow()).total_seconds() / 60)
             flash(f"Account locked. Try again in {remaining} minutes.", "error")
@@ -118,16 +114,48 @@ def login():
             flash("Your account has been deactivated.", "error")
             return render_template("auth/login.html")
 
+        # Check banned
+        if user.is_banned:
+            flash(f"Your account has been banned. Reason: {user.ban_reason or 'No reason given'}", "error")
+            return render_template("auth/login.html")
+
+        # Check suspended
+        if user.is_suspended:
+            if user.suspended_until and user.suspended_until > datetime.utcnow():
+                remaining = user.suspended_until.strftime("%d %b %Y, %I:%M %p")
+                flash(f"Your account is suspended until {remaining}.", "error")
+                return render_template("auth/login.html")
+            else:
+                user.is_suspended = False
+                user.suspended_until = None
+                db.session.commit()
+
         if user.is_self_excluded and user.self_exclusion_until and user.self_exclusion_until > datetime.utcnow():
             flash("You are currently self-excluded from playing.", "error")
             return render_template("auth/login.html")
 
-        # Successful login
+        # Successful password check
         user.failed_login_attempts = 0
         user.locked_until = None
         user.last_login_ip = get_real_ip()
         db.session.commit()
 
+        # Admin 2FA: if admin/superadmin, send OTP before granting access
+        if user.role in ("admin", "superadmin") and user.email:
+            code = OTP.generate(user.id, "admin_2fa", expiry_minutes=5)
+            # flash(f"Your password reset OTP is: {code} (in production this would be emailed)", "info")
+            send_email(user.email, "Admin Login OTP - Ditto Dinky",
+                       f"Hi {user.username},\n\n"
+                       f"Your admin login verification code is: {code}\n\n"
+                       f"This code expires in 5 minutes.\n"
+                       f"IP: {get_real_ip()}\n\n"
+                       f"If this wasn't you, change your password immediately.\n\n"
+                       f"- Ditto Dinky Security")
+            session["pending_admin_2fa"] = user.id
+            flash("A verification code has been sent to your email.", "info")
+            return redirect(url_for("auth.admin_2fa"))
+
+        # Regular user login
         login_user(user, remember=True)
         log_audit("LOGIN", f"User {username} logged in", user.id)
 
@@ -137,11 +165,54 @@ def login():
     return render_template("auth/login.html")
 
 
+# ────────────────────────── ADMIN 2FA VERIFICATION ──────────────────────────
+@auth_bp.route("/admin-2fa", methods=["GET", "POST"])
+def admin_2fa():
+    user_id = session.get("pending_admin_2fa")
+    if not user_id:
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        code = request.form.get("otp", "").strip()
+        user = db.session.get(User, user_id)
+
+        if not user:
+            session.pop("pending_admin_2fa", None)
+            flash("Session expired. Please login again.", "error")
+            return redirect(url_for("auth.login"))
+
+        otp = OTP.query.filter_by(
+            user_id=user_id, purpose="admin_2fa", code=code, is_used=False
+        ).first()
+
+        if not otp or not otp.is_valid:
+            flash("Invalid or expired code. Please try again.", "error")
+            return render_template("auth/admin_2fa.html")
+
+        otp.is_used = True
+        db.session.commit()
+
+        session.pop("pending_admin_2fa", None)
+        session["admin_2fa_verified"] = True
+        session["admin_last_active"] = datetime.utcnow().isoformat()
+
+        login_user(user, remember=True)
+        log_audit("ADMIN_LOGIN_2FA", f"Admin {user.username} passed 2FA verification", user.id)
+
+        flash("Welcome back, admin!", "success")
+        return redirect(url_for("admin.dashboard"))
+
+    return render_template("auth/admin_2fa.html")
+
+
 # ────────────────────────── LOGOUT ──────────────────────────
 @auth_bp.route("/logout")
 @login_required
 def logout():
     log_audit("LOGOUT", f"User {current_user.username} logged out")
+    session.pop("admin_2fa_verified", None)
+    session.pop("admin_last_active", None)
+    session.pop("pending_admin_2fa", None)
     logout_user()
     flash("You have been logged out.", "info")
     return redirect(url_for("auth.login"))
@@ -156,8 +227,12 @@ def forgot_password():
         if user:
             code = OTP.generate(user.id, "reset_password",
                                 current_app.config.get("OTP_EXPIRY_MINUTES", 10))
-            # In production, send via email. For now, flash it.
-            flash(f"Your password reset OTP is: {code} (in production this would be emailed)", "info")
+            send_email(email, "Password Reset - Ditto Dinky",
+                       f"Hi,\n\nYour password reset code is: {code}\n\n"
+                       f"This code expires in 10 minutes.\n\n"
+                       f"If you did not request this, please ignore this email.\n\n"
+                       f"- Ditto Dinky Team")
+            flash("A reset code has been sent to your email.", "info")
             return redirect(url_for("auth.reset_password", user_id=user.id))
         flash("If that email exists, an OTP has been sent.", "info")
 

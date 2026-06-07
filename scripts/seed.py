@@ -23,7 +23,7 @@ def seed():
         if not User.query.filter_by(username="superadmin").first():
             sa = User(
                 username="superadmin",
-                email="superadmin@dittodinky.com",
+                email="dittodinky@gmail.com",
                 password_hash=generate_password_hash("SuperAdmin@123"),
                 role="superadmin",
                 balance=0.0,

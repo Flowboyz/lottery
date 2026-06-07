@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Email Users - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Email Users</h2>
+        <p class="page-subtitle">Send an email to all registered users with email addresses. ({{ total_with_email }} users have email)</p>
+
+        <form method="POST" action="{{ url_for('admin.email_users') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label>Send To</label>
+                <select name="target" class="form-input">
+                    <option value="all">All Users with Email ({{ total_with_email }})</option>
+                    <option value="active">Active Users Only (excludes banned/suspended)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" class="form-input" required placeholder="e.g. Important Update from Ditto Dinky">
+            </div>
+
+            <div class="form-group">
+                <label>Message</label>
+                <textarea name="body" class="form-input" rows="6" required placeholder="Write your message here. It will be prefixed with 'Hi [username],' and signed '- Ditto Dinky Team'" style="height:auto;padding:12px;"></textarea>
+            </div>
+
+            <div class="warning-box">
+                This will send an email to {{ total_with_email }} users. Please double-check your message before sending.
+            </div>
+
+            <button type="submit" class="submit-btn" onclick="return confirm('Are you sure you want to send this email to all users?')">Send Email</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
