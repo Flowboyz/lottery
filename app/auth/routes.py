@@ -9,7 +9,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 from app.extensions import db, login_manager, mail
 from app.models import User, OTP
-from app.utils import notify_user, log_audit, credit_wallet, get_real_ip, send_email
+from app.utils import notify_user, log_audit, credit_wallet, get_real_ip, send_email, check_referral_tiers
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -70,6 +70,7 @@ def register():
                               description=f"Referral bonus for inviting {username}")
                 notify_user(referrer.id, "Referral Bonus!",
                             f"You earned ₦{ref_bonus:,.0f} for referring {username}!", "info")
+                check_referral_tiers(referrer)
 
         log_audit("REGISTER", f"New user registered: {username}", user.id)
         flash("Account created successfully! Please login.", "success")
@@ -143,7 +144,6 @@ def login():
         # Admin 2FA: if admin/superadmin, send OTP before granting access
         if user.role in ("admin", "superadmin") and user.email:
             code = OTP.generate(user.id, "admin_2fa", expiry_minutes=5)
-            # flash(f"Your password reset OTP is: {code} (in production this would be emailed)", "info")
             send_email(user.email, "Admin Login OTP - Ditto Dinky",
                        f"Hi {user.username},\n\n"
                        f"Your admin login verification code is: {code}\n\n"

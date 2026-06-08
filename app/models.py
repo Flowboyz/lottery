@@ -53,6 +53,7 @@ class User(UserMixin, db.Model):
     # Referral
     referral_code = db.Column(db.String(10), unique=True, nullable=True)
     referred_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    referral_tier_claimed = db.Column(db.Integer, default=0)  # highest tier milestone claimed
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

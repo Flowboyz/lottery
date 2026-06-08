@@ -1533,6 +1533,58 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
     text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);
     background: var(--bg-elevated); border-radius: 10px; margin-top: 12px;
 }
+/* ===== Leaderboard ===== */
+.lb-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.lb-tab {
+    flex: 1; padding: 12px; border: none; border-radius: 12px; cursor: pointer;
+    font-weight: 700; font-size: 14px; transition: all 0.2s ease;
+    background: var(--bg-elevated); color: var(--text-muted);
+}
+.lb-tab.active { background: var(--accent-primary); color: white; }
+.lb-tab:hover:not(.active) { color: var(--text-primary); }
+
+.lb-period { display: flex; gap: 6px; margin-bottom: 16px; }
+.lb-period-btn {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; color: var(--text-muted); background: var(--bg-elevated);
+    transition: all 0.2s ease;
+}
+.lb-period-btn.active { background: var(--accent-secondary); color: white; }
+.lb-period-btn:hover:not(.active) { color: var(--text-primary); }
+
+.lb-list { display: flex; flex-direction: column; gap: 8px; }
+.lb-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; background: var(--bg-elevated); border-radius: 12px;
+    border: 1px solid var(--border-subtle); transition: all 0.2s ease;
+}
+.lb-item.lb-top3 {
+    border-color: var(--accent-gold);
+    background: linear-gradient(135deg, var(--bg-elevated), rgba(251, 191, 36, 0.05));
+}
+.lb-rank {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: var(--text-muted);
+    background: var(--bg-card); border-radius: 10px; flex-shrink: 0;
+}
+.lb-top3 .lb-rank { font-size: 22px; background: transparent; }
+.lb-info { flex: 1; }
+.lb-name { font-weight: 700; font-size: 15px; color: var(--text-primary); }
+.lb-sub { font-size: 12px; color: var(--text-muted); }
+.lb-amount { font-weight: 700; font-size: 15px; text-align: right; }
+.lb-win { color: #22c55e; }
+.lb-ref { color: var(--accent-primary); }
+
+/* Tier Cards */
+.tier-info { margin-bottom: 20px; }
+.tier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tier-card {
+    padding: 14px; background: var(--bg-elevated); border-radius: 12px;
+    border: 1px solid var(--border-subtle); text-align: center;
+}
+.tier-title { font-weight: 700; font-size: 13px; color: var(--accent-gold); margin-bottom: 4px; }
+.tier-req { font-size: 12px; color: var(--text-muted); }
+.tier-reward { font-size: 18px; font-weight: 800; color: #22c55e; margin-top: 4px; }
 
 /* ===== Accessibility ===== */
 @media (prefers-reduced-motion: reduce) {

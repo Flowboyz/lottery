@@ -153,6 +153,33 @@ def admin_alert(action, details):
 
 
 # ---------------------------------------------------------------------------
+# Referral Tier Rewards
+# ---------------------------------------------------------------------------
+REFERRAL_TIERS = [
+    (5, 2000, "Bronze Referrer"),
+    (10, 5000, "Silver Referrer"),
+    (20, 10000, "Gold Referrer"),
+    (50, 25000, "Diamond Referrer"),
+]
+
+
+def check_referral_tiers(referrer):
+    """Check if a referrer has crossed a new tier and award bonus."""
+    from app.models import User
+    referral_count = User.query.filter_by(referred_by=referrer.id).count()
+    already_claimed = referrer.referral_tier_claimed or 0
+
+    for threshold, bonus, title in REFERRAL_TIERS:
+        if referral_count >= threshold and already_claimed < threshold:
+            credit_wallet(referrer, bonus, "REFERRAL",
+                          description=f"{title} reward — {threshold} referrals!")
+            notify_user(referrer.id, f"{title} Unlocked!",
+                        f"You've referred {threshold} people! Bonus: ₦{bonus:,.0f} credited!", "info")
+            referrer.referral_tier_claimed = threshold
+            db.session.commit()
+
+
+# ---------------------------------------------------------------------------
 # Real IP Helper
 # ---------------------------------------------------------------------------
 def get_real_ip():

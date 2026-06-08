@@ -212,3 +212,49 @@ def claim():
 @game_bp.route("/how-to-play")
 def how_to_play():
     return render_template("game/how_to_play.html")
+
+
+# ────────────────────────── LEADERBOARD ──────────────────────────
+@game_bp.route("/leaderboard")
+@login_required
+def leaderboard():
+    from app.models import User
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+
+    period = request.args.get("period", "weekly")
+
+    # Date filter
+    if period == "daily":
+        since = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "monthly":
+        since = datetime.utcnow() - timedelta(days=30)
+    else:
+        since = datetime.utcnow() - timedelta(days=7)
+
+    # Top winners by payout
+    top_winners = db.session.query(
+        User.username,
+        func.count(Bet.id).label("wins"),
+        func.sum(Bet.payout).label("total_won"),
+    ).join(User).filter(
+        Bet.result == "WIN",
+        Bet.created_at >= since,
+    ).group_by(User.id).order_by(func.sum(Bet.payout).desc()).limit(20).all()
+
+    # Top referrers (all time) - self-join on users table
+    from sqlalchemy import func as sqfunc
+    referred = db.aliased(User)
+    top_referrers = db.session.query(
+        User.username,
+        sqfunc.count(referred.id).label("ref_count"),
+    ).join(referred, referred.referred_by == User.id).group_by(
+        User.id
+    ).order_by(sqfunc.count(referred.id).desc()).limit(20).all()
+
+    # Referral tiers info
+    from app.utils import REFERRAL_TIERS
+
+    return render_template("game/leaderboard.html",
+                           top_winners=top_winners, top_referrers=top_referrers,
+                           period=period, tiers=REFERRAL_TIERS)

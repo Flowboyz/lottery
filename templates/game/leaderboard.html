@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Leaderboard</h2>
+
+        <!-- Tab Switcher -->
+        <div class="lb-tabs">
+            <button class="lb-tab active" onclick="showTab('winners', this)">🏆 Top Winners</button>
+            <button class="lb-tab" onclick="showTab('referrers', this)">👥 Top Referrers</button>
+        </div>
+
+        <!-- Winners Tab -->
+        <div id="tab-winners" class="lb-panel">
+            <!-- Period Filter -->
+            <div class="lb-period">
+                <a href="{{ url_for('game.leaderboard', period='daily') }}" class="lb-period-btn {% if period == 'daily' %}active{% endif %}">Today</a>
+                <a href="{{ url_for('game.leaderboard', period='weekly') }}" class="lb-period-btn {% if period == 'weekly' %}active{% endif %}">This Week</a>
+                <a href="{{ url_for('game.leaderboard', period='monthly') }}" class="lb-period-btn {% if period == 'monthly' %}active{% endif %}">This Month</a>
+            </div>
+
+            {% if top_winners %}
+            <div class="lb-list">
+                {% for winner in top_winners %}
+                <div class="lb-item {% if loop.index <= 3 %}lb-top3{% endif %}">
+                    <div class="lb-rank">
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}{{ loop.index }}{% endif %}
+                    </div>
+                    <div class="lb-info">
+                        <div class="lb-name">{{ winner.username }}</div>
+                        <div class="lb-sub">{{ winner.wins }} win{{ 's' if winner.wins != 1 else '' }}</div>
+                    </div>
+                    <div class="lb-amount lb-win">{{ naira(winner.total_won) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state"><p>No winners yet for this period. Be the first!</p></div>
+            {% endif %}
+        </div>
+
+        <!-- Referrers Tab -->
+        <div id="tab-referrers" class="lb-panel" style="display:none;">
+            <!-- Tier Info -->
+            <div class="tier-info">
+                <h4 class="form-subtitle" style="margin-top:0;">Referral Milestones</h4>
+                <div class="tier-grid">
+                    {% for threshold, bonus, title in tiers %}
+                    <div class="tier-card">
+                        <div class="tier-title">{{ title }}</div>
+                        <div class="tier-req">{{ threshold }} referrals</div>
+                        <div class="tier-reward">₦{{ "{:,.0f}".format(bonus) }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if top_referrers %}
+            <div class="lb-list">
+                {% for ref in top_referrers %}
+                <div class="lb-item {% if loop.index <= 3 %}lb-top3{% endif %}">
+                    <div class="lb-rank">
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}{{ loop.index }}{% endif %}
+                    </div>
+                    <div class="lb-info">
+                        <div class="lb-name">{{ ref.username }}</div>
+                    </div>
+                    <div class="lb-amount lb-ref">{{ ref.ref_count }} referral{{ 's' if ref.ref_count != 1 else '' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state"><p>No referrals yet. Share your code from your Profile!</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(tab, btn) {
+    document.querySelectorAll('.lb-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).style.display = 'block';
+    btn.classList.add('active');
+}
+</script>
+{% endblock %}
