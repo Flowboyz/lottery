@@ -2,8 +2,8 @@
 {% block title %}Admin Verification - DITTO DINKY{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card">
+<div class="container">
+    <div class="header">
         <h2 class="auth-title">Admin Verification</h2>
         <p class="auth-subtitle">Enter the 6-digit code sent to your email to continue.</p>
         <form method="POST" action="{{ url_for('auth.admin_2fa') }}">

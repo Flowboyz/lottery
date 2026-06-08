@@ -58,6 +58,11 @@
     {% block content %}{% endblock %}
 
     {% if current_user.is_authenticated %}
+    <div style="text-align:center;padding:8px 0;font-size:11px;">
+        <a href="{{ url_for('legal.terms') }}" style="color:var(--text-muted);text-decoration:none;">Terms</a> · 
+        <a href="{{ url_for('legal.privacy') }}" style="color:var(--text-muted);text-decoration:none;">Privacy</a> · 
+        <a href="{{ url_for('legal.responsible_gambling') }}" style="color:var(--text-muted);text-decoration:none;">Responsible Gambling</a>
+    </div>
     <!-- Footer Navigation -->
     <nav class="footer-nav">
         <a href="{{ url_for('game.home') }}" class="footer-nav-item {% if request.endpoint == 'game.home' %}active{% endif %}">
