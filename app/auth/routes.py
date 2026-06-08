@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 
+from app import referral
 from app.extensions import db, login_manager, mail
 from app.models import User, OTP
 from app.utils import notify_user, log_audit, credit_wallet, get_real_ip, send_email, check_referral_tiers
@@ -52,6 +53,7 @@ def register():
         user = User(username=username, email=email or None)
         user.set_password(password)
         user.generate_referral_code()
+        user.registration_ip = get_real_ip()
         db.session.add(user)
         db.session.commit()
 
@@ -65,12 +67,26 @@ def register():
             if referrer and referrer.id != user.id:
                 user.referred_by = referrer.id
                 db.session.commit()
-                ref_bonus = current_app.config.get("REFERRAL_BONUS", 200)
-                credit_wallet(referrer, ref_bonus, "REFERRAL",
-                              description=f"Referral bonus for inviting {username}")
-                notify_user(referrer.id, "Referral Bonus!",
-                            f"You earned ₦{ref_bonus:,.0f} for referring {username}!", "info")
-                check_referral_tiers(referrer)
+
+                # IP fraud check — block if same IP already referred by this person
+                ip = get_real_ip()
+                duplicate_ip = User.query.filter(
+                    User.referred_by == referrer.id,
+                    User.registration_ip == ip,
+                    User.id != user.id,
+                ).first()
+
+                if duplicate_ip:
+                    log_audit("REFERRAL_FLAGGED",
+                              f"Blocked referral bonus: {username} has same IP ({ip}) as {duplicate_ip.username}",
+                              referrer.id)
+                else:
+                    ref_bonus = current_app.config.get("REFERRAL_BONUS", 200)
+                    credit_wallet(referrer, ref_bonus, "REFERRAL",
+                                  description=f"Referral bonus for inviting {username}")
+                    notify_user(referrer.id, "Referral Bonus!",
+                                f"You earned ₦{ref_bonus:,.0f} for referring {username}!", "info")
+                    check_referral_tiers(referrer)
 
         log_audit("REGISTER", f"New user registered: {username}", user.id)
         flash("Account created successfully! Please login.", "success")

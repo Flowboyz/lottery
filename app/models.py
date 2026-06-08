@@ -43,6 +43,9 @@ class User(UserMixin, db.Model):
     is_self_excluded = db.Column(db.Boolean, default=False)
     self_exclusion_until = db.Column(db.DateTime, nullable=True)
 
+    # Registration
+    registration_ip = db.Column(db.String(45), nullable=True)
+    
     # Security
     failed_login_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
