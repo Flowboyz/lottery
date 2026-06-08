@@ -3,6 +3,7 @@ Admin blueprint - dashboard, user management, game settings, announcements, expo
 """
 import csv
 import io
+import time
 from datetime import datetime, timedelta, date
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -514,13 +515,18 @@ def email_users():
 
         users_with_email = query.all()
         sent_count = 0
+        fail_count = 0
         for user in users_with_email:
-            send_email(user.email, subject,
-                       f"Hi {user.username},\n\n{body}\n\n- Ditto Dinky Team")
-            sent_count += 1
+            try:
+                send_email(user.email, subject,
+                           f"Hi {user.username},\n\n{body}\n\n- Ditto Dinky Team")
+                sent_count += 1
+                time.sleep(1)  # 1 second delay between emails to avoid Gmail throttling
+            except Exception:
+                fail_count += 1
 
         log_audit("BULK_EMAIL", f"Sent email to {sent_count} users. Subject: {subject}")
-        flash(f"Email sent to {sent_count} users.", "success")
+        flash(f"Email sent to {sent_count} users. {fail_count} failed.", "success")
         return redirect(url_for("admin.email_users"))
 
     total_with_email = User.query.filter(User.email.isnot(None), User.email != "").count()

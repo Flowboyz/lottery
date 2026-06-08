@@ -116,20 +116,23 @@ def notify_user(user_id, title, message, category="info"):
 def send_email(to_email, subject, body):
     if not to_email:
         return
-    try:
-        from flask_mail import Message
-        from app.extensions import mail
-        msg = Message(
-            subject=subject,
-            recipients=[to_email],
-            body=body,
-            sender=current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@dittodinky.com"),
-        )
-        mail.send(msg)
-    except Exception as e:
-        current_app.logger.warning(f"Email send failed to {to_email}: {e}")
-
-
+    import time
+    from flask_mail import Message
+    from app.extensions import mail
+    for attempt in range(3):
+        try:
+            msg = Message(
+                subject=subject,
+                recipients=[to_email],
+                body=body,
+                sender=current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@dittodinky.com"),
+            )
+            mail.send(msg)
+            return
+        except Exception as e:
+            current_app.logger.warning(f"Email attempt {attempt+1} failed to {to_email}: {e}")
+            if attempt < 2:
+                time.sleep(3)
 # ---------------------------------------------------------------------------
 # Admin Alert (email superadmin on critical actions)
 # ---------------------------------------------------------------------------
