@@ -1533,6 +1533,33 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
     text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);
     background: var(--bg-elevated); border-radius: 10px; margin-top: 12px;
 }
+/* ===== Bulk Action Bar ===== */
+.bulk-bar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 14px 16px; margin-bottom: 16px;
+    background: var(--bg-elevated); border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+}
+.bulk-count { font-size: 13px; font-weight: 700; color: var(--accent-primary); min-width: 80px; }
+
+/* ===== Email User Selection List ===== */
+.email-select-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.email-user-list {
+    max-height: 300px; overflow-y: auto;
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+}
+.email-user-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.12s ease; font-size: 13px;
+}
+.email-user-item:last-child { border-bottom: none; }
+.email-user-item:hover { background: var(--bg-hover, var(--bg-card)); }
+.email-user-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+.email-user-name { font-weight: 600; color: var(--text-primary); }
+.email-user-addr { color: var(--text-muted); font-size: 12px; margin-left: auto; }
 /* ===== Leaderboard ===== */
 .lb-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
 .lb-tab {

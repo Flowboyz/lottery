@@ -3,7 +3,6 @@ Admin blueprint - dashboard, user management, game settings, announcements, expo
 """
 import csv
 import io
-import time
 from datetime import datetime, timedelta, date
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -191,6 +190,58 @@ def update_balance(user_id):
     admin_alert("Balance Adjustment", f"{action.title()} {format_money(amount)} for {user.username}")
     flash(f"Balance updated for {user.username}.", "success")
     return redirect(url_for("admin.user_detail", user_id=user_id))
+
+
+# ────────────────────────── BULK BALANCE ──────────────────────────
+@admin_bp.route("/bulk-balance", methods=["POST"])
+@login_required
+@superadmin_required
+def bulk_balance():
+    if not verify_admin_password():
+        flash("Admin password required for bulk balance.", "error")
+        return redirect(url_for("admin.users"))
+
+    user_ids = request.form.getlist("user_ids", type=int)
+    if not user_ids:
+        flash("No users selected.", "error")
+        return redirect(url_for("admin.users"))
+
+    try:
+        amount = float(request.form.get("amount", 0))
+    except (ValueError, TypeError):
+        flash("Invalid amount.", "error")
+        return redirect(url_for("admin.users"))
+
+    if amount <= 0:
+        flash("Amount must be positive.", "error")
+        return redirect(url_for("admin.users"))
+
+    action = request.form.get("action", "credit")
+    success_count = 0
+    fail_count = 0
+
+    for uid in user_ids:
+        user = db.session.get(User, uid)
+        if not user:
+            fail_count += 1
+            continue
+
+        if action == "credit":
+            credit_wallet(user, amount, "ADMIN_ADJUST",
+                          description=f"Bulk credit {format_money(amount)}", method="admin")
+            success_count += 1
+        else:
+            txn = debit_wallet(user, amount, "ADMIN_ADJUST",
+                               description=f"Bulk debit {format_money(amount)}", method="admin")
+            if txn:
+                success_count += 1
+            else:
+                fail_count += 1
+
+    log_audit("BULK_BALANCE", f"{action.title()} {format_money(amount)} to {success_count} users ({fail_count} failed)")
+    admin_alert("Bulk Balance", f"{action.title()} {format_money(amount)} to {success_count} users")
+    flash(f"{action.title()} {format_money(amount)} applied to {success_count} users. {fail_count} failed.", "success")
+    return redirect(url_for("admin.users"))
 
 
 # ────────────────────────── SUSPEND / BAN ──────────────────────────
@@ -503,34 +554,38 @@ def email_users():
     if request.method == "POST":
         subject = request.form.get("subject", "").strip()
         body = request.form.get("body", "").strip()
-        target = request.form.get("target", "all")
+        selected_ids = request.form.getlist("send_to", type=int)
 
         if not subject or not body:
             flash("Subject and message are required.", "error")
             return redirect(url_for("admin.email_users"))
 
-        query = User.query.filter(User.email.isnot(None), User.email != "")
-        if target == "active":
-            query = query.filter_by(is_banned=False, is_suspended=False)
+        if not selected_ids:
+            flash("No recipients selected.", "error")
+            return redirect(url_for("admin.email_users"))
 
-        users_with_email = query.all()
+        import time
+        users_to_email = User.query.filter(User.id.in_(selected_ids)).all()
         sent_count = 0
         fail_count = 0
-        for user in users_with_email:
-            try:
-                send_email(user.email, subject,
-                           f"Hi {user.username},\n\n{body}\n\n- Ditto Dinky Team")
-                sent_count += 1
-                time.sleep(1)  # 1 second delay between emails to avoid Gmail throttling
-            except Exception:
-                fail_count += 1
+        for user in users_to_email:
+            if user.email:
+                try:
+                    send_email(user.email, subject,
+                               f"Hi {user.username},\n\n{body}\n\n- Ditto Dinky Team")
+                    sent_count += 1
+                    time.sleep(1)
+                except Exception:
+                    fail_count += 1
 
-        log_audit("BULK_EMAIL", f"Sent email to {sent_count} users. Subject: {subject}")
+        log_audit("BULK_EMAIL", f"Sent email to {sent_count} users ({fail_count} failed). Subject: {subject}")
         flash(f"Email sent to {sent_count} users. {fail_count} failed.", "success")
         return redirect(url_for("admin.email_users"))
 
-    total_with_email = User.query.filter(User.email.isnot(None), User.email != "").count()
-    return render_template("admin/email_users.html", total_with_email=total_with_email)
+    all_email_users = User.query.filter(
+        User.email.isnot(None), User.email != ""
+    ).order_by(User.username).all()
+    return render_template("admin/email_users.html", email_users=all_email_users)
 
 
 # ────────────────────────── EXPORT CSV ──────────────────────────
