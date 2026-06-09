@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Spin the Wheel - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card" style="text-align:center;">
+        <h2 class="page-heading">🎡 Spin the Wheel</h2>
+        <p class="page-subtitle">Balance: <span id="balDisplay">{{ naira(current_user.balance) }}</span></p>
+
+        <!-- Wheel -->
+        <div class="wheel-wrapper">
+            <div class="wheel-pointer">▼</div>
+            <canvas id="wheelCanvas" width="300" height="300"></canvas>
+        </div>
+
+        <!-- Result -->
+        <div id="wheelResult" class="wheel-result" style="display:none;"></div>
+
+        <!-- Bet Controls -->
+        <div class="game-controls">
+            <div class="betInput">
+                <label>Bet Amount (₦)</label>
+                <input type="number" id="wheelBet" min="50" step="50" placeholder="Min ₦50" value="100">
+            </div>
+            <div class="input-amount">
+                <button type="button" class="inp-btn" onclick="document.getElementById('wheelBet').value=100">₦100</button>
+                <button type="button" class="inp-btn" onclick="document.getElementById('wheelBet').value=500">₦500</button>
+                <button type="button" class="inp-btn" onclick="document.getElementById('wheelBet').value=1000">₦1K</button>
+                <button type="button" class="inp-btn" onclick="document.getElementById('wheelBet').value=5000">₦5K</button>
+            </div>
+            <button id="spinBtn" class="submit-btn" onclick="spinWheel()">SPIN!</button>
+        </div>
+
+        <a href="{{ url_for('games.hub') }}" class="game-back-link">← Back to Games</a>
+    </div>
+</div>
+
+<!-- How to Play -->
+<button class="help-fab" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
+<div class="help-modal-overlay" id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+    <div class="help-modal">
+        <div class="help-modal-header">
+            <h3>How To Play</h3>
+            <button class="help-modal-close" onclick="document.getElementById('helpModal').style.display='none'">✕</button>
+        </div>
+        <div class="help-modal-body">
+            <div class="help-step"><span class="help-icon">💰</span><div><strong>Set Your Bet</strong><p>Enter a bet amount (min ₦50). Use the quick buttons for common amounts.</p></div></div>
+            <div class="help-step"><span class="help-icon">🎡</span><div><strong>Spin the Wheel</strong><p>Click SPIN and watch the wheel go! It will land on a random segment.</p></div></div>
+            <div class="help-step"><span class="help-icon">✨</span><div><strong>Win Multipliers</strong><p>Land on 1x to get your money back, 2x to double, up to 10x for the jackpot! Land on 💔 and you lose your bet.</p></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SEGMENTS = [
+    {label:"💔",mult:0,color:"#ef4444"},{label:"0.5x",mult:0.5,color:"#8b5cf6"},
+    {label:"1x",mult:1,color:"#3b82f6"},{label:"💔",mult:0,color:"#dc2626"},
+    {label:"1.5x",mult:1.5,color:"#22c55e"},{label:"2x",mult:2,color:"#f59e0b"},
+    {label:"💔",mult:0,color:"#b91c1c"},{label:"3x",mult:3,color:"#ec4899"},
+    {label:"0.5x",mult:0.5,color:"#6366f1"},{label:"5x",mult:5,color:"#14b8a6"},
+    {label:"💔",mult:0,color:"#ef4444"},{label:"10x🎉",mult:10,color:"#fbbf24"}
+];
+
+const canvas = document.getElementById("wheelCanvas");
+const ctx = canvas.getContext("2d");
+const size = canvas.width;
+const center = size / 2;
+const radius = center - 6;
+let currentAngle = 0;
+let spinning = false;
+
+function drawWheel(rotation) {
+    ctx.clearRect(0, 0, size, size);
+    const segAngle = (2 * Math.PI) / SEGMENTS.length;
+
+    SEGMENTS.forEach((seg, i) => {
+        const startAngle = rotation + i * segAngle;
+        const endAngle = startAngle + segAngle;
+
+        // Draw segment
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = seg.color;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Draw text
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(startAngle + segAngle / 2);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 13px sans-serif";
+        ctx.shadowColor = "rgba(0,0,0,0.6)";
+        ctx.shadowBlur = 3;
+        ctx.fillText(seg.label, radius * 0.62, 5);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    });
+
+    // Center circle
+    ctx.beginPath();
+    ctx.arc(center, center, 22, 0, 2 * Math.PI);
+    ctx.fillStyle = "#1a1f3a";
+    ctx.fill();
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("SPIN", center, center + 4);
+}
+
+drawWheel(0);
+
+function spinWheel() {
+    if (spinning) return;
+    const bet = parseFloat(document.getElementById("wheelBet").value);
+    if (!bet || bet < 50) { alert("Minimum bet is ₦50"); return; }
+
+    spinning = true;
+    document.getElementById("spinBtn").disabled = true;
+    document.getElementById("spinBtn").textContent = "Spinning...";
+    document.getElementById("wheelResult").style.display = "none";
+
+    fetch("{{ url_for('games.wheel_spin') }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({bet: bet})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            spinning = false;
+            document.getElementById("spinBtn").disabled = false;
+            document.getElementById("spinBtn").textContent = "SPIN!";
+            return;
+        }
+
+        const segAngle = (2 * Math.PI) / SEGMENTS.length;
+        // Where the target segment center needs to be (pointer at top = -π/2)
+        let desiredRotation = -(data.segment * segAngle + segAngle / 2) - Math.PI / 2;
+        while (desiredRotation < 0) desiredRotation += 2 * Math.PI;
+
+        // How much to spin from current position
+        let curNorm = currentAngle % (2 * Math.PI);
+        if (curNorm < 0) curNorm += 2 * Math.PI;
+        let delta = desiredRotation - curNorm;
+        if (delta <= 0) delta += 2 * Math.PI;
+
+        // Add 4 full rotations for visual effect
+        const totalSpin = delta + Math.PI * 8;
+        const duration = 4000;
+        const startTime = Date.now();
+        const startAngle = currentAngle;
+
+        function animate() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            currentAngle = startAngle + totalSpin * eased;
+            drawWheel(currentAngle);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                showResult(data, bet);
+            }
+        }
+        animate();
+    })
+    .catch(() => {
+        alert("Connection error. Try again.");
+        spinning = false;
+        document.getElementById("spinBtn").disabled = false;
+        document.getElementById("spinBtn").textContent = "SPIN!";
+    });
+}
+
+function showResult(data, bet) {
+    const resultDiv = document.getElementById("wheelResult");
+    if (data.result === "WIN") {
+        resultDiv.className = "wheel-result wheel-win";
+        resultDiv.innerHTML = "🎉 Landed on " + data.label + "! ₦" + bet.toLocaleString() + " × " + data.multiplier + " = <strong>₦" + data.payout.toLocaleString() + "</strong>";
+    } else {
+        resultDiv.className = "wheel-result wheel-lose";
+        resultDiv.innerHTML = "💔 Landed on " + data.label + " — Better luck next time!";
+    }
+    resultDiv.style.display = "block";
+    document.getElementById("balDisplay").textContent = "₦" + data.new_balance.toLocaleString(undefined,{minimumFractionDigits:2});
+    spinning = false;
+    document.getElementById("spinBtn").disabled = false;
+    document.getElementById("spinBtn").textContent = "SPIN!";
+}
+</script>
+{% endblock %}

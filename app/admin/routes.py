@@ -11,7 +11,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import check_password_hash
 
 from app.extensions import db
-from app.models import (User, Transaction, Bet, WithdrawalRequest, PaymentRecord,
+from app.models import (User, GamePlay, Transaction, Bet, WithdrawalRequest, PaymentRecord,
                         AuditLog, Notification, GameSettings, Announcement, BankAccount)
 from app.utils import (admin_required, superadmin_required, credit_wallet, debit_wallet,
                         notify_user, log_audit, format_money, send_email, admin_alert,
@@ -65,15 +65,26 @@ def dashboard():
 
         total_bets=Bet.query.count(),
         bets_today=count_since(Bet, today),
-        total_wagered=db.session.query(db.func.sum(Bet.bet_amount)).scalar() or 0,
-        wagered_today=db.session.query(db.func.sum(Bet.bet_amount)).filter(
-            Bet.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0,
+        total_wagered=(db.session.query(db.func.sum(Bet.bet_amount)).scalar() or 0) +
+                      (db.session.query(db.func.sum(GamePlay.bet_amount)).scalar() or 0),
+        wagered_today=(db.session.query(db.func.sum(Bet.bet_amount)).filter(
+            Bet.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0) +
+                      (db.session.query(db.func.sum(GamePlay.bet_amount)).filter(
+            GamePlay.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0),
 
-        total_payouts=db.session.query(db.func.sum(Bet.payout)).filter(
-            Bet.result == "WIN").scalar() or 0,
-        payouts_today=db.session.query(db.func.sum(Bet.payout)).filter(
+        total_payouts=(db.session.query(db.func.sum(Bet.payout)).filter(
+            Bet.result == "WIN").scalar() or 0) +
+                      (db.session.query(db.func.sum(GamePlay.payout)).filter(
+            GamePlay.result == "WIN").scalar() or 0),
+        payouts_today=(db.session.query(db.func.sum(Bet.payout)).filter(
             Bet.result == "WIN",
-            Bet.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0,
+            Bet.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0) +
+                      (db.session.query(db.func.sum(GamePlay.payout)).filter(
+            GamePlay.result == "WIN",
+            GamePlay.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0),
+
+        total_game_plays=GamePlay.query.count(),
+        game_plays_today=count_since(GamePlay, today),
 
         pending_withdrawals=WithdrawalRequest.query.filter_by(status="pending").count(),
         active_users_today=db.session.query(db.func.count(db.distinct(Bet.user_id))).filter(
@@ -460,6 +471,8 @@ def game_settings():
             "REFERRAL_BONUS": ("Referral Bonus (₦)", request.form.get("referral_bonus")),
             "MIN_DEPOSIT": ("Min Deposit (₦)", request.form.get("min_deposit")),
             "MIN_WITHDRAWAL": ("Min Withdrawal (₦)", request.form.get("min_withdrawal")),
+            "COINFLIP_PAYOUT": ("Coinflip Payout Multiplier", request.form.get("coinflip_payout")),
+            "SCRATCH_WIN_CHANCE": ("Scratch Card Win Chance (0-1)", request.form.get("scratch_win_chance")),
         }
 
         for key, (label, value) in settings_map.items():
@@ -485,6 +498,7 @@ def game_settings():
         "WIN_PROBABILITY": 0.10, "PAYOUT_MULTIPLIER": 5, "MAX_DAILY_BET": 50000,
         "DAILY_CLAIM_AMOUNT": 500, "COOLDOWN_SECONDS": 10, "SIGNUP_BONUS": 100,
         "REFERRAL_BONUS": 200, "MIN_DEPOSIT": 500, "MIN_WITHDRAWAL": 1000,
+        "COINFLIP_PAYOUT": 1.9, "SCRATCH_WIN_CHANCE": 0.30,
     }
     for key, default in defaults.items():
         settings[key] = get_setting(key, default)
@@ -630,3 +644,29 @@ def export_csv(data_type):
         mimetype="text/csv",
         headers={"Content-Disposition": f"attachment; filename=ditto_dinky_{data_type}_{date.today()}.csv"}
     )
+
+
+# ────────────────────────── GAME HISTORY ──────────────────────────
+@admin_bp.route("/game-history")
+@login_required
+@admin_required
+def game_history():
+    page = request.args.get("page", 1, type=int)
+    game_filter = request.args.get("game", "all", type=str)
+    user_filter = request.args.get("user", "", type=str).strip()
+
+    query = GamePlay.query.join(User)
+    if game_filter != "all":
+        query = query.filter(GamePlay.game_type == game_filter)
+    if user_filter:
+        query = query.filter(User.username.ilike(f"%{user_filter}%"))
+
+    plays = query.order_by(GamePlay.created_at.desc()).paginate(
+        page=page, per_page=30, error_out=False)
+
+    game_users = db.session.query(User.username).join(GamePlay).distinct().order_by(User.username).all()
+    user_list = [u[0] for u in game_users]
+
+    return render_template("admin/game_history.html", plays=plays,
+                           game_filter=game_filter, user_filter=user_filter,
+                           user_list=user_list)

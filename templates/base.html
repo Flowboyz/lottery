@@ -59,23 +59,23 @@
 
     {% if current_user.is_authenticated %}
     <div style="text-align:center;padding:8px 0;font-size:11px;">
-        <a href="{{ url_for('legal.terms') }}" style="color:var(--text-muted);text-decoration:none;">Terms</a> · 
-        <a href="{{ url_for('legal.privacy') }}" style="color:var(--text-muted);text-decoration:none;">Privacy</a> · 
+        <a href="{{ url_for('legal.terms') }}" style="color:var(--text-muted);text-decoration:none;">Terms</a> ·
+        <a href="{{ url_for('legal.privacy') }}" style="color:var(--text-muted);text-decoration:none;">Privacy</a> ·
         <a href="{{ url_for('legal.responsible_gambling') }}" style="color:var(--text-muted);text-decoration:none;">Responsible Gambling</a>
     </div>
     <!-- Footer Navigation -->
     <nav class="footer-nav">
         <a href="{{ url_for('game.home') }}" class="footer-nav-item {% if request.endpoint == 'game.home' %}active{% endif %}">
-            <span class="footer-icon">🎰</span>
+            <span class="footer-icon">🎲</span>
             <span class="footer-label">Lottery</span>
         </a>
-        <a href="{{ url_for('wallet.deposit_page') }}" class="footer-nav-item {% if request.endpoint == 'wallet.deposit_page' %}active{% endif %}">
-            <span class="footer-icon">💰</span>
-            <span class="footer-label">Deposit</span>
+        <a href="{{ url_for('games.hub') }}" class="footer-nav-item {% if request.endpoint and request.endpoint.startswith('games.') %}active{% endif %}">
+            <span class="footer-icon">🎮</span>
+            <span class="footer-label">Games</span>
         </a>
-        <a href="{{ url_for('wallet.history') }}" class="footer-nav-item {% if request.endpoint == 'wallet.history' %}active{% endif %}">
-            <span class="footer-icon">📋</span>
-            <span class="footer-label">History</span>
+        <a href="{{ url_for('wallet.deposit_page') }}" class="footer-nav-item {% if request.endpoint == 'wallet.deposit_page' %}active{% endif %}">
+            <span class="footer-icon">💳</span>
+            <span class="footer-label">Deposit</span>
         </a>
         <a href="{{ url_for('game.leaderboard') }}" class="footer-nav-item {% if request.endpoint == 'game.leaderboard' %}active{% endif %}">
             <span class="footer-icon">🏆</span>

@@ -48,6 +48,16 @@
                     <label>Min Withdrawal (₦)</label>
                     <input type="number" name="min_withdrawal" value="{{ settings.MIN_WITHDRAWAL|int }}" step="100" class="form-input">
                 </div>
+                <div class="form-group">
+                    <label>Coinflip Payout</label>
+                    <input type="number" name="coinflip_payout" value="{{ settings.COINFLIP_PAYOUT }}" step="0.1" min="1" class="form-input">
+                    <small class="form-hint">1.9 = 95% RTP (5% house edge)</small>
+                </div>
+                <div class="form-group">
+                    <label>Scratch Win Chance (0-1)</label>
+                    <input type="number" name="scratch_win_chance" value="{{ settings.SCRATCH_WIN_CHANCE }}" step="0.05" min="0" max="1" class="form-input">
+                    <small class="form-hint">0.30 = 30% chance to win</small>
+                </div>
             </div>
 
             <div class="form-group" style="margin-top:16px;">

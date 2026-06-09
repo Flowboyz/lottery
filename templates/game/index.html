@@ -17,6 +17,15 @@
 
     <!-- Main Game -->
     <div class="content">
+                <!-- Promo Banner -->
+        <div class="game-promo">
+            <p class="promo-text">🎮 Try our other games!</p>
+            <div class="promo-links">
+                <a href="{{ url_for('games.wheel') }}" class="promo-link">🎡 Wheel</a>
+                <a href="{{ url_for('games.coinflip') }}" class="promo-link">🪙 Flip</a>
+                <a href="{{ url_for('games.scratchcard') }}" class="promo-link">🎰 Scratch</a>
+            </div>
+        </div>
         <div class="casino-board">
             <h3>Last Lucky Numbers</h3>
             <div class="lucky-row">
@@ -98,6 +107,8 @@
         <div class="info-strip">
             Win chance: {{ win_probability }}% | Payout: 5x | Daily limit: ₦50,000
         </div>
+
+
     </div>
 
     <!-- Floating Help Button -->
@@ -155,10 +166,6 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div style="text-align:center;margin-top:20px;padding:16px;background:var(--bg-elevated);border-radius:12px;">
-        <p style="font-size:13px;color:var(--text-muted);">Need a break from gaming?</p>
-        <a href="{{ url_for('legal.responsible_gambling') }}" style="color:var(--accent-primary);font-weight:600;font-size:14px;">Visit Responsible Gambling</a>
     </div>
 {% endblock %}
 

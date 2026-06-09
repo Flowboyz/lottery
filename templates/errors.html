@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ error_code }} - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card" style="text-align:center;padding:60px 24px;">
+        <div style="font-size:64px;margin-bottom:16px;">
+            {% if error_code == 404 %}🔍{% elif error_code == 403 %}🚫{% elif error_code == 500 %}⚠️{% else %}🔒{% endif %}
+        </div>
+        <h2 class="page-heading" style="margin-bottom:8px;">{{ error_code }}</h2>
+        <p class="page-subtitle" style="margin-bottom:24px;">{{ message }}</p>
+        <a href="{{ url_for('auth.login') }}" class="submit-btn" style="display:inline-block;width:auto;padding:0 32px;">Go to Login</a>
+    </div>
+</div>
+{% endblock %}

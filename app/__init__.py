@@ -3,7 +3,7 @@ Application factory for Ditto Dinky.
 """
 import os
 
-from flask import Flask
+from flask import Flask, render_template
 
 from config import config_map
 
@@ -27,6 +27,9 @@ def create_app(config_name=None):
 
     db.init_app(app)
     login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "Please login to continue."
+    login_manager.login_message_category = "info"
     csrf.init_app(app)
     mail.init_app(app)
     migrate.init_app(app, db)
@@ -42,6 +45,7 @@ def create_app(config_name=None):
     from app.notifications import notifications_bp
     from app.legal import legal_bp
     from app.profile import profile_bp
+    from app.games import games_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(game_bp)
@@ -50,6 +54,7 @@ def create_app(config_name=None):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(legal_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(games_bp)
 
     # Template context processors
     @app.context_processor
@@ -75,8 +80,25 @@ def create_app(config_name=None):
         from app.models import (
             User, OTP, Transaction, LotteryRound, Bet,
             PaymentRecord, WithdrawalRequest, Notification, AuditLog,
-            BankAccount, GameSettings, Announcement
+            BankAccount, GameSettings, Announcement, GamePlay
         )
         db.create_all()
+        
+    # Custom error handlers
+    @app.errorhandler(401)
+    def unauthorized(e):
+        return render_template("errors.html", error_code=401, message="Please login to access this page."), 401
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("errors.html", error_code=403, message="You don't have permission to access this page."), 403
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template("errors.html", error_code=404, message="This page doesn't exist."), 404
+
+    @app.errorhandler(500)
+    def server_error(e):
+        return render_template("errors.html", error_code=500, message="Something went wrong. Please try again."), 500
 
     return app

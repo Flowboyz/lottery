@@ -31,10 +31,10 @@
                         {% else %}{{ loop.index }}{% endif %}
                     </div>
                     <div class="lb-info">
-                        <div class="lb-name">{{ winner.username }}</div>
-                        <div class="lb-sub">{{ winner.wins }} win{{ 's' if winner.wins != 1 else '' }}</div>
+                        <div class="lb-name">{{ winner["username"] }}</div>
+                        <div class="lb-sub">{{ winner["wins"] }} win{{ 's' if winner["wins"] != 1 else '' }}</div>
                     </div>
-                    <div class="lb-amount lb-win">{{ naira(winner.total_won) }}</div>
+                    <div class="lb-amount lb-win">{{ naira(winner["total_won"]) }}</div>
                 </div>
                 {% endfor %}
             </div>

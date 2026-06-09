@@ -43,9 +43,6 @@ class User(UserMixin, db.Model):
     is_self_excluded = db.Column(db.Boolean, default=False)
     self_exclusion_until = db.Column(db.DateTime, nullable=True)
 
-    # Registration
-    registration_ip = db.Column(db.String(45), nullable=True)
-    
     # Security
     failed_login_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
@@ -312,3 +309,21 @@ class Announcement(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
 
     author = db.relationship("User", backref="announcements")
+
+
+# ---------------------------------------------------------------------------
+# Game Play (generic for Wheel, Coinflip, Scratchcard)
+# ---------------------------------------------------------------------------
+class GamePlay(db.Model):
+    __tablename__ = "game_plays"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    game_type = db.Column(db.String(20), nullable=False)
+    bet_amount = db.Column(db.Float, nullable=False)
+    payout = db.Column(db.Float, default=0.0)
+    result = db.Column(db.String(10), nullable=True)
+    result_data = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref("game_plays", lazy="dynamic"))

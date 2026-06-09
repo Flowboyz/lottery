@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Games - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Games</h2>
+        <p class="page-subtitle">Pick a game and start winning!</p>
+
+        <div class="game-hub-grid">
+            <a href="{{ url_for('game.home') }}" class="game-card">
+                <span class="game-card-icon">🎲</span>
+                <span class="game-card-title">Lucky Lottery</span>
+                <span class="game-card-desc">Pick 3 numbers, match the lucky number, win 5x!</span>
+            </a>
+            <a href="{{ url_for('games.wheel') }}" class="game-card">
+                <span class="game-card-icon">🎡</span>
+                <span class="game-card-title">Spin the Wheel</span>
+                <span class="game-card-desc">Spin for up to 10x your bet!</span>
+            </a>
+            <a href="{{ url_for('games.coinflip') }}" class="game-card">
+                <span class="game-card-icon">🪙</span>
+                <span class="game-card-title">Coin Flip</span>
+                <span class="game-card-desc">Heads or tails? 1.9x payout!</span>
+            </a>
+            <a href="{{ url_for('games.scratchcard') }}" class="game-card">
+                <span class="game-card-icon">🎰</span>
+                <span class="game-card-title">Scratch Card</span>
+                <span class="game-card-desc">Match 3 symbols to win! Free card daily.</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

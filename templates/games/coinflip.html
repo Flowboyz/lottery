@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Coin Flip - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card" style="text-align:center;">
+        <h2 class="page-heading">🪙 Coin Flip</h2>
+        <p class="page-subtitle">Balance: <span id="balDisplay">{{ naira(current_user.balance) }}</span> | Payout: 1.9x</p>
+
+        <!-- Coin -->
+        <div class="coin-area">
+            <div class="coin" id="coin">
+                <div class="coin-face coin-heads">H</div>
+                <div class="coin-face coin-tails">T</div>
+            </div>
+        </div>
+
+        <!-- Result -->
+        <div id="flipResult" class="wheel-result" style="display:none;"></div>
+
+        <!-- Choice -->
+        <div class="flip-choice">
+            <button class="flip-pick active" id="pickHeads" onclick="pickSide('heads')">👑 Heads</button>
+            <button class="flip-pick" id="pickTails" onclick="pickSide('tails')">🦅 Tails</button>
+        </div>
+
+        <!-- Bet Controls -->
+        <div class="game-controls">
+            <div class="betInput">
+                <label>Bet Amount (₦)</label>
+                <input type="number" id="flipBet" min="50" step="50" placeholder="Min ₦50" value="100">
+            </div>
+            <div class="input-amount">
+                <button type="button" class="inp-btn" onclick="document.getElementById('flipBet').value=100">₦100</button>
+                <button type="button" class="inp-btn" onclick="document.getElementById('flipBet').value=500">₦500</button>
+                <button type="button" class="inp-btn" onclick="document.getElementById('flipBet').value=1000">₦1K</button>
+                <button type="button" class="inp-btn" onclick="document.getElementById('flipBet').value=5000">₦5K</button>
+            </div>
+            <button id="flipBtn" class="submit-btn" onclick="flipCoin()">FLIP!</button>
+        </div>
+
+        <a href="{{ url_for('games.hub') }}" class="game-back-link">← Back to Games</a>
+    </div>
+</div>
+
+<!-- How to Play -->
+<button class="help-fab" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
+<div class="help-modal-overlay" id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+    <div class="help-modal">
+        <div class="help-modal-header">
+            <h3>How To Play</h3>
+            <button class="help-modal-close" onclick="document.getElementById('helpModal').style.display='none'">✕</button>
+        </div>
+        <div class="help-modal-body">
+            <div class="help-step"><span class="help-icon">👑</span><div><strong>Pick a Side</strong><p>Choose Heads or Tails.</p></div></div>
+            <div class="help-step"><span class="help-icon">💰</span><div><strong>Place Your Bet</strong><p>Enter your bet amount (min ₦50).</p></div></div>
+            <div class="help-step"><span class="help-icon">🪙</span><div><strong>Flip!</strong><p>Click FLIP and watch the coin spin. If it lands on your side, you win 1.9x your bet!</p></div></div>
+            <div class="help-step"><span class="help-icon">📊</span><div><strong>Odds</strong><p>50/50 chance. Bet ₦1,000 → Win ₦1,900!</p></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedSide = "heads";
+let flipping = false;
+
+function pickSide(side) {
+    selectedSide = side;
+    document.getElementById("pickHeads").classList.toggle("active", side === "heads");
+    document.getElementById("pickTails").classList.toggle("active", side === "tails");
+}
+
+function flipCoin() {
+    if (flipping) return;
+    const bet = parseFloat(document.getElementById("flipBet").value);
+    if (!bet || bet < 50) { alert("Minimum bet is ₦50"); return; }
+
+    flipping = true;
+    document.getElementById("flipBtn").disabled = true;
+    document.getElementById("flipBtn").textContent = "Flipping...";
+    document.getElementById("flipResult").style.display = "none";
+
+    const coin = document.getElementById("coin");
+    coin.classList.remove("show-heads", "show-tails");
+    coin.classList.add("coin-spinning");
+
+    fetch("{{ url_for('games.coinflip_flip') }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({bet: bet, choice: selectedSide})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            coin.classList.remove("coin-spinning");
+            flipping = false;
+            document.getElementById("flipBtn").disabled = false;
+            document.getElementById("flipBtn").textContent = "FLIP!";
+            return;
+        }
+
+        setTimeout(() => {
+            coin.classList.remove("coin-spinning");
+            coin.classList.add(data.coin === "tails" ? "show-tails" : "show-heads");
+
+            setTimeout(() => {
+                const resultDiv = document.getElementById("flipResult");
+                if (data.won) {
+                    resultDiv.className = "wheel-result wheel-win";
+                    resultDiv.innerHTML = "🎉 " + data.coin.toUpperCase() + "! You won ₦" + data.payout.toLocaleString() + "!";
+                } else {
+                    resultDiv.className = "wheel-result wheel-lose";
+                    resultDiv.innerHTML = "💔 It was " + data.coin.toUpperCase() + ". You picked " + data.choice.toUpperCase() + ".";
+                }
+                resultDiv.style.display = "block";
+                document.getElementById("balDisplay").textContent = "₦" + data.new_balance.toLocaleString(undefined,{minimumFractionDigits:2});
+
+                flipping = false;
+                document.getElementById("flipBtn").disabled = false;
+                document.getElementById("flipBtn").textContent = "FLIP!";
+            }, 400);
+        }, 1800);
+    })
+    .catch(() => {
+        alert("Connection error. Try again.");
+        coin.classList.remove("coin-spinning");
+        flipping = false;
+        document.getElementById("flipBtn").disabled = false;
+        document.getElementById("flipBtn").textContent = "FLIP!";
+    });
+}
+</script>
+{% endblock %}

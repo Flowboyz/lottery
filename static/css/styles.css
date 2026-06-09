@@ -1613,6 +1613,168 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
 .tier-req { font-size: 12px; color: var(--text-muted); }
 .tier-reward { font-size: 18px; font-weight: 800; color: #22c55e; margin-top: 4px; }
 
+/* ===== Game Hub ===== */
+.game-hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.game-card {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 24px 16px; background: var(--bg-elevated); border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--border-subtle); text-decoration: none;
+    transition: all 0.2s ease; text-align: center;
+}
+.game-card:hover {
+    border-color: var(--accent-primary); transform: translateY(-3px);
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.3));
+}
+.game-card-icon { font-size: 40px; }
+.game-card-title { font-weight: 700; font-size: 15px; color: var(--text-primary); }
+.game-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+/* Game controls shared */
+.game-controls { margin-top: 20px; }
+.game-back-link {
+    display: inline-block; margin-top: 16px; color: var(--text-muted);
+    text-decoration: none; font-size: 13px; font-weight: 600;
+}
+.game-back-link:hover { color: var(--accent-primary); }
+
+/* Game promo banner on lottery page */
+.game-promo {
+    margin-top: 16px; padding: 16px; background: var(--bg-elevated, var(--bg-card));
+    border-radius: var(--radius-md, 12px); border: 1px solid var(--border-subtle);
+    text-align: center;
+}
+.promo-text { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; }
+.promo-links { display: flex; justify-content: center; gap: 10px; }
+.promo-link {
+    padding: 8px 16px; background: var(--accent-primary-soft, rgba(0,212,170,0.12));
+    border: 1px solid var(--accent-primary); color: var(--accent-primary);
+    border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 13px;
+    transition: all 0.15s ease;
+}
+.promo-link:hover { background: var(--accent-primary); color: #042b22; }
+
+/* ===== Spin Wheel (Canvas) ===== */
+.wheel-wrapper {
+    position: relative; width: 300px; margin: 20px auto;
+    user-select: none;
+}
+.wheel-wrapper canvas {
+    width: 100%; height: auto; display: block;
+    border-radius: 50%;
+    box-shadow: 0 0 30px rgba(251,191,36,0.3);
+}
+.wheel-pointer {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 28px; color: var(--accent-gold, #fbbf24); z-index: 10;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+/* Wheel result */
+.wheel-result {
+    margin: 16px 0; padding: 16px; border-radius: var(--radius-md, 12px);
+    font-weight: 700; font-size: 16px; text-align: center;
+}
+.wheel-win {
+    background: var(--accent-success-soft, rgba(34,197,94,0.14));
+    color: var(--accent-success, #22c55e);
+    border: 1px solid rgba(34,197,94,0.3);
+}
+.wheel-lose {
+    background: var(--accent-danger-soft, rgba(239,68,68,0.14));
+    color: var(--accent-danger, #ef4444);
+    border: 1px solid rgba(239,68,68,0.3);
+}
+
+/* ===== Coin Flip ===== */
+.coin-area {
+    perspective: 600px; margin: 30px auto; width: 120px; height: 120px;
+}
+.coin {
+    width: 120px; height: 120px; position: relative;
+    transform-style: preserve-3d; transition: transform 0.4s ease;
+}
+.coin-face {
+    position: absolute; width: 100%; height: 100%; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; font-weight: 800; backface-visibility: hidden;
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.3));
+}
+.coin-heads {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #78350f;
+}
+.coin-tails {
+    background: linear-gradient(135deg, #94a3b8, #64748b);
+    color: #1e293b;
+    transform: rotateY(180deg);
+}
+.coin.show-tails { transform: rotateY(180deg); }
+.coin.show-heads { transform: rotateY(0deg); }
+.coin-spinning {
+    animation: coinSpin 0.3s linear infinite;
+}
+@keyframes coinSpin {
+    from { transform: rotateY(0deg); }
+    to { transform: rotateY(360deg); }
+}
+
+/* Flip choice buttons */
+.flip-choice { display: flex; gap: 12px; justify-content: center; margin: 20px 0; }
+.flip-pick {
+    padding: 14px 28px; border: 2px solid var(--border-subtle); border-radius: var(--radius-md, 12px);
+    background: var(--bg-elevated); color: var(--text-secondary);
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s ease; font-family: inherit;
+}
+.flip-pick:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.flip-pick.active {
+    border-color: var(--accent-primary); background: var(--accent-primary-soft, rgba(0,212,170,0.12));
+    color: var(--accent-primary);
+}
+
+/* ===== Scratch Card ===== */
+.scratch-tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.scratch-tier-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 18px 12px; border: 2px solid var(--border-subtle);
+    border-radius: var(--radius-md, 12px); background: var(--bg-elevated);
+    cursor: pointer; transition: all 0.15s ease; font-family: inherit;
+}
+.scratch-tier-btn:hover:not(:disabled) { border-color: var(--accent-primary); transform: translateY(-2px); }
+.scratch-tier-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tier-label { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.tier-price { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.tier-free { border-color: var(--accent-gold, #fbbf24); }
+.tier-bronze { border-color: #cd7f32; }
+.tier-silver { border-color: #94a3b8; }
+.tier-gold { border-color: #fbbf24; }
+
+.scratch-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    max-width: 320px; margin: 0 auto;
+}
+.scratch-cell-wrap {
+    position: relative; width: 100%; padding-top: 100%;
+    border-radius: var(--radius-md, 12px); overflow: hidden;
+}
+.scratch-prize-layer {
+    position: absolute; inset: 0;
+    background: var(--bg-elevated); border: 2px solid var(--border-subtle);
+    border-radius: var(--radius-md, 12px);
+    display: flex; align-items: center; justify-content: center;
+}
+.scratch-emoji { font-size: 36px; }
+.scratch-canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    border-radius: var(--radius-md, 12px); cursor: pointer;
+    transition: opacity 0.4s ease;
+    touch-action: none;
+}
+.scratch-progress {
+    margin-top: 12px; font-size: 13px; color: var(--text-muted); font-weight: 600;
+}
+.scratch-board { margin-bottom: 16px; }
+
 /* ===== Accessibility ===== */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -1839,4 +2001,16 @@ select:focus-visible {
         padding-right: 48px;
     }
     .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ===== Accessibility ===== */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 3px solid var(--accent-primary); outline-offset: 2px;
 }

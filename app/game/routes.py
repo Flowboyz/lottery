@@ -218,13 +218,13 @@ def how_to_play():
 @game_bp.route("/leaderboard")
 @login_required
 def leaderboard():
-    from app.models import User
+    from app.models import User, GamePlay
     from datetime import datetime, timedelta
     from sqlalchemy import func
+    from collections import defaultdict
 
     period = request.args.get("period", "weekly")
 
-    # Date filter
     if period == "daily":
         since = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     elif period == "monthly":
@@ -232,27 +232,47 @@ def leaderboard():
     else:
         since = datetime.utcnow() - timedelta(days=7)
 
-    # Top winners by payout
-    top_winners = db.session.query(
+    # Lottery wins
+    lottery_wins = db.session.query(
         User.username,
         func.count(Bet.id).label("wins"),
         func.sum(Bet.payout).label("total_won"),
     ).join(User).filter(
-        Bet.result == "WIN",
-        Bet.created_at >= since,
-    ).group_by(User.id).order_by(func.sum(Bet.payout).desc()).limit(20).all()
+        Bet.result == "WIN", Bet.created_at >= since,
+    ).group_by(User.id).all()
 
-    # Top referrers (all time) - self-join on users table
-    from sqlalchemy import func as sqfunc
+    # Game wins (wheel, coinflip, scratchcard)
+    game_wins = db.session.query(
+        User.username,
+        func.count(GamePlay.id).label("wins"),
+        func.sum(GamePlay.payout).label("total_won"),
+    ).join(User).filter(
+        GamePlay.result == "WIN", GamePlay.created_at >= since,
+    ).group_by(User.id).all()
+
+    # Combine results
+    combined = defaultdict(lambda: {"wins": 0, "total_won": 0.0})
+    for row in lottery_wins:
+        combined[row.username]["wins"] += row.wins
+        combined[row.username]["total_won"] += float(row.total_won or 0)
+    for row in game_wins:
+        combined[row.username]["wins"] += row.wins
+        combined[row.username]["total_won"] += float(row.total_won or 0)
+
+    top_winners = sorted(
+        [{"username": k, "wins": v["wins"], "total_won": v["total_won"]} for k, v in combined.items()],
+        key=lambda x: x["total_won"], reverse=True
+    )[:20]
+
+    # Top referrers
     referred = db.aliased(User)
     top_referrers = db.session.query(
         User.username,
-        sqfunc.count(referred.id).label("ref_count"),
+        func.count(referred.id).label("ref_count"),
     ).join(referred, referred.referred_by == User.id).group_by(
         User.id
-    ).order_by(sqfunc.count(referred.id).desc()).limit(20).all()
+    ).order_by(func.count(referred.id).desc()).limit(20).all()
 
-    # Referral tiers info
     from app.utils import REFERRAL_TIERS
 
     return render_template("game/leaderboard.html",

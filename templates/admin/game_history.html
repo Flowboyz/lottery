@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Game History - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <h2 class="page-heading">Game History</h2>
+
+        <form method="GET" class="bet-filters">
+            <div class="filter-row">
+                <select name="game" class="form-input filter-select">
+                    <option value="all" {% if game_filter == 'all' %}selected{% endif %}>All Games</option>
+                    <option value="wheel" {% if game_filter == 'wheel' %}selected{% endif %}>🎡 Wheel</option>
+                    <option value="coinflip" {% if game_filter == 'coinflip' %}selected{% endif %}>🪙 Coin Flip</option>
+                    <option value="scratchcard" {% if game_filter == 'scratchcard' %}selected{% endif %}>🎰 Scratch Card</option>
+                </select>
+                <select name="user" class="form-input filter-select">
+                    <option value="">All Users</option>
+                    {% for username in user_list %}
+                    <option value="{{ username }}" {% if user_filter == username %}selected{% endif %}>{{ username }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="small-btn">Filter</button>
+                {% if game_filter != 'all' or user_filter %}
+                <a href="{{ url_for('admin.game_history') }}" class="small-btn btn-reject">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if plays.items %}
+        <div class="bet-list">
+            {% set current_user_display = namespace(name='') %}
+            {% for play in plays.items %}
+            {% if play.user.username != current_user_display.name %}
+            {% set current_user_display.name = play.user.username %}
+            <div class="bet-user-header">
+                <span class="bet-user-icon">👤</span>
+                <span class="bet-user-name">{{ play.user.username }}</span>
+            </div>
+            {% endif %}
+
+            <div class="bet-card bet-{{ play.result|lower }}">
+                <div class="bet-card-top">
+                    <div class="bet-nums">
+                        <span class="game-type-badge game-{{ play.game_type }}">
+                            {% if play.game_type == 'wheel' %}🎡{% elif play.game_type == 'coinflip' %}🪙{% else %}🎰{% endif %}
+                            {{ play.game_type }}
+                        </span>
+                    </div>
+                    <span class="result-badge result-{{ play.result|lower }}">{{ play.result }}</span>
+                </div>
+                <div class="bet-card-bottom">
+                    <span class="bet-stake">Bet: {{ naira(play.bet_amount) }}</span>
+                    {% if play.payout %}
+                    <span class="bet-payout">Won: {{ naira(play.payout) }}</span>
+                    {% endif %}
+                    <span class="bet-time"><span class="local-time" data-utc="{{ play.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ play.created_at.strftime('%d %b, %H:%M') }}</span></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if plays.pages > 1 %}
+        <div class="pagination">
+            {% if plays.has_prev %}
+            <a href="{{ url_for('admin.game_history', page=plays.prev_num, game=game_filter, user=user_filter) }}" class="page-link">← Prev</a>
+            {% endif %}
+            <span class="page-info">Page {{ plays.page }} of {{ plays.pages }}</span>
+            {% if plays.has_next %}
+            <a href="{{ url_for('admin.game_history', page=plays.next_num, game=game_filter, user=user_filter) }}" class="page-link">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state"><p>No game plays found.</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

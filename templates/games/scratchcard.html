@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Scratch Card - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card" style="text-align:center;">
+        <h2 class="page-heading">🎰 Scratch Card</h2>
+        <p class="page-subtitle">Balance: <span id="balDisplay">{{ naira(current_user.balance) }}</span> | Match 3 to win!</p>
+
+        <!-- Scratch Grid -->
+        <div class="scratch-board" id="scratchBoard" style="display:none;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Scratch all cells to reveal your prizes!</p>
+            <div class="scratch-grid" id="scratchGrid"></div>
+            <div class="scratch-progress">
+                <span id="scratchCount">0</span>/9 revealed
+            </div>
+        </div>
+
+        <!-- Result -->
+        <div id="scratchResult" class="wheel-result" style="display:none;"></div>
+
+        <!-- Buy Controls -->
+        <div class="game-controls" id="buyControls">
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px;">Choose a card:</p>
+            <div class="scratch-tiers">
+                {% if free_available %}
+                <button class="scratch-tier-btn tier-free" onclick="buyCard('free')">
+                    <span class="tier-label">🎁 FREE</span>
+                    <span class="tier-price">Daily Card</span>
+                </button>
+                {% else %}
+                <button class="scratch-tier-btn tier-free" disabled>
+                    <span class="tier-label">🎁 FREE</span>
+                    <span class="tier-price">Used Today</span>
+                </button>
+                {% endif %}
+                <button class="scratch-tier-btn tier-bronze" onclick="buyCard('bronze')">
+                    <span class="tier-label">🥉 Bronze</span>
+                    <span class="tier-price">₦100</span>
+                </button>
+                <button class="scratch-tier-btn tier-silver" onclick="buyCard('silver')">
+                    <span class="tier-label">🥈 Silver</span>
+                    <span class="tier-price">₦500</span>
+                </button>
+                <button class="scratch-tier-btn tier-gold" onclick="buyCard('gold')">
+                    <span class="tier-label">🥇 Gold</span>
+                    <span class="tier-price">₦1,000</span>
+                </button>
+            </div>
+        </div>
+
+        <button class="submit-btn" id="newCardBtn" style="display:none;" onclick="resetCard()">Buy Another Card</button>
+        <a href="{{ url_for('games.hub') }}" class="game-back-link">← Back to Games</a>
+    </div>
+</div>
+
+<!-- How to Play -->
+<button class="help-fab" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
+<div class="help-modal-overlay" id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+    <div class="help-modal">
+        <div class="help-modal-header">
+            <h3>How To Play</h3>
+            <button class="help-modal-close" onclick="document.getElementById('helpModal').style.display='none'">✕</button>
+        </div>
+        <div class="help-modal-body">
+            <div class="help-step"><span class="help-icon">🎫</span><div><strong>Buy a Card</strong><p>Pick Free (1/day), Bronze (₦100), Silver (₦500), or Gold (₦1,000).</p></div></div>
+            <div class="help-step"><span class="help-icon">👆</span><div><strong>Scratch to Reveal</strong><p>Drag your finger or mouse across each cell to scratch off the coating and reveal the hidden symbol.</p></div></div>
+            <div class="help-step"><span class="help-icon">🎯</span><div><strong>Match 3 Symbols</strong><p>If 3 cells show the same symbol, you win that prize!</p></div></div>
+            <div class="help-step"><span class="help-icon">💎</span><div><strong>Prize Table</strong><p>💎 = 5x | 🌟 = 3x | 🎯 = 2x | 💰 = 1.5x | 🍀 = 1x</p></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let gameData = null;
+let revealedCount = 0;
+
+function buyCard(tier) {
+    fetch("{{ url_for('games.scratchcard_buy') }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({tier: tier})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        gameData = data;
+        revealedCount = 0;
+        document.getElementById("buyControls").style.display = "none";
+        document.getElementById("scratchResult").style.display = "none";
+        document.getElementById("scratchBoard").style.display = "block";
+        document.getElementById("scratchCount").textContent = "0";
+        buildGrid(data.cells);
+    })
+    .catch(() => alert("Connection error. Try again."));
+}
+
+function buildGrid(cells) {
+    const grid = document.getElementById("scratchGrid");
+    grid.innerHTML = "";
+
+    cells.forEach((cell, i) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "scratch-cell-wrap";
+
+        // Prize layer (underneath)
+        const prize = document.createElement("div");
+        prize.className = "scratch-prize-layer";
+        prize.innerHTML = '<span class="scratch-emoji">' + cell.symbol + '</span>';
+
+        // Canvas overlay (scratch surface)
+        const cvs = document.createElement("canvas");
+        cvs.className = "scratch-canvas";
+        cvs.width = 100;
+        cvs.height = 100;
+
+        wrapper.appendChild(prize);
+        wrapper.appendChild(cvs);
+        grid.appendChild(wrapper);
+
+        // Draw scratch coating
+        const sctx = cvs.getContext("2d");
+        const grad = sctx.createLinearGradient(0, 0, 100, 100);
+        grad.addColorStop(0, "#7c3aed");
+        grad.addColorStop(1, "#6d28d9");
+        sctx.fillStyle = grad;
+        sctx.fillRect(0, 0, 100, 100);
+        sctx.fillStyle = "rgba(255,255,255,0.25)";
+        sctx.font = "bold 32px sans-serif";
+        sctx.textAlign = "center";
+        sctx.fillText("?", 50, 62);
+
+        // Scratch logic
+        let scratching = false;
+        let revealed = false;
+        let scratchPixels = 0;
+        const totalPixels = 100 * 100;
+
+        function scratch(x, y) {
+            sctx.globalCompositeOperation = "destination-out";
+            sctx.beginPath();
+            sctx.arc(x, y, 16, 0, 2 * Math.PI);
+            sctx.fill();
+            scratchPixels += 800;
+
+            if (!revealed && scratchPixels > totalPixels * 0.45) {
+                revealed = true;
+                cvs.style.opacity = "0";
+                cvs.style.pointerEvents = "none";
+                revealedCount++;
+                document.getElementById("scratchCount").textContent = revealedCount;
+                if (revealedCount >= 9) setTimeout(showResult, 500);
+            }
+        }
+
+        function getPos(e) {
+            const rect = cvs.getBoundingClientRect();
+            const scaleX = cvs.width / rect.width;
+            const scaleY = cvs.height / rect.height;
+            if (e.touches) {
+                return {x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY};
+            }
+            return {x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY};
+        }
+
+        cvs.addEventListener("mousedown", (e) => { scratching = true; const p = getPos(e); scratch(p.x, p.y); });
+        cvs.addEventListener("mousemove", (e) => { if (scratching) { const p = getPos(e); scratch(p.x, p.y); } });
+        cvs.addEventListener("mouseup", () => { scratching = false; });
+        cvs.addEventListener("mouseleave", () => { scratching = false; });
+
+        cvs.addEventListener("touchstart", (e) => { e.preventDefault(); scratching = true; const p = getPos(e); scratch(p.x, p.y); }, {passive:false});
+        cvs.addEventListener("touchmove", (e) => { e.preventDefault(); if (scratching) { const p = getPos(e); scratch(p.x, p.y); } }, {passive:false});
+        cvs.addEventListener("touchend", () => { scratching = false; });
+    });
+}
+
+function showResult() {
+    const resultDiv = document.getElementById("scratchResult");
+    if (gameData.result === "WIN") {
+        resultDiv.className = "wheel-result wheel-win";
+        resultDiv.innerHTML = "🎉 3 matching symbols! You won ₦" + gameData.payout.toLocaleString() + "!";
+    } else {
+        resultDiv.className = "wheel-result wheel-lose";
+        resultDiv.innerHTML = "💔 No match this time. Try again!";
+    }
+    resultDiv.style.display = "block";
+    document.getElementById("balDisplay").textContent = "₦" + gameData.new_balance.toLocaleString(undefined,{minimumFractionDigits:2});
+    document.getElementById("newCardBtn").style.display = "block";
+}
+
+function resetCard() {
+    document.getElementById("scratchBoard").style.display = "none";
+    document.getElementById("scratchResult").style.display = "none";
+    document.getElementById("newCardBtn").style.display = "none";
+    document.getElementById("buyControls").style.display = "block";
+    gameData = null;
+}
+</script>
+{% endblock %}

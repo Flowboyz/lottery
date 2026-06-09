@@ -65,6 +65,14 @@
                     <div class="stat-value">{{ stats.bets_today }}</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-label">Game Plays</div>
+                    <div class="stat-value">{{ stats.total_game_plays }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Games Today</div>
+                    <div class="stat-value">{{ stats.game_plays_today }}</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-label">Pending Withdrawals</div>
                     <div class="stat-value">{{ stats.pending_withdrawals }}</div>
                 </div>
@@ -82,6 +90,7 @@
                 <a href="{{ url_for('admin.users') }}" class="admin-link">👥 Manage Users</a>
                 <a href="{{ url_for('admin.withdrawals') }}" class="admin-link">💸 Withdrawals</a>
                 <a href="{{ url_for('admin.betting_history') }}" class="admin-link">🎲 Bet History</a>
+                <a href="{{ url_for('admin.game_history') }}" class="admin-link">🎮 Game History</a>
                 <a href="{{ url_for('admin.announcements') }}" class="admin-link">📢 Announcements</a>
                 <a href="{{ url_for('admin.email_users') }}" class="admin-link">✉️ Email Users</a>
                 {% if current_user.role == 'superadmin' %}
