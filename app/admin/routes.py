@@ -473,6 +473,7 @@ def game_settings():
             "MIN_WITHDRAWAL": ("Min Withdrawal (₦)", request.form.get("min_withdrawal")),
             "COINFLIP_PAYOUT": ("Coinflip Payout Multiplier", request.form.get("coinflip_payout")),
             "SCRATCH_WIN_CHANCE": ("Scratch Card Win Chance (0-1)", request.form.get("scratch_win_chance")),
+            "MAINTENANCE_MODE": "off" if request.form.get("maintenance_mode") == "off" else "on",
         }
 
         for key, (label, value) in settings_map.items():
@@ -632,6 +633,12 @@ def export_csv(data_type):
                              b.picked_total, b.lucky_number, f"{b.bet_amount:.2f}",
                              f"{b.payout:.2f}", b.result,
                              b.created_at.strftime("%Y-%m-%d %H:%M")])
+    elif data_type == "games":
+        writer.writerow(["ID", "User", "Game", "Bet", "Payout", "Result", "Date"])
+        for g in GamePlay.query.order_by(GamePlay.created_at.desc()).limit(5000).all():
+            writer.writerow([g.id, g.user.username, g.game_type,
+                             f"{g.bet_amount:.2f}", f"{g.payout:.2f}", g.result,
+                             g.created_at.strftime("%Y-%m-%d %H:%M")])        
     else:
         flash("Invalid export type.", "error")
         return redirect(url_for("admin.dashboard"))

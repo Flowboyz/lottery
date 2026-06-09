@@ -14,7 +14,7 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Transaction, PaymentRecord, WithdrawalRequest
-from app.utils import credit_wallet, debit_wallet, notify_user, generate_reference, format_money, send_email
+from app.utils import credit_wallet, debit_wallet, get_setting, notify_user, generate_reference, format_money, send_email
 
 wallet_bp = Blueprint("wallet", __name__, url_prefix="/wallet")
 
@@ -23,6 +23,10 @@ wallet_bp = Blueprint("wallet", __name__, url_prefix="/wallet")
 @wallet_bp.route("/deposit", methods=["GET"])
 @login_required
 def deposit_page():
+    if get_setting("MAINTENANCE_MODE", "off") == "on":
+        flash("Deposits and withdrawals are temporarily paused for maintenance.", "warning")
+        return redirect(url_for("game.home"))
+    
     flash("Deposits are temporarily disabled. We'll be back shortly!", "info")
     return redirect(url_for("game.home"))
     # return render_template("wallet/deposit.html",
@@ -33,6 +37,9 @@ def deposit_page():
 @wallet_bp.route("/deposit/initialize", methods=["POST"])
 @login_required
 def initialize_deposit():
+    if get_setting("MAINTENANCE_MODE", "off") == "on":
+        flash("Deposits and withdrawals are temporarily paused for maintenance.", "warning")
+        return redirect(url_for("game.home"))
     try:
         amount = float(request.form.get("amount", 0))
     except (ValueError, TypeError):
@@ -209,6 +216,9 @@ def paystack_webhook():
 @wallet_bp.route("/withdraw", methods=["GET"])
 @login_required
 def withdraw_page():
+    if get_setting("MAINTENANCE_MODE", "off") == "on":
+        flash("Deposits and withdrawals are temporarily paused for maintenance.", "warning")
+        return redirect(url_for("game.home"))
     pending = WithdrawalRequest.query.filter_by(
         user_id=current_user.id, status="pending"
     ).count()
@@ -224,6 +234,9 @@ def withdraw_page():
 @wallet_bp.route("/withdraw/submit", methods=["POST"])
 @login_required
 def submit_withdrawal():
+    if get_setting("MAINTENANCE_MODE", "off") == "on":
+        flash("Deposits and withdrawals are temporarily paused for maintenance.", "warning")
+        return redirect(url_for("game.home"))
     try:
         amount = float(request.form.get("amount", 0))
     except (ValueError, TypeError):

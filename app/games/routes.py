@@ -5,7 +5,7 @@ import json
 import secrets
 from datetime import datetime, date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, config, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 
 from app.extensions import db, csrf
@@ -96,7 +96,8 @@ def wheel_spin():
         return jsonify({"error": "Maximum bet is ₦50,000."}), 400
 
     if not check_daily_bet_limit(user, bet_amount):
-        return jsonify({"error": "Daily bet limit reached."}), 400
+        return jsonify({"error": "You've reached your daily betting limit of ₦50,000. Come back tomorrow!"}), 400
+    flash(f"You've hit your daily betting limit of {format_money(get_setting('MAX_DAILY_BET', 50000))}. Come back tomorrow!", "warning")
 
     if user.balance < bet_amount:
         return jsonify({"error": "Insufficient balance."}), 400
@@ -186,7 +187,9 @@ def coinflip_flip():
         return jsonify({"error": "Maximum bet is ₦50,000."}), 400
 
     if not check_daily_bet_limit(user, bet_amount):
-        return jsonify({"error": "Daily bet limit reached."}), 400
+        return jsonify({"error": "You've reached your daily betting limit of ₦50,000. Come back tomorrow!"}), 400
+    flash(f"You've hit your daily betting limit of {format_money(get_setting('MAX_DAILY_BET', 50000))}. Come back tomorrow!", "warning")
+    
     if user.balance < bet_amount:
         return jsonify({"error": "Insufficient balance."}), 400
     
@@ -278,7 +281,8 @@ def scratchcard_buy():
             return jsonify({"error": "Free daily card already used. Try again tomorrow!"}), 400
     else:
         if not check_daily_bet_limit(user, cost):
-            return jsonify({"error": "Daily bet limit reached."}), 400
+            return jsonify({"error": "You've reached your daily betting limit of ₦50,000. Come back tomorrow!"}), 400
+        flash(f"You've hit your daily betting limit of {format_money(get_setting('MAX_DAILY_BET', 50000))}. Come back tomorrow!", "warning")
         if user.balance < cost:
             return jsonify({"error": "Insufficient balance."}), 400
         

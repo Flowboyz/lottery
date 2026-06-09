@@ -5,7 +5,7 @@ import secrets
 import time
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, jsonify, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 
 from app.extensions import db
@@ -86,7 +86,7 @@ def home():
 @login_required
 def play():
     user = current_user
-    config = current_app.config
+    config = get_setting
 
     # Self-exclusion check
     if user.is_self_excluded:
@@ -124,9 +124,10 @@ def play():
 
     # Daily limit check
     if not check_daily_bet_limit(user, bet_amount):
-        flash(f"Daily betting limit of {format_money(config['MAX_DAILY_BET'])} reached.", "error")
+        flash(f"You've hit your daily betting limit of {format_money(get_setting('MAX_DAILY_BET', 50000))}. Come back tomorrow!", "warning")
         return redirect(url_for("game.home"))
-
+    
+        
     picked_total = num1 + num2 + num3
 
     # Determine outcome using cryptographic randomness

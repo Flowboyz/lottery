@@ -33,6 +33,8 @@ class User(UserMixin, db.Model):
     suspended_until = db.Column(db.DateTime, nullable=True)
     is_banned = db.Column(db.Boolean, default=False)
     ban_reason = db.Column(db.String(200), nullable=True)
+    
+    registration_ip = db.Column(db.String(50), nullable=True) 
 
     # Wallet
     balance = db.Column(db.Float, default=0.0)
