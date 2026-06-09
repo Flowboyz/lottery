@@ -160,16 +160,16 @@ def login():
         # Admin 2FA: if admin/superadmin, send OTP before granting access
         if user.role in ("admin", "superadmin") and user.email:
             code = OTP.generate(user.id, "admin_2fa", expiry_minutes=5)
-            flash(f"Your password reset OTP is: {code} (in production this would be emailed)", "info")
-            # send_email(user.email, "Admin Login OTP - Ditto Dinky",
-            #            f"Hi {user.username},\n\n"
-            #            f"Your admin login verification code is: {code}\n\n"
-            #            f"This code expires in 5 minutes.\n"
-            #            f"IP: {get_real_ip()}\n\n"
-            #            f"If this wasn't you, change your password immediately.\n\n"
-            #            f"- Ditto Dinky Security")
+            # flash(f"Your password reset OTP is: {code} (in production this would be emailed)", "info")
+            send_email(user.email, "Admin Login OTP - Ditto Dinky",
+                       f"Hi {user.username},\n\n"
+                       f"Your admin login verification code is: {code}\n\n"
+                       f"This code expires in 5 minutes.\n"
+                       f"IP: {get_real_ip()}\n\n"
+                       f"If this wasn't you, change your password immediately.\n\n"
+                       f"- Ditto Dinky Security")
             session["pending_admin_2fa"] = user.id
-            # flash("A verification code has been sent to your email.", "info")
+            flash("A verification code has been sent to your email.", "info")
             return redirect(url_for("auth.admin_2fa"))
 
         # Regular user login
