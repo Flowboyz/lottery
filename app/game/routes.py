@@ -29,7 +29,7 @@ def home():
     remaining_cooldown = 0
     if user.last_play_time:
         elapsed = current_time - user.last_play_time
-        if elapsed < cooldown:
+        if elapsed <int(cooldown):
             remaining_cooldown = cooldown - elapsed
 
     # Daily claim countdown
