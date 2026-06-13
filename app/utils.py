@@ -31,19 +31,34 @@ def naira(amount):
 
 def get_setting(key, default=None):
     """
-    Safely retrieve a setting from the game_settings table.
-    Works correctly with the current 'label' column.
+    Get setting value and try to convert it to the same type as the default.
+    This prevents 'int vs str' and similar type errors.
     """
     from app.models import GameSettings
+
     try:
         setting = GameSettings.query.filter_by(key=key).first()
-        if setting:
-            # Return value, fallback to label if value is empty
-            return setting.value or setting.label or default
-        return default
+        if not setting:
+            return default
+
+        value = setting.value
+
+        # If no value, return default
+        if value is None or value == "":
+            return default
+
+        # Try to convert to the same type as default
+        if isinstance(default, bool):
+            return str(value).lower() in ("1", "true", "yes", "on")
+        elif isinstance(default, int):
+            return int(float(value))  # handles "10.0" -> 10
+        elif isinstance(default, float):
+            return float(value)
+        else:
+            return value
+
     except Exception:
         return default
-
 # ---------------------------------------------------------------------------
 # Wallet Operations (ledger-safe)
 # ---------------------------------------------------------------------------
