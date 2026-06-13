@@ -626,7 +626,7 @@ def email_users():
 @admin_required
 def games_report():
     """Revenue report for Aviator and Color Prediction."""
-    from app.models_games import  ColorRound
+    from app.models_games import ColorRound
     from sqlalchemy import func
 
     today = date.today()
@@ -657,7 +657,7 @@ def games_report():
     avi_stats   = {p: gp_stats("aviator", since) for p, since in periods.items()}
     color_stats = {p: gp_stats("color",   since) for p, since in periods.items()}
 
-    # Color round counts (fixed)
+    # Color round counts
     color_rounds_today = ColorRound.query.filter(
         ColorRound.started_at >= datetime.combine(today, datetime.min.time())
     ).count()
@@ -665,10 +665,10 @@ def games_report():
     color_rounds_total = ColorRound.query.count()
 
     return render_template("admin/games_report.html",
-                        avi_stats=avi_stats,
-                        color_stats=color_stats,
-                        color_rounds_today=color_rounds_today,
-                        color_rounds_total=color_rounds_total)
+                           avi_stats=avi_stats,
+                           color_stats=color_stats,
+                           color_rounds_today=color_rounds_today,
+                           color_rounds_total=color_rounds_total)
 
 # ────────────────────────── EXPORT CSV ──────────────────────────
 @admin_bp.route("/export/<string:data_type>")
