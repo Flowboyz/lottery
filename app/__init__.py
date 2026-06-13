@@ -60,6 +60,7 @@ def create_app(config_name=None):
     app.register_blueprint(games_bp)
     app.register_blueprint(aviator_bp)
     app.register_blueprint(color_bp)
+    
 
     # Template context processors
     @app.context_processor

@@ -151,7 +151,7 @@ def index():
         # from flask import flash, redirect, url_for
         # flash("Color Prediction is currently unavailable.", "info")
         # return redirect(url_for("games.hub"))
-        return True
+       return str(get_setting("COLOR_ENABLED", "1")) == "1"
 
     current_round = _ensure_open_round()
     duration = int(get_setting("COLOR_ROUND_DURATION", 30))

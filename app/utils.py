@@ -30,15 +30,19 @@ def naira(amount):
 # ---------------------------------------------------------------------------
 
 def get_setting(key, default=None):
-    """Get a game setting from DB, falling back to app config, then default."""
+    """
+    Safely retrieve a setting from the game_settings table.
+    Works correctly with the current 'label' column.
+    """
     from app.models import GameSettings
-    setting = GameSettings.query.filter_by(key=key).first()
-    if setting:
-        try:
-            return float(setting.value)
-        except (ValueError, TypeError):
-            return setting.value
-    return current_app.config.get(key.upper(), default)
+    try:
+        setting = GameSettings.query.filter_by(key=key).first()
+        if setting:
+            # Return value, fallback to label if value is empty
+            return setting.value or setting.label or default
+        return default
+    except Exception:
+        return default
 
 # ---------------------------------------------------------------------------
 # Wallet Operations (ledger-safe)

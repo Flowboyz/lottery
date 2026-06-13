@@ -304,7 +304,7 @@ def index():
         # from flask import flash, redirect, url_for
         # flash("Aviator is currently unavailable.", "info")
         # return redirect(url_for("games.hub"))
-        return True
+        return str(get_setting("AVIATOR_ENABLED", "1")) == "1"
 
     current_round = _ensure_round()
 
