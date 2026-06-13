@@ -143,13 +143,13 @@ settings_to_seed = [
     ("COLOR_VIOLET_PAYOUT",  "4.5",  "Color: Violet Payout Multiplier"),
 ]
 
-for key, value, description in settings_to_seed:
+for key, value, label in settings_to_seed:
     cursor.execute("SELECT 1 FROM game_settings WHERE key = ?", (key,))
     if not cursor.fetchone():
         cursor.execute("""
-            INSERT INTO game_settings (key, value, description)
+            INSERT INTO game_settings (key, value, label)
             VALUES (?, ?, ?)
-        """, (key, value, description))
+        """, (key, value, label))
         print(f"  [+] Seeded setting: {key}")
     else:
         print(f"  [=] Setting already exists: {key}")
