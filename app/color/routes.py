@@ -148,9 +148,10 @@ def _settle_round(round_obj: ColorRound):
 @login_required
 def index():
     if not _color_enabled():
-        from flask import flash, redirect, url_for
-        flash("Color Prediction is currently unavailable.", "info")
-        return redirect(url_for("games.hub"))
+        # from flask import flash, redirect, url_for
+        # flash("Color Prediction is currently unavailable.", "info")
+        # return redirect(url_for("games.hub"))
+        return True
 
     current_round = _ensure_open_round()
     duration = int(get_setting("COLOR_ROUND_DURATION", 30))

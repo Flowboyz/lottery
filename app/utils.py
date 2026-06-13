@@ -28,21 +28,17 @@ def naira(amount):
 # ---------------------------------------------------------------------------
 # Game Settings (DB-backed with config fallback)
 # ---------------------------------------------------------------------------
-def get_setting(key, default=None):
-    """
-    Safely get a setting from game_settings table.
-    Works whether the column is called 'label' or 'description'.
-    """
-    from app.models import GameSettings
-    try:
-        setting = GameSettings.query.filter_by(key=key).first()
-        if setting:
-            # Prefer 'value', fallback to 'label' or 'description' if needed
-            return setting.value or getattr(setting, 'label', None) or getattr(setting, 'description', None) or default
-        return default
-    except Exception:
-        return default
 
+def get_setting(key, default=None):
+    """Get a game setting from DB, falling back to app config, then default."""
+    from app.models import GameSettings
+    setting = GameSettings.query.filter_by(key=key).first()
+    if setting:
+        try:
+            return float(setting.value)
+        except (ValueError, TypeError):
+            return setting.value
+    return current_app.config.get(key.upper(), default)
 
 # ---------------------------------------------------------------------------
 # Wallet Operations (ledger-safe)

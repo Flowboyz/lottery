@@ -301,9 +301,10 @@ def _pregenerate_next(current_round_number: int):
 @login_required
 def index():
     if not _enabled():
-        from flask import flash, redirect, url_for
-        flash("Aviator is currently unavailable.", "info")
-        return redirect(url_for("games.hub"))
+        # from flask import flash, redirect, url_for
+        # flash("Aviator is currently unavailable.", "info")
+        # return redirect(url_for("games.hub"))
+        return True
 
     current_round = _ensure_round()
 
