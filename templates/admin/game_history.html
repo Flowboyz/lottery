@@ -12,6 +12,8 @@
                     <option value="wheel" {% if game_filter == 'wheel' %}selected{% endif %}>🎡 Wheel</option>
                     <option value="coinflip" {% if game_filter == 'coinflip' %}selected{% endif %}>🪙 Coin Flip</option>
                     <option value="scratchcard" {% if game_filter == 'scratchcard' %}selected{% endif %}>🎰 Scratch Card</option>
+                    <option value="aviator" {% if game_filter == 'aviator' %}selected{% endif %}>✈️ Aviator</option>
+                    <option value="color" {% if game_filter == 'color' %}selected{% endif %}>🎨 Color Prediction</option>
                 </select>
                 <select name="user" class="form-input filter-select">
                     <option value="">All Users</option>
@@ -42,7 +44,11 @@
                 <div class="bet-card-top">
                     <div class="bet-nums">
                         <span class="game-type-badge game-{{ play.game_type }}">
-                            {% if play.game_type == 'wheel' %}🎡{% elif play.game_type == 'coinflip' %}🪙{% else %}🎰{% endif %}
+                            {% if play.game_type == 'wheel' %}🎡
+                            {% elif play.game_type == 'coinflip' %}🪙
+                            {% elif play.game_type == 'aviator' %}✈️
+                            {% elif play.game_type == 'color' %}🎨
+                            {% else %}🎰{% endif %}
                             {{ play.game_type }}
                         </span>
                     </div>

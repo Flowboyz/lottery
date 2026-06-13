@@ -2,10 +2,10 @@
 Application factory for Ditto Dinky.
 """
 import os
-
 from flask import Flask, render_template
 
 from config import config_map
+from app.extensions import socketio, db, login_manager, csrf, mail, migrate
 
 
 def create_app(config_name=None):
@@ -19,12 +19,10 @@ def create_app(config_name=None):
     )
     app.config.from_object(config_map.get(config_name, config_map["default"]))
 
-    # Ensure instance folder exists (for SQLite)
+    # Ensure instance folder exists
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), "instance"), exist_ok=True)
 
     # Initialize extensions
-    from app.extensions import db, login_manager, csrf, mail, migrate
-
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
@@ -33,6 +31,9 @@ def create_app(config_name=None):
     csrf.init_app(app)
     mail.init_app(app)
     migrate.init_app(app, db)
+
+    # Initialize SocketIO
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent")
 
     # Exempt Paystack webhook from CSRF
     csrf.exempt("app.wallet.routes.paystack_webhook")
@@ -46,6 +47,8 @@ def create_app(config_name=None):
     from app.legal import legal_bp
     from app.profile import profile_bp
     from app.games import games_bp
+    from app.aviator import aviator_bp
+    from app.color import color_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(game_bp)
@@ -55,6 +58,8 @@ def create_app(config_name=None):
     app.register_blueprint(legal_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(games_bp)
+    app.register_blueprint(aviator_bp)
+    app.register_blueprint(color_bp)
 
     # Template context processors
     @app.context_processor
@@ -62,29 +67,33 @@ def create_app(config_name=None):
         from app.utils import naira
         from flask_login import current_user as cu
         from datetime import datetime
-        ctx = dict(naira=naira)
+
+        ctx = {"naira": naira}
+
         if cu.is_authenticated:
-            from app.models import Notification, Announcement
+            from app.models import Notification
             ctx["unread_count"] = Notification.query.filter_by(
                 user_id=cu.id, is_read=False
             ).count()
-        # Active announcements for all users
+
         from app.models import Announcement
         ctx["announcements"] = Announcement.query.filter_by(is_active=True).filter(
             db.or_(Announcement.expires_at.is_(None), Announcement.expires_at > datetime.utcnow())
         ).order_by(Announcement.created_at.desc()).limit(3).all()
+
         return ctx
 
-    # Create tables on first request if they don't exist
+    # Create tables (for development). Remove in production if using migrations.
     with app.app_context():
         from app.models import (
             User, OTP, Transaction, LotteryRound, Bet,
             PaymentRecord, WithdrawalRequest, Notification, AuditLog,
             BankAccount, GameSettings, Announcement, GamePlay
         )
+        from app.models_games import ColorRound, ColorEntry, AviatorRound, AviatorEntry
         db.create_all()
-        
-    # Custom error handlers
+
+    # Error handlers
     @app.errorhandler(401)
     def unauthorized(e):
         return render_template("errors.html", error_code=401, message="Please login to access this page."), 401

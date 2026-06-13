@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Games Report - Admin - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+            <div>
+                <h2 class="page-heading" style="margin-bottom:4px;">🎮 New Games Report</h2>
+                <p class="page-subtitle">Aviator & Color Prediction — revenue metrics</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="small-btn">← Back to Dashboard</a>
+        </div>
+
+        <!-- Period Tabs -->
+        <div class="lb-tabs" style="margin-bottom:20px;">
+            <button class="lb-tab active" onclick="showPeriod('today',this)">Today</button>
+            <button class="lb-tab" onclick="showPeriod('weekly',this)">This Week</button>
+            <button class="lb-tab" onclick="showPeriod('monthly',this)">This Month</button>
+            <button class="lb-tab" onclick="showPeriod('alltime',this)">All Time</button>
+        </div>
+
+        {% for period in ['today','weekly','monthly','alltime'] %}
+        <div id="period-{{ period }}" class="period-panel" style="{{ 'display:block' if loop.first else 'display:none' }};">
+            <!-- Aviator Stats -->
+            <h3 class="section-title">✈️ Aviator</h3>
+            <div class="stats-grid" style="margin-bottom:24px;">
+                {% set a = avi_stats[period] %}
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(a.wagers) }}</div>
+                    <div class="stat-label">Total Wagered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(a.payouts) }}</div>
+                    <div class="stat-label">Total Payouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if a.rtp > 100 %}text-danger{% elif a.rtp < 90 %}text-success{% endif %}">{{ "{:.1f}".format(a.rtp) }}%</div>
+                    <div class="stat-label">Actual RTP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if a.profit > 0 %}text-success{% else %}text-danger{% endif %}">₦{{ "{:,.0f}".format(a.profit) }}</div>
+                    <div class="stat-label">House Profit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ a.plays }}</div>
+                    <div class="stat-label">Flights Played</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ a.players }}</div>
+                    <div class="stat-label">Unique Players</div>
+                </div>
+            </div>
+
+            <!-- Color Stats -->
+            <h3 class="section-title">🎨 Color Prediction</h3>
+            <div class="stats-grid">
+                {% set c = color_stats[period] %}
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(c.wagers) }}</div>
+                    <div class="stat-label">Total Wagered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(c.payouts) }}</div>
+                    <div class="stat-label">Total Payouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if c.rtp > 100 %}text-danger{% elif c.rtp < 90 %}text-success{% endif %}">{{ "{:.1f}".format(c.rtp) }}%</div>
+                    <div class="stat-label">Actual RTP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if c.profit > 0 %}text-success{% else %}text-danger{% endif %}">₦{{ "{:,.0f}".format(c.profit) }}</div>
+                    <div class="stat-label">House Profit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ c.plays }}</div>
+                    <div class="stat-label">Bets Placed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ c.players }}</div>
+                    <div class="stat-label">Unique Players</div>
+                </div>
+            </div>
+
+            {% if period == 'today' %}
+            <div style="margin-top:16px;padding:12px 16px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:13px;color:var(--text-muted);">
+                Color rounds today: <strong style="color:var(--text-primary);">{{ color_rounds_today }}</strong>
+                &nbsp;|&nbsp; Total rounds ever: <strong style="color:var(--text-primary);">{{ color_rounds_total }}</strong>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Links -->
+        <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="{{ url_for('admin.game_history') }}?game=aviator" class="small-btn">✈️ Aviator Plays</a>
+            <a href="{{ url_for('admin.game_history') }}?game=color"   class="small-btn">🎨 Color Plays</a>
+            <a href="{{ url_for('admin.game_settings') }}"             class="small-btn">⚙️ Game Settings</a>
+            <a href="{{ url_for('admin.export_csv', data_type='games') }}" class="small-btn">📥 Export CSV</a>
+        </div>
+    </div>
+</div>
+<script>
+function showPeriod(p, btn){
+    document.querySelectorAll(".period-panel").forEach(el => el.style.display = "none");
+    document.querySelectorAll(".lb-tab").forEach(el => el.classList.remove("active"));
+    document.getElementById("period-" + p).style.display = "block";
+    btn.classList.add("active");
+}
+</script>
+{% endblock %}

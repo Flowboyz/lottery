@@ -14,12 +14,17 @@ profile_bp = Blueprint("profile", __name__, url_prefix="/profile")
 @profile_bp.route("/")
 @login_required
 def index():
+    from app.models import GamePlay
     banks = BankAccount.query.filter_by(user_id=current_user.id).order_by(
         BankAccount.is_default.desc(), BankAccount.created_at.desc()
     ).all()
-    # Count how many users this person referred
     referral_count = User.query.filter_by(referred_by=current_user.id).count()
-    return render_template("profile/index.html", banks=banks, referral_count=referral_count)
+    # Recent game history (all game types inc. aviator & color)
+    game_history = GamePlay.query.filter_by(
+        user_id=current_user.id
+    ).order_by(GamePlay.created_at.desc()).limit(20).all()
+    return render_template("profile/index.html", banks=banks,
+                           referral_count=referral_count, game_history=game_history)
 
 
 # ────────────────────────── EDIT PROFILE ──────────────────────────

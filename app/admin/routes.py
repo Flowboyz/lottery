@@ -473,7 +473,19 @@ def game_settings():
             "MIN_WITHDRAWAL": ("Min Withdrawal (₦)", request.form.get("min_withdrawal")),
             "COINFLIP_PAYOUT": ("Coinflip Payout Multiplier", request.form.get("coinflip_payout")),
             "SCRATCH_WIN_CHANCE": ("Scratch Card Win Chance (0-1)", request.form.get("scratch_win_chance")),
-            "MAINTENANCE_MODE": "off" if request.form.get("maintenance_mode") == "off" else "on",
+            # Aviator
+            "AVIATOR_ENABLED":    ("Aviator Enabled (1=yes, 0=no)", request.form.get("aviator_enabled")),
+            "AVIATOR_RTP":        ("Aviator RTP %",                 request.form.get("aviator_rtp")),
+            "AVIATOR_HOUSE_EDGE": ("Aviator House Edge %",          request.form.get("aviator_house_edge")),
+            "AVIATOR_MIN_BET":    ("Aviator Min Bet (₦)",        request.form.get("aviator_min_bet")),
+            "AVIATOR_MAX_BET":    ("Aviator Max Bet (₦)",        request.form.get("aviator_max_bet")),
+            # Color Prediction
+            "COLOR_ENABLED":        ("Color Prediction Enabled",        request.form.get("color_enabled")),
+            "COLOR_RED_PAYOUT":     ("Color Red Payout Multiplier",     request.form.get("color_red_payout")),
+            "COLOR_GREEN_PAYOUT":   ("Color Green Payout Multiplier",   request.form.get("color_green_payout")),
+            "COLOR_VIOLET_PAYOUT":  ("Color Violet Payout Multiplier",  request.form.get("color_violet_payout")),
+            "COLOR_ROUND_DURATION": ("Color Round Duration (seconds)",  request.form.get("color_round_duration")),
+            "MAINTENANCE_MODE": ("Maintenance Mode", "on" if request.form.get("maintenance_mode") == "on" else "off"),
         }
 
         for key, (label, value) in settings_map.items():
@@ -500,6 +512,10 @@ def game_settings():
         "DAILY_CLAIM_AMOUNT": 500, "COOLDOWN_SECONDS": 10, "SIGNUP_BONUS": 100,
         "REFERRAL_BONUS": 200, "MIN_DEPOSIT": 500, "MIN_WITHDRAWAL": 1000,
         "COINFLIP_PAYOUT": 1.9, "SCRATCH_WIN_CHANCE": 0.30,
+        "AVIATOR_ENABLED": 1, "AVIATOR_RTP": 96, "AVIATOR_HOUSE_EDGE": 4,
+        "AVIATOR_MIN_BET": 50, "AVIATOR_MAX_BET": 50000,
+        "COLOR_ENABLED": 1, "COLOR_RED_PAYOUT": 2.0, "COLOR_GREEN_PAYOUT": 2.0,
+        "COLOR_VIOLET_PAYOUT": 4.5, "COLOR_ROUND_DURATION": 30,
     }
     for key, default in defaults.items():
         settings[key] = get_setting(key, default)
@@ -602,6 +618,57 @@ def email_users():
     ).order_by(User.username).all()
     return render_template("admin/email_users.html", email_users=all_email_users)
 
+
+
+# ────────────────────────── NEW GAMES REPORTING ──────────────────────────
+@admin_bp.route("/games-report")
+@login_required
+@admin_required
+def games_report():
+    """Revenue report for Aviator and Color Prediction."""
+    from app.models_games import  ColorRound
+    from sqlalchemy import func
+
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+
+    def gp_stats(game_type, since=None):
+        q = GamePlay.query.filter(GamePlay.game_type == game_type)
+        if since:
+            q = q.filter(GamePlay.created_at >= datetime.combine(since, datetime.min.time()))
+        rows = q.all()
+        wagers   = sum(r.bet_amount for r in rows)
+        payouts  = sum(r.payout    for r in rows)
+        plays    = len(rows)
+        players  = len(set(r.user_id for r in rows))
+        rtp      = (payouts / wagers * 100) if wagers else 0
+        profit   = wagers - payouts
+        return dict(wagers=wagers, payouts=payouts, plays=plays, players=players,
+                    rtp=rtp, profit=profit)
+
+    periods = {
+        "today":   today,
+        "weekly":  week_ago,
+        "monthly": month_ago,
+        "alltime": None,
+    }
+
+    avi_stats   = {p: gp_stats("aviator", since) for p, since in periods.items()}
+    color_stats = {p: gp_stats("color",   since) for p, since in periods.items()}
+
+    # Color round counts (fixed)
+    color_rounds_today = ColorRound.query.filter(
+        ColorRound.started_at >= datetime.combine(today, datetime.min.time())
+    ).count()
+
+    color_rounds_total = ColorRound.query.count()
+
+    return render_template("admin/games_report.html",
+                        avi_stats=avi_stats,
+                        color_stats=color_stats,
+                        color_rounds_today=color_rounds_today,
+                        color_rounds_total=color_rounds_total)
 
 # ────────────────────────── EXPORT CSV ──────────────────────────
 @admin_bp.route("/export/<string:data_type>")

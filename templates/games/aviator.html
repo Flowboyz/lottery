@@ -1,0 +1,1361 @@
+{% extends "base.html" %}
+{% block title %}Aviator - DITTO DINKY{% endblock %}
+{% block extra_css %}
+<style>
+/* ═══════════════════════════════════════
+   AVIATOR — Production CSS
+   All colours via CSS variables so the
+   existing theme system works unchanged.
+═══════════════════════════════════════ */
+.avi-wrap{max-width:560px;margin:0 auto;padding:80px 16px 100px;}
+
+/* ── Crash-history scrollbar ── */
+.avi-histbar{
+  display:flex;gap:6px;overflow-x:auto;padding:6px 0 10px;
+  scrollbar-width:none;margin-bottom:8px;
+}
+.avi-histbar::-webkit-scrollbar{display:none;}
+.avi-hchip{
+  flex-shrink:0;padding:4px 12px;border-radius:20px;
+  font-size:12px;font-weight:800;white-space:nowrap;cursor:default;
+}
+.avi-hchip.high{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#22c55e;}
+.avi-hchip.low {background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.4); color:#ef4444;}
+.avi-hchip.med {background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;}
+
+/* ── Phase banner ── */
+.avi-phase{
+  text-align:center;padding:8px 12px;font-size:13px;font-weight:700;
+  letter-spacing:.4px;margin-bottom:10px;border-radius:var(--radius-sm);
+}
+.avi-phase.betting{color:#fbbf24;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);}
+.avi-phase.flying {color:#22c55e;background:rgba(34,197,94,.07); border:1px solid rgba(34,197,94,.2);}
+.avi-phase.crashed{color:#ef4444;background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.2);}
+
+/* ── Sky container ── */
+.avi-sky{
+  position:relative;overflow:hidden;border-radius:var(--radius-lg);
+  height:280px;margin-bottom:12px;
+  box-shadow:var(--shadow-lg);
+  border:1px solid rgba(0,212,170,.18);
+  background:linear-gradient(170deg,#03050d 0%,#070d1e 45%,#0a1128 100%);
+}
+
+/* Stars */
+.avi-stars{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+.avi-stars span{
+  position:absolute;border-radius:50%;background:#fff;
+  animation:twinkle linear infinite;
+}
+@keyframes twinkle{
+  0%,100%{opacity:.1;transform:scale(1)}
+  50%{opacity:.8;transform:scale(1.4)}
+}
+
+/* Canvas — sits on z-index 1, behind plane (z-index 4) */
+#graphCanvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  z-index:1;pointer-events:none;
+}
+
+/* Ground glow */
+.avi-ground{
+  position:absolute;bottom:0;left:0;right:0;height:26px;z-index:2;
+  background:linear-gradient(0deg,rgba(0,212,170,.05),transparent);
+  border-top:1px solid rgba(0,212,170,.12);
+}
+/* Runway dashes */
+.avi-runway-dashes{
+  position:absolute;bottom:8px;left:4%;right:4%;height:2px;z-index:3;
+  background:repeating-linear-gradient(
+    90deg,
+    rgba(0,212,170,.35) 0 16px,
+    transparent 16px 28px
+  );
+}
+
+/* Clouds */
+.avi-cloud{
+  position:absolute;opacity:.12;font-size:24px;pointer-events:none;z-index:2;
+  animation:driftCloud linear infinite;
+}
+@keyframes driftCloud{from{transform:translateX(110%)}to{transform:translateX(-110%)}}
+
+/* Multiplier overlay */
+.avi-mult-wrap{
+  position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);
+  z-index:5;text-align:center;pointer-events:none;
+}
+.avi-mult-num{
+  font-size:62px;font-weight:900;letter-spacing:-2px;line-height:1;
+  color:var(--accent-primary);
+  text-shadow:0 0 40px rgba(0,212,170,.6);
+}
+.avi-mult-num.crashed{
+  color:#ef4444;
+  text-shadow:0 0 40px rgba(239,68,68,.7);
+}
+.avi-mult-num.betting{
+  color:rgba(255,255,255,.22);
+  font-size:28px;text-shadow:none;letter-spacing:0;
+}
+/* "FLEW AWAY" flash */
+.avi-flew{
+  display:none;margin-top:6px;font-size:18px;font-weight:900;
+  color:#ef4444;letter-spacing:2px;text-transform:uppercase;
+  text-shadow:0 0 18px rgba(239,68,68,.7);
+  animation:flashAlt .45s ease infinite alternate;
+}
+@keyframes flashAlt{to{opacity:.3;}}
+
+/* Plane — NO default CSS transition; JS drives it entirely */
+.avi-plane{
+  position:absolute;font-size:32px;z-index:4;
+  filter:drop-shadow(0 0 10px rgba(0,212,170,.55));
+  will-change:left,bottom,transform,opacity;
+}
+
+/* Trail dots */
+.avi-trail{
+  position:absolute;border-radius:50%;width:4px;height:4px;
+  background:rgba(0,212,170,.65);pointer-events:none;z-index:3;
+  animation:trailFade .9s ease forwards;
+}
+@keyframes trailFade{to{opacity:0;width:1px;height:1px;}}
+
+/* Explosion particles */
+.avi-particle{
+  position:absolute;border-radius:50%;pointer-events:none;z-index:6;
+  animation:partBurst .9s ease-out forwards;
+}
+@keyframes partBurst{
+  0%{opacity:1;transform:translate(0,0) scale(1);}
+  100%{opacity:0;transform:var(--tx,translate(0,-50px)) scale(0);}
+}
+
+/* Sky status line */
+.avi-sky-status{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  font-size:11px;font-weight:700;color:rgba(255,255,255,.4);
+  letter-spacing:.8px;text-transform:uppercase;z-index:5;white-space:nowrap;
+}
+
+/* ── Cards ── */
+.avi-card{
+  background:var(--bg-card);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md);padding:18px;margin-bottom:12px;
+  box-shadow:var(--shadow-sm);
+}
+.avi-card-title{
+  font-size:12px;font-weight:700;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+
+/* Bet input */
+.avi-bet-input{
+  width:100%;padding:12px 14px;font-size:16px;font-weight:700;
+  background:var(--bg-elevated);border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm);color:var(--text-primary);
+  outline:none;box-sizing:border-box;
+}
+.avi-bet-input:focus{border-color:var(--accent-primary);box-shadow:var(--shadow-glow);}
+
+.avi-presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.avi-preset{
+  padding:5px 12px;background:var(--bg-elevated);border:1px solid var(--border-subtle);
+  border-radius:20px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;
+}
+.avi-preset:hover{background:var(--accent-primary-soft);color:var(--accent-primary);border-color:var(--accent-primary);}
+
+.avi-autocash-row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.avi-autocash-label{font-size:13px;color:var(--text-muted);}
+.avi-autocash-input{
+  width:80px;padding:7px 10px;font-size:13px;font-weight:700;
+  background:var(--bg-elevated);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-sm);color:var(--text-primary);outline:none;text-align:center;
+}
+
+/* Buttons */
+.avi-btn{
+  padding:14px;border-radius:var(--radius-md);font-size:15px;font-weight:700;
+  border:none;cursor:pointer;transition:all .18s;width:100%;margin-top:10px;
+}
+.avi-btn-bet{
+  background:linear-gradient(135deg,var(--accent-primary),#00b894);color:#fff;
+  box-shadow:0 4px 16px rgba(0,212,170,.3);
+}
+.avi-btn-bet:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,212,170,.4);}
+.avi-btn-cash{
+  background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;
+  box-shadow:0 4px 20px rgba(251,191,36,.4);
+  font-size:18px;font-weight:900;
+}
+.avi-btn-cash:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(251,191,36,.55);}
+.avi-btn-wait{
+  background:var(--bg-elevated);color:var(--text-muted);
+  border:1px solid var(--border-subtle);cursor:not-allowed;font-size:13px;
+}
+.avi-btn:disabled{opacity:.38;cursor:not-allowed;transform:none!important;}
+
+/* Entry strip */
+.avi-entry-strip{
+  padding:10px 14px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;margin-bottom:10px;
+}
+.avi-entry-strip.won  {background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3); color:#22c55e;}
+.avi-entry-strip.lost {background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#ef4444;}
+.avi-entry-strip.live {background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;}
+.avi-entry-strip.idle {background:var(--bg-elevated);border:1px solid var(--border-subtle);color:var(--text-muted);}
+
+/* Live players panel */
+.avi-players-tabs{display:flex;border-bottom:1px solid var(--border-subtle);}
+.avi-ptab{
+  padding:7px 16px;font-size:12px;font-weight:700;color:var(--text-muted);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.avi-ptab.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary);}
+.avi-players-panel{
+  background:var(--bg-card);border:1px solid var(--border-subtle);border-top:none;
+  border-radius:0 0 var(--radius-md) var(--radius-md);
+  max-height:150px;overflow-y:auto;
+}
+.avi-players-panel::-webkit-scrollbar{width:3px;}
+.avi-players-panel::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:2px;}
+.avi-prow{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 14px;border-bottom:1px solid var(--border-subtle);font-size:12px;
+}
+.avi-prow:last-child{border-bottom:none;}
+.avi-pname{color:var(--text-secondary);font-weight:600;}
+.avi-pbet{color:var(--text-muted);}
+.avi-pcash{font-weight:800;font-size:13px;}
+.avi-pcash.win{color:#22c55e;}
+.avi-pcash.flying{color:#fbbf24;animation:flashAlt .8s ease infinite alternate;}
+.avi-empty{padding:14px;text-align:center;color:var(--text-muted);font-size:12px;}
+
+/* Toast */
+.avi-toast{
+  position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+  padding:14px 28px;border-radius:var(--radius-md);
+  font-size:15px;font-weight:700;z-index:9999;
+  animation:fadeUp .3s ease;box-shadow:var(--shadow-lg);
+  pointer-events:none;white-space:nowrap;
+}
+.avi-toast.win {background:rgba(34,197,94,.96);color:#fff;}
+.avi-toast.loss{background:rgba(239,68,68,.96);color:#fff;}
+.avi-toast.info{background:rgba(59,130,246,.96);color:#fff;}
+@keyframes fadeUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* Misc */
+.sound-btn{
+  background:none;border:1px solid var(--border-subtle);border-radius:20px;
+  padding:3px 10px;font-size:11px;color:var(--text-muted);cursor:pointer;
+}
+.sound-btn:hover{border-color:var(--accent-primary);color:var(--accent-primary);}
+.fair-box{
+  font-size:11px;color:var(--text-muted);background:var(--bg-elevated);
+  border-radius:var(--radius-sm);padding:8px 12px;word-break:break-all;font-family:monospace;
+}
+.avi-history-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.avi-history-tbl th{color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-subtle);}
+.avi-history-tbl td{padding:8px;border-bottom:1px solid var(--border-subtle);color:var(--text-secondary);}
+.avi-history-tbl tr:last-child td{border-bottom:none;}
+.tag-win{color:#22c55e;font-weight:700;} .tag-loss{color:#ef4444;font-weight:700;}
+</style>
+{% endblock %}
+{% block content %}
+<div class="content page-content">
+  <h2 class="page-heading" style="text-align:center;margin-bottom:4px;">✈️ Aviator</h2>
+
+  <!-- Crash history bar -->
+  <div class="avi-histbar" id="histBar">
+    {% for r in recent_crashes %}{% if r.crash_point %}
+    <span class="avi-hchip {{ 'high' if r.crash_point>=3 else 'low' if r.crash_point<1.5 else 'med' }}">
+      {{ "%.2f"|format(r.crash_point) }}x
+    </span>{% endif %}{% endfor %}
+  </div>
+
+  <!-- Phase banner — fully JS-controlled -->
+  <div class="avi-phase" id="phaseBanner">
+    <span id="bannerText">Loading…</span>
+  </div>
+
+  <!-- Sky -->
+  <div class="avi-sky" id="avSky">
+    <div class="avi-stars" id="starLayer"></div>
+    <canvas id="graphCanvas"></canvas>
+    <div class="avi-cloud" style="bottom:60%;animation-duration:19s;animation-delay:-4s;">☁️</div>
+    <div class="avi-cloud" style="bottom:74%;animation-duration:26s;animation-delay:-13s;font-size:18px;">☁️</div>
+    <div class="avi-ground"><div class="avi-runway-dashes"></div></div>
+    <div class="avi-plane" id="avPlane" style="left:6%;bottom:26px;">✈️</div>
+    <div class="avi-mult-wrap">
+      <div class="avi-mult-num" id="avMult">1.00x</div>
+      <div class="avi-flew" id="avFlew">FLEW AWAY!</div>
+    </div>
+    <div class="avi-sky-status" id="avStatus">Loading…</div>
+  </div>
+
+  <!-- Entry strip -->
+  <div id="entryStrip" style="display:none;" class="avi-entry-strip idle"></div>
+
+  <!-- Controls -->
+  <div class="avi-card">
+    <div class="avi-card-title">
+      <span>Round #<span id="roundLabel">—</span></span>
+      <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔊 Sound ON</button>
+    </div>
+
+    <div id="betForm">
+      <input class="avi-bet-input" type="number" id="avBet"
+             min="{{ min_bet }}" max="{{ max_bet }}" step="50" value="{{ min_bet }}">
+      <div class="avi-presets">
+        <span class="avi-preset" onclick="setP(100)">₦100</span>
+        <span class="avi-preset" onclick="setP(500)">₦500</span>
+        <span class="avi-preset" onclick="setP(1000)">₦1K</span>
+        <span class="avi-preset" onclick="setP(5000)">₦5K</span>
+        <span class="avi-preset" onclick="setP(10000)">₦10K</span>
+        <span class="avi-preset" onclick="halfB()">½</span>
+        <span class="avi-preset" onclick="dblB()">2×</span>
+      </div>
+      <div class="avi-autocash-row">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="autoCheck" style="accent-color:var(--accent-gold);">
+          <span class="avi-autocash-label">Auto cashout at</span>
+        </label>
+        <input class="avi-autocash-input" type="number" id="autoAt" value="2.00" step="0.10" min="1.10">
+        <span class="avi-autocash-label">x</span>
+      </div>
+      <button class="avi-btn avi-btn-bet" id="betBtn" onclick="placeBet()">🎯 Place Bet</button>
+    </div>
+
+    <button class="avi-btn avi-btn-cash" id="cashBtn" onclick="doCashout()" style="display:none;">
+      💰 Cash Out &nbsp;<span id="cashAmt"></span>
+    </button>
+    <button class="avi-btn avi-btn-wait" id="waitBtn" style="display:none;" disabled>
+      ⏳ Wait for next round to bet…
+    </button>
+  </div>
+
+  <!-- Live players -->
+  <div class="avi-card" style="padding:0;">
+    <div class="avi-players-tabs">
+      <div class="avi-ptab active" onclick="switchTab('all',this)">All Bets</div>
+      <div class="avi-ptab" onclick="switchTab('top',this)">Top Wins</div>
+    </div>
+    <div class="avi-players-panel" id="playersPanel">
+      <div class="avi-empty">Waiting for players…</div>
+    </div>
+  </div>
+
+  <!-- My history -->
+  <div class="avi-card">
+    <div class="avi-card-title">My Recent Flights</div>
+    {% if history %}
+    <table class="avi-history-tbl">
+      <thead><tr><th>Round</th><th>Bet</th><th>Cashout</th><th>Crash</th><th>Result</th></tr></thead>
+      <tbody>
+        {% for e in history %}
+        <tr>
+          <td>#{{ e.round.round_number if e.round else '—' }}</td>
+          <td>₦{{ "%.0f"|format(e.bet_amount) }}</td>
+          <td>{% if e.cashout_at %}{{ "%.2f"|format(e.cashout_at) }}x{% else %}—{% endif %}</td>
+          <td>{% if e.round and e.round.crash_point %}{{ "%.2f"|format(e.round.crash_point) }}x{% else %}—{% endif %}</td>
+          <td class="{{ 'tag-win' if e.result=='WIN' else 'tag-loss' if e.result=='LOSS' else '' }}">
+            {% if e.payout > 0 %}₦{{ "%.0f"|format(e.payout) }}{% elif e.result=='LOSS' %}Lost{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px 0;">No flights yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Provably fair -->
+  <div class="avi-card">
+    <div class="avi-card-title">Provably Fair</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+      Crash point is sealed server-side using a cryptographic seed before betting opens.
+      Seed is revealed after the crash so you can independently verify the result.
+    </p>
+    <div class="fair-box" id="fairSeed">Seed revealed after each crash.</div>
+  </div>
+</div>
+
+<script>
+/* ╔═══════════════════════════════════════════════════════════════════╗
+   ║  AVIATOR — Production-grade shared-round JS engine               ║
+   ║                                                                   ║
+   ║  Architecture:                                                    ║
+   ║  • Server pre-computes the FULL multiplier timeline as a JSON     ║
+   ║    array of [elapsed_seconds, multiplier] pairs.                  ║
+   ║  • On each rAF tick, JS looks up the next pre-computed value      ║
+   ║    (binary search) — no floating-point formula drift.             ║
+   ║  • Canvas draws a smooth Bézier curve that redraws every frame.   ║
+   ║  • Sound files: drop crash.mp3/.ogg + engine.mp3/.ogg +           ║
+   ║    cashout.mp3/.ogg + bet.mp3/.ogg in /static/sounds/             ║
+   ║    Falls back to Web Audio synthesis if files are missing.        ║
+   ║  • Poll: 500ms interval keeps all clients in sync.                ║
+   ╚═══════════════════════════════════════════════════════════════════╝ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §1  SOUND SYSTEM
+   ─────────────────────────────────────────────
+   Priority: Audio file → Web Audio synthesis
+   To use your own sounds:
+     /static/sounds/avi_engine.mp3   (looping engine hum)
+     /static/sounds/avi_crash.mp3    (one-shot crash)
+     /static/sounds/avi_cashout.mp3  (one-shot win chime)
+     /static/sounds/avi_bet.mp3      (one-shot bet placed)
+     /static/sounds/avi_tick.mp3     (one-shot countdown beep)
+   If a file is not found the synthesised fallback plays silently.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let SND = { on: true, ctx: null, eng: null, engGain: null };
+
+/* Audio files — edit paths here to change your sounds */
+const SND_FILES = {
+  crash:   "/static/sounds/avi_crash.mp3",
+  cashout: "/static/sounds/avi_cashout.mp3",
+  bet:     "/static/sounds/avi_bet.mp3",
+  tick:    "/static/sounds/avi_tick.mp3",
+  engine:  "/static/sounds/avi_engine.mp3",
+};
+
+/* Cache decoded audio buffers */
+const SND_BUFFERS = {};
+
+function _initCtx(){
+  if(SND.ctx) return;
+  try{ SND.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+}
+function _resume(){
+  if(SND.ctx && SND.ctx.state==="suspended") SND.ctx.resume();
+}
+/* Unlock on first user gesture */
+document.addEventListener("click",    ()=>{ _initCtx(); _resume(); }, {once:true});
+document.addEventListener("touchstart",()=>{ _initCtx(); _resume(); }, {once:true});
+
+/* Preload audio files into buffers */
+async function _loadBuf(key){
+  if(SND_BUFFERS[key]) return SND_BUFFERS[key];
+  _initCtx();
+  if(!SND.ctx) return null;
+  try{
+    const r = await fetch(SND_FILES[key]);
+    if(!r.ok) return null;
+    const ab = await r.arrayBuffer();
+    const buf = await SND.ctx.decodeAudioData(ab);
+    SND_BUFFERS[key] = buf;
+    return buf;
+  }catch(e){ return null; }
+}
+/* Preload all sounds in background — won't block game */
+["crash","cashout","bet","tick"].forEach(k => _loadBuf(k).catch(()=>{}));
+
+function _playBuf(key, vol=1){
+  if(!SND.on || !SND.ctx) return;
+  _resume();
+  const buf = SND_BUFFERS[key];
+  if(buf){
+    try{
+      const src = SND.ctx.createBufferSource();
+      const gain = SND.ctx.createGain();
+      src.buffer = buf;
+      src.connect(gain); gain.connect(SND.ctx.destination);
+      gain.gain.value = vol;
+      src.start();
+    }catch(e){}
+    return;
+  }
+  /* Synthesis fallback */
+  _synth(key);
+}
+
+function _synth(key){
+  if(!SND.ctx) return;
+  _resume();
+  const t = SND.ctx.currentTime;
+  const mk = (type, freq, dur, vol, startAt=0)=>{
+    const o=SND.ctx.createOscillator(), g=SND.ctx.createGain();
+    o.connect(g); g.connect(SND.ctx.destination);
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,t+startAt);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+startAt+dur);
+    o.start(t+startAt); o.stop(t+startAt+dur);
+  };
+  if(key==="crash"){
+    mk("sawtooth",380,.15,.3);
+    mk("square",  130,.2, .25,.06);
+    mk("sine",    800,.18,.15,.02);
+  } else if(key==="cashout"){
+    mk("sine",660,.12,.18);
+    mk("sine",880,.12,.18,.12);
+    mk("sine",1100,.2,.2,.24);
+  } else if(key==="bet"){
+    mk("sine",660,.12,.14);
+  } else if(key==="tick"){
+    mk("sine",880,.08,.13);
+  }
+}
+
+/* Engine — looping audio file or synthesised sawtooth */
+async function startEngine(){
+  if(!SND.on) return;
+  _initCtx(); _resume();
+  stopEngine();
+  /* Try file-based looping engine */
+  const buf = await _loadBuf("engine");
+  if(buf && SND.ctx){
+    try{
+      const src = SND.ctx.createBufferSource();
+      const gain = SND.ctx.createGain();
+      src.buffer = buf; src.loop = true;
+      src.connect(gain); gain.connect(SND.ctx.destination);
+      gain.gain.value = 0.6;
+      src.start();
+      SND.eng = src; SND.engGain = gain;
+      return;
+    }catch(e){}
+  }
+  /* Synthesis fallback */
+  if(!SND.ctx) return;
+  try{
+    SND.eng = SND.ctx.createOscillator();
+    SND.engGain = SND.ctx.createGain();
+    SND.eng.connect(SND.engGain); SND.engGain.connect(SND.ctx.destination);
+    SND.eng.type="sawtooth"; SND.eng.frequency.value=85;
+    SND.engGain.gain.setValueAtTime(0,SND.ctx.currentTime);
+    SND.engGain.gain.linearRampToValueAtTime(0.05,SND.ctx.currentTime+0.5);
+    SND.eng.start();
+  }catch(e){}
+}
+
+function rampEngine(mult){
+  if(!SND.eng||!SND.ctx) return;
+  /* File-based: vary playback rate for pitch */
+  if(SND.eng.playbackRate){
+    try{ SND.eng.playbackRate.value = 0.9 + (mult-1)*0.04; }catch(e){}
+  } else {
+    /* Synthesised oscillator */
+    try{ SND.eng.frequency.setValueAtTime(Math.min(260,85+(mult-1)*16),SND.ctx.currentTime); }catch(e){}
+  }
+}
+
+function stopEngine(){
+  try{
+    if(SND.engGain && SND.ctx){
+      SND.engGain.gain.linearRampToValueAtTime(0,SND.ctx.currentTime+0.3);
+      setTimeout(()=>{ try{SND.eng.stop();}catch(e){} },350);
+    }
+  }catch(e){}
+  SND.eng=null; SND.engGain=null;
+}
+
+function toggleSound(){
+  SND.on=!SND.on;
+  document.getElementById("soundBtn").textContent=SND.on?"🔊 Sound ON":"🔇 Sound OFF";
+  if(!SND.on) stopEngine();
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §2  CANVAS GRAPH
+   Draws a smooth green Bézier curve upward as
+   the multiplier climbs; turns red on crash.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const canvas = document.getElementById("graphCanvas");
+const gCtx   = canvas.getContext("2d");
+let graphPts = [];  /* [{x,y}] canvas-pixel coords */
+const GROUND_PX = 26;  /* height of runway strip */
+
+function resizeCanvas(){
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", ()=>{ resizeCanvas(); drawGraph(false); });
+
+function multToCanvas(mult){
+  /* Map multiplier log-scale → Y (inverted: higher = lower Y value = higher on screen) */
+  const W = canvas.width, H = canvas.height;
+  const logM   = Math.log(Math.max(mult,1));
+  const logMax = Math.log(201);  /* cap at 200x */
+  const yFrac  = Math.min(logM/logMax, 1);
+  const yPx    = H - GROUND_PX - 6 - yFrac * (H - GROUND_PX - 46);
+  return yPx;
+}
+
+function addGraphPt(mult, ptIndex = null){
+  if(!canvas.width) return;
+  const W = canvas.width;
+  const pts = graphPts;
+  let xPx;
+  if (ptIndex != null && PRE_PTS.length > 1) {
+    /* Use PRE_PTS progress fraction — identical to planePosFromMult.
+       This guarantees the curve tip ALWAYS aligns with the airplane position. */
+    const maxIdx = Math.max(PRE_PTS.length - 1, 1);
+    const xFrac = Math.min(ptIndex / maxIdx, 1);
+    xPx = 8 + xFrac * (W - 16);
+  } else {
+    /* Fallback (used by old calls or initial rebuild path) */
+    const maxPts = 240;
+    xPx = 8 + (Math.min(pts.length, maxPts) / maxPts) * (W - 16);
+  }
+  const yPx = multToCanvas(mult);
+  pts.push({x: Math.min(xPx, W-8), y: yPx});
+}
+
+function drawGraph(crashed){
+  const W=canvas.width, H=canvas.height;
+  gCtx.clearRect(0,0,W,H);
+  if(graphPts.length < 2) return;
+
+  const col  = crashed ? "#ef4444" : "#00d4aa";
+  const glow = crashed ? "rgba(239,68,68,.28)" : "rgba(0,212,170,.28)";
+
+  /* Filled area under curve */
+  gCtx.beginPath();
+  gCtx.moveTo(graphPts[0].x, H - GROUND_PX);
+  graphPts.forEach(p => gCtx.lineTo(p.x, p.y));
+  gCtx.lineTo(graphPts[graphPts.length-1].x, H - GROUND_PX);
+  gCtx.closePath();
+  gCtx.fillStyle = crashed ? "rgba(239,68,68,.06)" : "rgba(0,212,170,.06)";
+  gCtx.fill();
+
+  /* Main curve — smooth quadratic Bézier */
+  gCtx.beginPath();
+  gCtx.moveTo(graphPts[0].x, graphPts[0].y);
+  for(let i=1;i<graphPts.length;i++){
+    const mx=(graphPts[i-1].x+graphPts[i].x)/2;
+    const my=(graphPts[i-1].y+graphPts[i].y)/2;
+    gCtx.quadraticCurveTo(graphPts[i-1].x, graphPts[i-1].y, mx, my);
+  }
+  gCtx.lineTo(graphPts[graphPts.length-1].x, graphPts[graphPts.length-1].y);
+  gCtx.strokeStyle = col;
+  gCtx.lineWidth   = 2.5;
+  gCtx.shadowBlur  = 12;
+  gCtx.shadowColor = glow;
+  gCtx.stroke();
+  gCtx.shadowBlur  = 0;
+
+  /* Dot at tip */
+  const tip = graphPts[graphPts.length-1];
+  gCtx.beginPath();
+  gCtx.arc(tip.x, tip.y, 5, 0, Math.PI*2);
+  gCtx.fillStyle = col;
+  gCtx.shadowBlur=8; gCtx.shadowColor=glow;
+  gCtx.fill();
+  gCtx.shadowBlur=0;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §3  STARS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+(function(){
+  const l=document.getElementById("starLayer");
+  for(let i=0;i<55;i++){
+    const s=document.createElement("span");
+    const z=Math.random()*2+0.5;
+    s.style.cssText=`width:${z}px;height:${z}px;left:${Math.random()*100}%;top:${Math.random()*88}%;`+
+      `animation-duration:${(Math.random()*4+2).toFixed(1)}s;animation-delay:-${(Math.random()*7).toFixed(1)}s`;
+    l.appendChild(s);
+  }
+})();
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §4  MULTIPLIER LOOKUP
+   Binary search through the precomputed array.
+   Server format: [[elapsed_t, mult], ...]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let PRE_PTS   = [];   /* [[t, mult], ...] */
+let PRE_DUR   = 10.0; /* total flight duration */
+let PRE_CRASH = 1.0;  /* crash multiplier */
+
+function multAtElapsed(t){
+  if(!PRE_PTS.length) return 1.00;
+  /* Binary search for largest t_i ≤ t */
+  let lo=0, hi=PRE_PTS.length-1, idx=0;
+  while(lo<=hi){
+    const mid=(lo+hi)>>1;
+    if(PRE_PTS[mid][0]<=t){ idx=mid; lo=mid+1; }
+    else hi=mid-1;
+  }
+  return PRE_PTS[idx][1];
+}
+
+function loadPrecomputed(pre){
+  if(!pre) return;
+  PRE_PTS   = pre.points   || [];
+  PRE_DUR   = pre.duration || 10.0;
+  PRE_CRASH = pre.crash_point || 1.0;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §5  PLANE POSITIONING
+   Plane follows the canvas curve tip exactly.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const avSky   = document.getElementById("avSky");
+const avPlane = document.getElementById("avPlane");
+let planeX=6, planeY=26;  /* % left, px bottom */
+let trails=[];
+
+function planePosFromMult(mult, ptIndex){
+  /* X: use EXACT same px->% mapping as graph curve points for perfect sync
+     Plane now sits exactly at the tip of the drawn line. */
+  const maxIdx = Math.max(PRE_PTS.length - 1, 1);
+  const W = avSky.clientWidth || 560;
+  const xFrac = Math.min(ptIndex / maxIdx, 1);
+  const xPx   = 8 + xFrac * (W - 16);           /* match graph add/rebuild margins */
+  const xPct  = (xPx / W) * 100;
+
+  /* Y: same log-scale as graph (multToCanvas) */
+  const H = avSky.clientHeight || 280;
+  const logM   = Math.log(Math.max(mult,1));
+  const logMax = Math.log(201);
+  const yFrac  = Math.min(logM/logMax, 1);
+  /* px from bottom: GROUND_PX (on runway) → near top. Slight offset vs graph for plane visual center */
+  const yPx = GROUND_PX + yFrac * (H - GROUND_PX - 44);
+
+  return {xPct: Math.max(1.5, Math.min(xPct, 98.5)), yPx: Math.max(GROUND_PX, yPx)};
+}
+
+function movePlane(xPct, yPx){
+  avPlane.style.left   = xPct + "%";
+  avPlane.style.bottom = yPx  + "px";
+  planeX = xPct;
+  planeY = yPx;
+}
+
+function dropTrail(){
+  const d=document.createElement("div");
+  d.className="avi-trail";
+  d.style.left=planeX+"%";
+  d.style.bottom=planeY+"px";
+  avSky.appendChild(d);
+  trails.push(d);
+  setTimeout(()=>{ if(d.parentNode)d.parentNode.removeChild(d); },900);
+  if(trails.length>22)trails.shift();
+}
+
+function clearTrails(){
+  trails.forEach(t=>{ if(t.parentNode)t.parentNode.removeChild(t); });
+  trails=[];
+}
+
+function resetPlane(){
+  avPlane.style.transition="none";
+  avPlane.style.left="6%";
+  avPlane.style.bottom=GROUND_PX+"px";
+  avPlane.style.transform="scale(1) rotate(0deg)";
+  avPlane.style.opacity="1";
+  planeX=6; planeY=GROUND_PX;
+  clearTrails();
+  graphPts=[];
+  gCtx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+function flyPlaneAway(){
+  /* Force reflow so browser registers current position, then transition */
+  void avPlane.offsetWidth;
+  avPlane.style.transition=
+    "left .9s cubic-bezier(.3,0,.65,1), bottom .9s cubic-bezier(.3,0,.65,1), "+
+    "opacity .7s ease, transform .8s ease";
+  avPlane.style.left     ="115%";
+  avPlane.style.bottom   ="96%";
+  avPlane.style.transform="rotate(-42deg) scale(0.12)";
+  avPlane.style.opacity  ="0";
+}
+
+function spawnExplosion(){
+  const colors=["#ef4444","#fbbf24","#f97316","#fff","#fb923c","#dc2626","#a78bfa"];
+  for(let i=0;i<24;i++){
+    const p=document.createElement("div"); p.className="avi-particle";
+    const sz=Math.random()*9+3;
+    const ang=Math.random()*Math.PI*2, dist=Math.random()*90+30;
+    const tx=Math.cos(ang)*dist, ty=Math.sin(ang)*dist;
+    p.style.cssText=
+      `left:${planeX}%;bottom:${planeY}px;width:${sz}px;height:${sz}px;`+
+      `background:${colors[i%7]};--tx:translate(${tx}px,${-Math.abs(ty)}px);`;
+    avSky.appendChild(p);
+    setTimeout(()=>{ if(p.parentNode)p.parentNode.removeChild(p); },1000);
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §6  rAF ANIMATION LOOP
+   Runs ONLY during "flying" phase.
+   Uses precomputed array — no formula drift.
+   ptIdx tracks position in PRE_PTS so plane
+   and graph stay perfectly synchronised.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const multEl    = document.getElementById("avMult");
+const avFlew    = document.getElementById("avFlew");
+const avStatus  = document.getElementById("avStatus");
+const cashBtn   = document.getElementById("cashBtn");
+const cashAmt   = document.getElementById("cashAmt");
+
+let rafId      = null;
+let rafTs      = null;
+let elapsed    = 0;       /* seconds since betting_ends_at */
+let ptIdx      = 0;       /* current index into PRE_PTS */
+let curMult    = 1.00;
+let trailTimer = 0;       /* seconds since last trail dot */
+let crashReported = false;
+let bettingCountdownInterval = null;  /* for smooth local countdown during betting */
+let currentBettingRno = null;           /* track which round the local timer belongs to */
+
+function startAnim(){
+  if(rafId) return;
+  rafTs = performance.now();
+  rafId = requestAnimationFrame(rafTick);
+}
+
+function stopAnim(){
+  if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+  rafTs=null;
+}
+
+function rafTick(now){
+  if(STATE.status!=="flying"){ rafId=null; return; }
+
+  const dt = Math.min(0.1, (now-(rafTs||now))/1000);
+  rafTs = now;
+  elapsed += dt;
+  trailTimer += dt;
+
+  /* Advance ptIdx to stay current — walk forward (never backwards) */
+  while(ptIdx < PRE_PTS.length-1 && PRE_PTS[ptIdx+1][0] <= elapsed) ptIdx++;
+
+  curMult = PRE_PTS.length ? PRE_PTS[ptIdx][1] : 1.00;
+
+  /* ── Multiplier display ── */
+  multEl.textContent = curMult.toFixed(2) + "x";
+
+  /* ── Move plane to match graph curve ── */
+  const pos = planePosFromMult(curMult, ptIdx);
+  movePlane(pos.xPct, pos.yPx);
+
+  /* ── Trail + Graph point every ~0.18s (graph now uses ptIdx for X-sync with plane) ── */
+  if(trailTimer >= 0.18){
+    dropTrail();
+    addGraphPt(curMult, ptIdx);   /* pass ptIdx so curve tip x matches plane exactly */
+    trailTimer = 0;
+  }
+  drawGraph(false);
+
+  /* ── Cash-out button live payout ── */
+  if(STATE.hasBet && STATE.myResult===null && cashBtn.style.display!=="none"){
+    cashAmt.textContent = "₦" + Math.floor((STATE.myBet||0)*curMult).toLocaleString();
+  }
+
+  /* ── Engine pitch ── */
+  rampEngine(curMult);
+
+  /* ── Detect crash — elapsed >= duration ── */
+  if(!crashReported && elapsed >= PRE_DUR){
+    crashReported = true;
+    fetch("/games/aviator/crash-round",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({round_id: STATE.roundId})
+    }).catch(()=>{});
+    /* Don't stop anim here — next poll will fire enterCrashed */
+  }
+
+  rafId = requestAnimationFrame(rafTick);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §7  GAME STATE  (single source of truth)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const STATE = {
+  status:    "waiting",
+  roundId:   0,
+  roundNo:   0,
+  hasBet:    false,
+  myBet:     null,
+  myResult:  null,
+  myCashAt:  null,
+  crashDone: false,
+};
+
+{% if my_entry %}
+STATE.hasBet   = true;
+STATE.myBet    = {{ my_entry.bet_amount }};
+STATE.myResult = {{ ('"%s"'|format(my_entry.result)) if my_entry.result else 'null' }};
+STATE.myCashAt = {{ my_entry.cashout_at or 'null' }};
+{% endif %}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §8  UI HELPERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const betForm    = document.getElementById("betForm");
+const betBtn     = document.getElementById("betBtn");
+const waitBtn    = document.getElementById("waitBtn");
+const strip      = document.getElementById("entryStrip");
+const banner     = document.getElementById("phaseBanner");
+const bannerTxt  = document.getElementById("bannerText");
+const roundLabel = document.getElementById("roundLabel");
+const histBar    = document.getElementById("histBar");
+const playersEl  = document.getElementById("playersPanel");
+const MIN_BET    = {{ min_bet }};
+const MAX_BET    = {{ max_bet }};
+
+function showBetForm(v){ betForm.style.display=v?"block":"none"; if(v)betBtn.disabled=false; }
+function showCash(v)   { cashBtn.style.display=v?"flex":"none"; if(v)cashBtn.disabled=false; }
+function showWait(v)   { waitBtn.style.display=v?"block":"none"; }
+function setStrip(cls,msg){ strip.style.display="block"; strip.className="avi-entry-strip "+cls; strip.textContent=msg; }
+function hideStrip()   { strip.style.display="none"; }
+
+function setBanner(type, rno, extra){
+  banner.className="avi-phase "+type;
+  if(type==="betting")
+    bannerTxt.textContent="🎯 BETTING OPEN — Round #"+rno+" — "+extra+"s left";
+  else if(type==="flying")
+    bannerTxt.textContent="🚀 ROUND #"+rno+" IN FLIGHT — Cash out any time!";
+  else
+    bannerTxt.textContent="💥 ROUND #"+rno+" CRASHED at "+extra+"x — Next round soon…";
+}
+
+function updateBalance(b){
+  if(b==null) return;
+  document.querySelectorAll(".balance").forEach(el=>{
+    el.textContent="Balance: ₦"+parseFloat(b).toLocaleString("en-NG",{minimumFractionDigits:2});
+  });
+}
+
+// Replace addHistChip() with rebuildHistBar() 
+function rebuildHistBar(crashes) {
+    histBar.innerHTML = "";
+    crashes.forEach(c => {
+        const chip = document.createElement("span");
+        chip.className = "avi-hchip " + (c.crash_point >= 3 ? "high" : c.crash_point < 1.5 ? "low" : "med");
+        chip.textContent = c.crash_point.toFixed(2) + "x";
+        histBar.appendChild(chip);
+    });
+}
+
+
+
+function toast(msg,type){
+  const t=document.createElement("div"); t.className="avi-toast "+type; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .5s";
+                   setTimeout(()=>t.remove(),600); },2800);
+}
+
+function setP(v){ document.getElementById("avBet").value=v; }
+function halfB(){
+  const el=document.getElementById("avBet");
+  el.value=Math.max(MIN_BET,Math.floor((parseFloat(el.value)||0)/2/50)*50);
+}
+function dblB(){
+  const el=document.getElementById("avBet");
+  el.value=Math.min(MAX_BET,Math.ceil((parseFloat(el.value)||0)*2/50)*50);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §9  PHASE TRANSITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function enterBetting(rid, rno, secsLeft){
+  STATE.status="betting"; STATE.roundId=rid; STATE.roundNo=rno;
+  STATE.hasBet=false; STATE.myBet=null; STATE.myResult=null; STATE.myCashAt=null;
+  STATE.crashDone=false; crashReported=false;
+  currentBettingRno = rno;
+
+  /* Clear any stale local countdown from previous round */
+  if(bettingCountdownInterval){ 
+    clearInterval(bettingCountdownInterval); 
+    bettingCountdownInterval = null; 
+  }
+
+  stopAnim(); stopEngine(); resetPlane();
+  avFlew.style.display="none";
+  multEl.className="avi-mult-num betting"; multEl.textContent="Waiting…";
+  roundLabel.textContent=rno;
+  hideStrip(); showBetForm(true); showCash(false); showWait(false);
+
+  /* ── Robust LOCAL countdown ──
+     Always finishes cleanly from ~10 down to 0.
+     Uses its own timer so it doesn't depend on poll timing.
+     When it hits 0 it shows "Taking off…" and forces one extra poll
+     to trigger the flying transition as fast as possible.
+  */
+  let localSecs = Math.max(1, Math.ceil(secsLeft || 10));
+  
+  const doCountdown = () => {
+    // Safety: if phase or round changed externally, stop this timer
+    if (STATE.status !== "betting" || currentBettingRno !== rno || STATE.roundNo !== rno) {
+      if (bettingCountdownInterval) {
+        clearInterval(bettingCountdownInterval);
+        bettingCountdownInterval = null;
+      }
+      return;
+    }
+
+    avStatus.textContent = "⏰ " + localSecs + "s to place bet";
+    setBanner("betting", rno, localSecs);
+
+    if (localSecs <= 5 && localSecs > 0) {
+      _playBuf("tick", 0.5);
+    }
+
+    localSecs--;
+
+    if (localSecs < 0) {
+      if (bettingCountdownInterval) {
+        clearInterval(bettingCountdownInterval);
+        bettingCountdownInterval = null;
+      }
+      avStatus.textContent = "⏰ Taking off…";
+      // Force an immediate poll to catch the server-side transition to flying
+      setTimeout(() => { poll().catch(()=>{}); }, 150);
+    }
+  };
+
+  // Start immediately + every second
+  doCountdown();
+  bettingCountdownInterval = setInterval(doCountdown, 1000);
+}
+
+function enterFlying(rid, rno, serverElapsed, pre){
+  STATE.status="flying"; STATE.roundId=rid; STATE.roundNo=rno;
+  STATE.crashDone=false; crashReported=false;
+
+  if(bettingCountdownInterval){ clearInterval(bettingCountdownInterval); bettingCountdownInterval=null; }
+  currentBettingRno = null;
+
+  loadPrecomputed(pre);
+
+  /* Seek ptIdx to match server elapsed */
+  elapsed=Math.max(0,serverElapsed);
+  ptIdx=0;
+  while(ptIdx<PRE_PTS.length-1 && PRE_PTS[ptIdx+1][0]<=elapsed) ptIdx++;
+  curMult = PRE_PTS.length ? PRE_PTS[ptIdx][1] : 1.00;
+
+  /* Position plane at correct point */
+  const pos=planePosFromMult(curMult, ptIdx);
+  avPlane.style.transition="none";
+  movePlane(pos.xPct, pos.yPx);
+
+  /* Rebuild graph to current point */
+  graphPts=[];
+  for(let i=0;i<=ptIdx;i++) {
+    /* Quick-fill graph up to current position */
+    const W=canvas.width, H=canvas.height;
+    const maxPts=Math.max(PRE_PTS.length-1,1);
+    const xPx=8+(i/maxPts)*(W-16);
+    const yPx=multToCanvas(PRE_PTS[i][1]);
+    graphPts.push({x:Math.min(xPx,W-8), y:yPx});
+  }
+  drawGraph(false);
+
+  multEl.className="avi-mult-num"; multEl.textContent=curMult.toFixed(2)+"x";
+  avFlew.style.display="none";
+  avStatus.textContent="✈️ "+curMult.toFixed(2)+"x";
+  setBanner("flying", rno, null);
+  roundLabel.textContent=rno;
+
+  if(STATE.hasBet && STATE.myResult===null){
+    showBetForm(false); showCash(true); showWait(false);
+    startEngine();
+    setStrip("live","🚀 In flight! Bet: ₦"+(STATE.myBet||0).toLocaleString()+" — tap Cash Out!");
+  } else if(!STATE.hasBet){
+    showBetForm(false); showCash(false); showWait(true);
+  } else {
+    showBetForm(false); showCash(false); showWait(false);
+  }
+
+  trailTimer=0;
+  startAnim();
+}
+
+function enterCrashed(rid, rno, cp, seed, recentCrashes){
+  if(STATE.crashDone) return;
+  STATE.crashDone=true; STATE.status="crashed";
+
+  if(bettingCountdownInterval){ clearInterval(bettingCountdownInterval); bettingCountdownInterval=null; }
+  currentBettingRno = null;
+
+  stopAnim(); stopEngine();
+  drawGraph(true);   /* turn curve red */
+  spawnExplosion();
+  flyPlaneAway();    /* plane flies off-screen */
+  _playBuf("crash");
+
+  multEl.className="avi-mult-num crashed"; multEl.textContent=cp.toFixed(2)+"x";
+  avFlew.style.display="block";
+  avStatus.textContent="💥 CRASHED!";
+  setBanner("crashed", rno, cp.toFixed(2));
+  showCash(false);
+
+  if(seed) document.getElementById("fairSeed").textContent="Round #"+rno+" seed: "+seed;
+  if(recentCrashes) {
+    rebuildHistBar(recentCrashes);
+  } else {
+      const c = document.createElement("span");
+      c.className = "avi-hchip " + (cp >= 3 ? "high" : cp < 1.5 ? "low" : "med");
+      c.textContent = cp.toFixed(2) + "x";
+      histBar.insertBefore(c, histBar.firstChild);
+      while(histBar.children.length > 20) histBar.removeChild(histBar.lastChild);
+  }
+
+  if(STATE.hasBet && STATE.myResult===null){
+    STATE.myResult="LOSS";
+    setStrip("lost","❌ Crashed at "+cp.toFixed(2)+"x — bet lost");
+    toast("💥 Crashed at "+cp.toFixed(2)+"x — you lost ₦"+(STATE.myBet||0).toLocaleString(),"loss");
+  } else if(STATE.hasBet && STATE.myResult==="WIN" && STATE.myCashAt){
+    setStrip("won","✅ You cashed out at "+STATE.myCashAt.toFixed(2)+"x before crash!");
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §10  BET + CASHOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function placeBet(){
+  _initCtx(); _resume();
+  const bet=parseFloat(document.getElementById("avBet").value||0);
+  if(!bet||bet<MIN_BET){ toast("Minimum bet is ₦"+MIN_BET.toLocaleString(),"info"); return; }
+  betBtn.disabled=true;
+  const auto=document.getElementById("autoCheck").checked
+    ? parseFloat(document.getElementById("autoAt").value) : null;
+
+  const res=await fetch("/games/aviator/bet",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({bet, auto_cashout:auto})
+  });
+  const d=await res.json();
+  if(d.error){ toast(d.error,"loss"); betBtn.disabled=false; return; }
+
+  STATE.hasBet=true; STATE.myBet=bet; STATE.myResult=null; STATE.myCashAt=null;
+  _playBuf("bet");
+  updateBalance(d.new_balance);
+  showBetForm(false); showCash(false); showWait(false);
+  setStrip("live","🎯 Bet placed: ₦"+bet.toLocaleString()+" — waiting for takeoff…");
+}
+
+async function doCashout(){
+  if(!STATE.roundId || STATE.myResult!==null || STATE.status!=="flying") return;
+  cashBtn.disabled=true;
+  _initCtx(); _resume();
+
+  const res=await fetch("/games/aviator/cashout",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({round_id:STATE.roundId, multiplier:curMult})
+  });
+  const d=await res.json();
+  if(d.error){ toast(d.error,"loss"); cashBtn.disabled=false; return; }
+
+  STATE.myResult=d.result; showCash(false);
+  if(d.result==="WIN"){
+    STATE.myCashAt=d.cashout_at;
+    _playBuf("cashout");
+    toast("✅ Cashed out "+d.cashout_at.toFixed(2)+"x — ₦"+
+      d.payout.toLocaleString("en-NG",{minimumFractionDigits:2}),"win");
+    setStrip("won","✅ Cashed out at "+d.cashout_at.toFixed(2)+"x — Won ₦"+
+      d.payout.toLocaleString("en-NG",{minimumFractionDigits:2}));
+    updateBalance(d.new_balance);
+  } else {
+    toast("💥 Too late — crashed before cashout","loss");
+    setStrip("lost","❌ Crashed before cashout — bet lost");
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §11  LIVE PLAYERS PANEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let activeTab="all", playersData=[];
+
+function switchTab(tab,el){
+  activeTab=tab;
+  document.querySelectorAll(".avi-ptab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  renderPlayers();
+}
+
+function renderPlayers(){
+  let data=playersData;
+  if(activeTab==="top")
+    data=[...playersData].filter(p=>p.result==="WIN").sort((a,b)=>(b.payout||0)-(a.payout||0));
+  if(!data.length){
+    playersEl.innerHTML='<div class="avi-empty">No bets this round yet…</div>'; return;
+  }
+  playersEl.innerHTML=data.map(p=>{
+    let cashHtml="";
+    if(p.result==="WIN"&&p.cashout_at!=null)
+      cashHtml=`<span class="avi-pcash win">✅ ${p.cashout_at.toFixed(2)}x</span>`;
+    else if(p.result===null&&STATE.status==="flying")
+      cashHtml=`<span class="avi-pcash flying">Flying…</span>`;
+    else if(p.result==="LOSS")
+      cashHtml=`<span class="avi-pcash" style="color:#ef4444;">❌</span>`;
+    return `<div class="avi-prow">
+      <span class="avi-pname">${p.name}</span>
+      <span class="avi-pbet">₦${p.bet.toLocaleString()}</span>
+      ${cashHtml}
+    </div>`;
+  }).join("");
+}
+
+async function fetchPlayers(){
+  try{
+    const r=await fetch("/games/aviator/players");
+    const d=await r.json();
+    playersData=d.players||[];
+    renderPlayers();
+  }catch(e){}
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §12  POLL LOOP  (500ms)
+   Server is authoritative for phase changes.
+   rAF handles all visual updates between polls.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function poll(){
+  try{
+    const res=await fetch("/games/aviator/status");
+    const d=await res.json();
+    const newRound=(d.round_id!==STATE.roundId);
+
+    /* ── BETTING ── */
+    if(d.status==="betting" && (STATE.status!=="betting"||newRound)){
+      enterBetting(d.round_id, d.round_number, d.seconds_left||10);
+    } else if(d.status==="betting"){
+      /* Countdown is now smoothly driven by local 1s interval started in enterBetting.
+         This guarantees it always visually finishes counting (10→…→0) without
+         poll jitter or the rno appearing to "auto continue". Poll only handles
+         initial enter + any unexpected round change (newRound). */
+      // Optional: detect large drift and restart timer, but not needed for normal flow.
+    }
+
+    /* ── FLYING ── */
+    if(d.status==="flying"){
+      if(STATE.status!=="flying"||newRound){
+        /* Restore bet state if mid-flight page load */
+        if(d.my_bet && !STATE.hasBet){
+          STATE.hasBet=true; STATE.myBet=d.my_bet; STATE.myResult=d.my_result;
+        }
+        enterFlying(d.round_id, d.round_number, d.elapsed_flying||0, d.precomputed);
+      } else {
+        /* Correct drift: if server is >0.5s ahead, resync elapsed */
+        if(d.elapsed_flying > elapsed+0.5) elapsed=d.elapsed_flying;
+      }
+    }
+
+    /* ── CRASHED ── */
+    if(d.status==="crashed" && STATE.status!=="crashed"){
+      enterCrashed(d.round_id, d.round_number, d.crash_point, d.seed, d.recent_crashes);
+    }
+
+    /* ── Auto cashout settled server-side ── */
+    if(d.auto_cashed && STATE.myResult===null){
+      STATE.myResult="WIN"; STATE.myCashAt=d.auto_result?.cashout_at;
+      _playBuf("cashout");
+      showCash(false);
+      const at=(d.auto_result?.cashout_at||0).toFixed(2);
+      const pay=(d.auto_result?.payout||0).toLocaleString("en-NG",{minimumFractionDigits:2});
+      setStrip("won","✅ Auto cashed out at "+at+"x — Won ₦"+pay);
+      toast("✅ Auto cashout "+at+"x","win");
+    }
+
+    if(d.my_result && STATE.myResult===null) STATE.myResult=d.my_result;
+    if(d.new_balance!=null) updateBalance(d.new_balance);
+
+  }catch(e){ console.warn("poll error",e); }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §13  WEBSOCKET (Flask-SocketIO) - Instant events
+   Replaces polling delay for crash + important notifications.
+   Multiplier during flight still uses rAF + precomputed for perfect smoothness.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let socket = null;
+
+function initAviatorSocket() {
+  if (socket) return; // already initialized
+
+  // Load Socket.IO client if not present (CDN fallback)
+  if (typeof io === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+    s.onload = () => connectSocket();
+    document.head.appendChild(s);
+    return;
+  }
+  connectSocket();
+}
+
+function connectSocket() {
+  try {
+    socket = io({ transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+      console.log('[Aviator WS] Connected');
+      // Re-join current round room if we already have one
+      if (STATE.roundId) {
+        socket.emit('join_aviator_round', { round_id: STATE.roundId });
+      }
+    });
+
+    socket.on('disconnect', () => console.log('[Aviator WS] Disconnected'));
+
+    // Instant crash notification (all clients crash together with almost zero delay)
+    socket.on('aviator_crash', (data) => {
+      if (data.round_id === STATE.roundId && STATE.status === 'flying') {
+        console.log('[Aviator WS] Crash received via socket');
+        enterCrashed(data.round_id, data.round_number || STATE.roundNo, data.crash_point, data.seed, data.recent_crashes);
+      }
+    });
+
+    // Optional: live players update push (if server emits it)
+    socket.on('aviator_players', (data) => {
+      if (data.round_id === STATE.roundId) {
+        playersData = data.players || [];
+        renderPlayers();
+      }
+    });
+
+    // Optional: big win notification
+    socket.on('aviator_big_win', (data) => {
+      if (data.round_id === STATE.roundId) {
+        toast(`🎉 Big win! ${data.username || 'Someone'} cashed at ${data.multiplier}x`, 'win');
+      }
+    });
+
+  } catch (e) {
+    console.warn('[Aviator WS] Socket init failed, falling back to polling only', e);
+  }
+}
+
+// Join room when we enter a new round
+function joinAviatorRoom(roundId) {
+  if (socket && socket.connected && roundId) {
+    socket.emit('join_aviator_round', { round_id: roundId });
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   §14  BOOT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* First poll immediately establishes correct state */
+poll();
+setInterval(poll, 500);
+setInterval(fetchPlayers, 2000);
+fetchPlayers();
+
+// Initialize WebSocket (non-blocking)
+setTimeout(initAviatorSocket, 800);
+
+// When entering flying or betting, try to join the WS room
+const _originalEnterFlying = enterFlying;
+enterFlying = function(rid, rno, serverElapsed, pre) {
+  _originalEnterFlying(rid, rno, serverElapsed, pre);
+  joinAviatorRoom(rid);
+};
+
+const _originalEnterBetting = enterBetting;
+enterBetting = function(rid, rno, secsLeft) {
+  _originalEnterBetting(rid, rno, secsLeft);
+  joinAviatorRoom(rid);
+};
+</script>
+{% endblock %}

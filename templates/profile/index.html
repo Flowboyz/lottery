@@ -54,6 +54,54 @@
             </div>
         </div>
 
+
+        <!-- Game History -->
+        <div class="profile-section">
+            <h3 class="section-title">Recent Game History</h3>
+            {% if game_history %}
+            <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-subtle);">
+                        <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:600;">Game</th>
+                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-weight:600;">Bet</th>
+                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-weight:600;">Payout</th>
+                        <th style="padding:6px 8px;text-align:center;color:var(--text-muted);font-weight:600;">Result</th>
+                        <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:600;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in game_history %}
+                    <tr style="border-bottom:1px solid var(--border-subtle);">
+                        <td style="padding:8px;color:var(--text-secondary);">
+                            {% if g.game_type == 'wheel' %}🎡
+                            {% elif g.game_type == 'coinflip' %}🪙
+                            {% elif g.game_type == 'aviator' %}✈️
+                            {% elif g.game_type == 'color' %}🎨
+                            {% else %}🎰{% endif %}
+                            {{ g.game_type|capitalize }}
+                        </td>
+                        <td style="padding:8px;text-align:right;color:var(--text-secondary);">{{ naira(g.bet_amount) }}</td>
+                        <td style="padding:8px;text-align:right;">
+                            {% if g.payout > 0 %}<span style="color:var(--accent-success);font-weight:700;">{{ naira(g.payout) }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td style="padding:8px;text-align:center;">
+                            {% if g.result == 'WIN' %}<span style="color:var(--accent-success);font-weight:700;font-size:11px;">WIN</span>
+                            {% elif g.result == 'LOSS' %}<span style="color:var(--accent-danger);font-weight:700;font-size:11px;">LOSS</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td style="padding:8px;color:var(--text-muted);font-size:11px;">{{ g.created_at.strftime('%d %b %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <p style="color:var(--text-muted);font-size:13px;">No game history yet. Start playing!</p>
+            {% endif %}
+        </div>
+
         <!-- Edit Profile -->
         <div class="profile-section">
             <h3 class="section-title">Edit Profile</h3>

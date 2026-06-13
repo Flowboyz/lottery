@@ -11,25 +11,35 @@
     {% if current_user.is_authenticated %}
     <!-- Top Bar -->
     <div class="top-bar">
-        <div class="left-controls">
+        <div class="left-controls desktop-only">
             <a href="{{ url_for('wallet.deposit_page') }}">Deposit</a>
             <a href="{{ url_for('wallet.withdraw_page') }}">Withdraw</a>
             {% if current_user.role in ["admin", "superadmin"] %}
-            <a href="{{ url_for('admin.dashboard') }}">Admin</a>
+                <a href="{{ url_for('admin.dashboard') }}">Admin</a>
             {% endif %}
             <a href="{{ url_for('wallet.history') }}">History</a>
             <a href="{{ url_for('profile.index') }}">Profile</a>
             <a href="{{ url_for('notifications.inbox') }}" class="notif-link">
                 Alerts
                 {% if unread_count is defined and unread_count > 0 %}
-                <span class="notif-badge">{{ unread_count }}</span>
+                    <span class="notif-badge">{{ unread_count }}</span>
                 {% endif %}
             </a>
             <a href="{{ url_for('auth.logout') }}">Logout</a>
             <a href="{{ url_for('game.claim') }}" class="claim-btn">Claim ₦500</a>
-            <button id="themeToggle"></button>
+            
         </div>
-        <div class="balance">Balance: {{ naira(current_user.balance) }}</div>
+
+        <!-- Mobile View -->
+        <div class="mobile-top-bar mobile-only">
+            <button id="settingsBtn" class="btn-settings">
+                ⚙️ Settings
+            </button>
+             <button id="themeToggle"></button>
+            <div class="balance">
+                Balance: <strong>{{ naira(current_user.balance) }}</strong>
+            </div>
+        </div>
     </div>
     {% endif %}
 
@@ -56,6 +66,28 @@
     {% endif %}
 
     <a href="https://t.me/YOUR_TELEGRAM_USERNAME" target="_blank" class="support-fab" title="Customer Support">💬</a>
+    <!-- Settings Modal (Mobile Only) -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <a href="{{ url_for('wallet.deposit_page') }}" class="modal-link">💳 Deposit</a>
+                <a href="{{ url_for('wallet.withdraw_page') }}" class="modal-link">🏦 Withdraw</a>
+                <a href="{{ url_for('wallet.history') }}" class="modal-link">📜 History</a>
+                <a href="{{ url_for('profile.index') }}" class="modal-link">👤 Profile</a>
+                <a href="{{ url_for('notifications.inbox') }}" class="modal-link notif-link">
+                    🔔 Alerts
+                    {% if unread_count is defined and unread_count > 0 %}
+                        <span class="notif-badge">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="modal-link logout-link">🚪 Logout</a>
+            </div>
+        </div>
+    </div>
     {% block content %}{% endblock %}
 
     {% if current_user.is_authenticated %}
@@ -105,6 +137,34 @@
             }
         });
     });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const settingsBtn = document.getElementById('settingsBtn');
+            const modal = document.getElementById('settingsModal');
+            const closeBtn = modal ? modal.querySelector('.close-modal') : null;
+
+            if (settingsBtn && modal) {
+                settingsBtn.addEventListener('click', function() {
+                    modal.style.display = 'flex';
+                });
+            }
+
+            if (closeBtn && modal) {
+                closeBtn.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                });
+            }
+
+            // Close modal when clicking outside
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

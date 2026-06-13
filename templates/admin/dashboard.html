@@ -91,6 +91,7 @@
                 <a href="{{ url_for('admin.withdrawals') }}" class="admin-link">💸 Withdrawals</a>
                 <a href="{{ url_for('admin.betting_history') }}" class="admin-link">🎲 Bet History</a>
                 <a href="{{ url_for('admin.game_history') }}" class="admin-link">🎮 Game History</a>
+                <a href="{{ url_for('admin.games_report') }}" class="admin-link">✈️ New Games Report</a>
                 <a href="{{ url_for('admin.announcements') }}" class="admin-link">📢 Announcements</a>
                 <a href="{{ url_for('admin.email_users') }}" class="admin-link">✉️ Email Users</a>
                 {% if current_user.role == 'superadmin' %}

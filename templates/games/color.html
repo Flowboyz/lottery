@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block title %}Color Prediction - DITTO DINKY{% endblock %}
+{% block extra_css %}
+<style>
+/* ── Color Prediction styles ── */
+.col-wrap { max-width: 540px; margin: 0 auto; padding: 80px 16px 100px; }
+
+/* Timer ring */
+.col-timer-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:16px; }
+.col-timer-ring {
+  width: 88px; height: 88px; border-radius: 50%;
+  background: conic-gradient(var(--accent-primary) 0deg, var(--bg-elevated) 0deg);
+  display:flex; align-items:center; justify-content:center;
+  position: relative;
+  box-shadow: 0 0 0 4px var(--bg-card), 0 0 0 5px var(--border-strong);
+  transition: background .2s;
+}
+.col-timer-inner {
+  width: 70px; height: 70px; border-radius: 50%;
+  background: var(--bg-card);
+  display: flex; align-items:center; justify-content:center;
+  flex-direction:column;
+}
+.col-timer-num { font-size: 26px; font-weight: 800; color: var(--text-primary); line-height:1; }
+.col-timer-unit { font-size: 10px; color: var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+.col-round-label { font-size: 12px; color: var(--text-muted); font-weight:600; }
+
+/* Color card buttons */
+.col-choices { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:14px; }
+.col-choice {
+  border-radius: var(--radius-md); padding: 18px 8px; text-align:center;
+  cursor:pointer; border: 2px solid transparent; transition: all .2s;
+  position: relative; overflow: hidden;
+}
+.col-choice:hover:not(.disabled) { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.col-choice.selected { border-color: #fff !important; box-shadow: 0 0 0 2px rgba(255,255,255,.3); }
+.col-choice.disabled { opacity:.45; cursor:not-allowed; }
+
+.col-red    { background: linear-gradient(135deg,#ef4444,#dc2626); color:#fff; }
+.col-green  { background: linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
+.col-violet { background: linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; }
+
+.col-choice-name  { font-size:15px; font-weight:800; letter-spacing:.5px; }
+.col-choice-mult  { font-size:12px; opacity:.85; margin-top:2px; }
+
+/* Bet input */
+.col-card { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px; margin-bottom:12px; box-shadow:var(--shadow-sm); }
+.col-card-title { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; }
+
+.col-bet-row { display:flex; gap:8px; }
+.col-bet-input {
+  flex:1; padding:12px 14px; font-size:16px; font-weight:700;
+  background:var(--bg-elevated); border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm); color:var(--text-primary); outline:none;
+}
+.col-bet-input:focus { border-color:var(--accent-primary); box-shadow:var(--shadow-glow); }
+.col-presets { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.col-preset {
+  padding:5px 12px; background:var(--bg-elevated); border:1px solid var(--border-subtle);
+  border-radius:20px; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; transition:all .15s;
+}
+.col-preset:hover { background:var(--accent-primary-soft); color:var(--accent-primary); border-color:var(--accent-primary); }
+
+.col-btn {
+  width:100%; margin-top:10px; padding:14px; border-radius:var(--radius-md);
+  font-size:15px; font-weight:700; border:none; cursor:pointer; transition:all .2s;
+  background:linear-gradient(135deg,var(--accent-primary),#00b894); color:#fff;
+  box-shadow:0 4px 16px rgba(0,212,170,.3);
+}
+.col-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 24px rgba(0,212,170,.4); }
+.col-btn:disabled { opacity:.45; cursor:not-allowed; transform:none !important; }
+
+/* Status bar */
+.col-status-bar {
+  padding:12px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+  text-align:center; margin-bottom:12px; border:1px solid var(--border-subtle);
+  background:var(--bg-card);
+}
+.col-status-bar.waiting  { color:var(--text-muted); }
+.col-status-bar.placed   { color:var(--accent-primary); background:var(--accent-primary-soft); border-color:var(--accent-primary); }
+.col-status-bar.win      { color:var(--accent-success); background:var(--accent-success-soft); border-color:var(--accent-success); }
+.col-status-bar.loss     { color:var(--accent-danger);  background:var(--accent-danger-soft);  border-color:var(--accent-danger); }
+
+/* Result reveal animation */
+.col-result-reveal {
+  display:none; flex-direction:column; align-items:center; gap:4px;
+  padding:18px 0; animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn { from{opacity:0;transform:scale(.5)} to{opacity:1;transform:scale(1)} }
+.col-result-dot { width:64px; height:64px; border-radius:50%; margin-bottom:4px; }
+.col-result-dot.red    { background:linear-gradient(135deg,#ef4444,#dc2626); box-shadow:0 0 24px rgba(239,68,68,.5); }
+.col-result-dot.green  { background:linear-gradient(135deg,#22c55e,#16a34a); box-shadow:0 0 24px rgba(34,197,94,.5); }
+.col-result-dot.violet { background:linear-gradient(135deg,#8b5cf6,#6d28d9); box-shadow:0 0 24px rgba(139,92,246,.5); }
+.col-result-name { font-size:20px; font-weight:800; text-transform:uppercase; letter-spacing:1px; }
+
+/* History pills */
+.col-hist-row { display:flex; flex-wrap:wrap; gap:5px; }
+.col-hist-pill {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+}
+.col-hist-pill.red    { background:rgba(239,68,68,.15);  color:#ef4444; }
+.col-hist-pill.green  { background:rgba(34,197,94,.15);  color:#22c55e; }
+.col-hist-pill.violet { background:rgba(139,92,246,.15); color:#8b5cf6; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="content page-content">
+  <h2 class="page-heading" style="text-align:center;margin-bottom:4px;">🎨 Color Prediction</h2>
+  <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:16px;">Pick a color, wait for the result. Everyone plays the same round.</p>
+
+  <!-- Timer -->
+  <div class="col-timer-wrap">
+    <div class="col-timer-ring" id="timerRing">
+      <div class="col-timer-inner">
+        <span class="col-timer-num" id="timerNum">{{ seconds_left }}</span>
+        <span class="col-timer-unit">sec</span>
+      </div>
+    </div>
+    <span class="col-round-label">Round #<span id="roundNum">{{ current_round.round_number }}</span></span>
+  </div>
+
+  <!-- Result Reveal (hidden until round ends) -->
+  <div class="col-result-reveal" id="revealBox">
+    <div class="col-result-dot" id="revealDot"></div>
+    <span class="col-result-name" id="revealName"></span>
+    <span style="font-size:13px;color:var(--text-muted);" id="revealSub"></span>
+  </div>
+
+  <!-- Status -->
+  <div class="col-status-bar waiting" id="statusBar">Waiting for your bet…</div>
+
+  <!-- Color Choices -->
+  <div class="col-choices">
+    <div class="col-choice col-red" id="choiceRed" onclick="selectColor('red')">
+      <div class="col-choice-name">🔴 RED</div>
+      <div class="col-choice-mult">{{ payouts.red }}x</div>
+    </div>
+    <div class="col-choice col-green" id="choiceGreen" onclick="selectColor('green')">
+      <div class="col-choice-name">🟢 GREEN</div>
+      <div class="col-choice-mult">{{ payouts.green }}x</div>
+    </div>
+    <div class="col-choice col-violet" id="choiceViolet" onclick="selectColor('violet')">
+      <div class="col-choice-name">🟣 VIOLET</div>
+      <div class="col-choice-mult">{{ payouts.violet }}x</div>
+    </div>
+  </div>
+
+  <!-- Bet Card -->
+  <div class="col-card">
+    <div class="col-card-title">Place Your Bet</div>
+    <div class="col-bet-row">
+      <input class="col-bet-input" type="number" id="colBet" min="{{ min_bet|int }}" max="{{ max_bet|int }}" step="50" value="{{ min_bet|int }}" placeholder="₦ amount">
+    </div>
+    <div class="col-presets">
+      <span class="col-preset" onclick="colPreset(100)">₦100</span>
+      <span class="col-preset" onclick="colPreset(500)">₦500</span>
+      <span class="col-preset" onclick="colPreset(1000)">₦1K</span>
+      <span class="col-preset" onclick="colPreset(5000)">₦5K</span>
+    </div>
+    <button class="col-btn" id="colBetBtn" onclick="placeBet()">🎯 Place Bet</button>
+  </div>
+
+  <!-- My current entry indicator -->
+  {% if my_entry %}
+  <div class="col-card" style="border-color:var(--accent-primary);">
+    <div class="col-card-title">Your Bet This Round</div>
+    <p style="font-size:14px;color:var(--text-secondary);">
+      You bet <strong style="color:var(--accent-primary);">₦{{ "%.0f"|format(my_entry.bet_amount) }}</strong> on
+      <strong style="text-transform:uppercase; color:{% if my_entry.choice=='red' %}#ef4444{% elif my_entry.choice=='green' %}#22c55e{% else %}#8b5cf6{% endif %};">{{ my_entry.choice }}</strong>
+      {% if my_entry.result == "WIN" %} — <span style="color:var(--accent-success);">WON ₦{{ "%.0f"|format(my_entry.payout) }} ✅</span>
+      {% elif my_entry.result == "LOSS" %} — <span style="color:var(--accent-danger);">Lost ❌</span>
+      {% else %} — <span style="color:var(--text-muted);">Waiting…</span>
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- Recent Round History -->
+  <div class="col-card">
+    <div class="col-card-title">Recent Results</div>
+    <div class="col-hist-row">
+      {% for r in history %}
+        {% if r.result %}
+        <span class="col-hist-pill {{ r.result }}">#{{ r.round_number }} {{ r.result|upper }}</span>
+        {% endif %}
+      {% endfor %}
+      {% if not history %}
+      <span style="color:var(--text-muted);font-size:13px;">No rounds yet.</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+const ROUND_DURATION = {{ (seconds_left + (current_round.round_number - 1) * 0) | int }}; // initial from server
+let selectedColor = null;
+let roundNum = {{ current_round.round_number }};
+let pollTimer = null;
+let countdownTimer = null;
+let secondsLeft = {{ seconds_left }};
+let betPlaced = false;
+
+{% if my_entry %}
+betPlaced = true;
+disableChoices();
+document.getElementById("colBetBtn").disabled = true;
+document.getElementById("statusBar").textContent = "Bet placed on {{ my_entry.choice|upper }} — waiting for result…";
+document.getElementById("statusBar").className = "col-status-bar placed";
+{% endif %}
+
+function colPreset(v){ document.getElementById("colBet").value = v; }
+
+function selectColor(c){
+  if(betPlaced) return;
+  selectedColor = c;
+  ["Red","Green","Violet"].forEach(n => document.getElementById("choice"+n).classList.remove("selected"));
+  document.getElementById("choice" + c.charAt(0).toUpperCase() + c.slice(1)).classList.add("selected");
+  document.getElementById("statusBar").textContent = c.toUpperCase() + " selected — enter bet and confirm!";
+  document.getElementById("statusBar").className = "col-status-bar placed";
+}
+
+function disableChoices(){
+  ["Red","Green","Violet"].forEach(n => document.getElementById("choice"+n).classList.add("disabled"));
+}
+function enableChoices(){
+  ["Red","Green","Violet"].forEach(n => document.getElementById("choice"+n).classList.remove("disabled"));
+  betPlaced = false; selectedColor = null;
+}
+
+async function placeBet(){
+  if(!selectedColor){ alert("Select a color first!"); return; }
+  const bet = parseFloat(document.getElementById("colBet").value);
+  if(!bet || bet < {{ min_bet }}){ alert("Minimum bet is ₦{{ min_bet|int }}"); return; }
+
+  document.getElementById("colBetBtn").disabled = true;
+
+  const res = await fetch("/games/color/bet", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ choice: selectedColor, bet })
+  });
+  const data = await res.json();
+  if(data.error){
+    alert(data.error);
+    document.getElementById("colBetBtn").disabled = false;
+    return;
+  }
+
+  betPlaced = true;
+  disableChoices();
+  document.getElementById("statusBar").textContent = `Bet placed on ${selectedColor.toUpperCase()} for ₦${bet.toLocaleString()} — awaiting result!`;
+  document.getElementById("statusBar").className = "col-status-bar placed";
+}
+
+// ── Countdown & polling ──────────────────────────────────────────
+
+function updateTimerRing(sec, total){
+  const pct = sec / total;
+  const deg = Math.round(pct * 360);
+  const color = sec <= 5 ? "var(--accent-danger)" : sec <= 10 ? "var(--accent-gold)" : "var(--accent-primary)";
+  document.getElementById("timerRing").style.background =
+    `conic-gradient(${color} ${deg}deg, var(--bg-elevated) ${deg}deg)`;
+  document.getElementById("timerNum").textContent = sec;
+}
+
+function runCountdown(){
+  clearInterval(countdownTimer);
+  const total = secondsLeft;
+  let cur = secondsLeft;
+  updateTimerRing(cur, Math.max(total, 1));
+  countdownTimer = setInterval(()=>{
+    cur = Math.max(0, cur - 1);
+    updateTimerRing(cur, Math.max(total, 1));
+  }, 1000);
+}
+runCountdown();
+
+let lastResult = null;
+let lastResultRound = null;
+
+async function pollStatus(){
+  try {
+    const res = await fetch("/games/color/status");
+    const d = await res.json();
+
+    // New round detected
+    if(d.round_number !== roundNum){
+      roundNum = d.round_number;
+      document.getElementById("roundNum").textContent = roundNum;
+      enableChoices();
+      document.getElementById("colBetBtn").disabled = false;
+      document.getElementById("statusBar").textContent = "New round! Place your bet.";
+      document.getElementById("statusBar").className = "col-status-bar waiting";
+      document.getElementById("revealBox").style.display = "none";
+    }
+
+    // Update timer
+    secondsLeft = d.seconds_left;
+    runCountdown();
+
+    // Show result if round just closed
+    if(d.last_result && d.last_round !== lastResultRound){
+      lastResultRound = d.last_round;
+      showResult(d.last_result, d.last_round, d.my_result, d.my_payout, d.my_choice);
+    }
+
+    // Update balance
+    if(d.new_balance != null){
+      document.querySelectorAll(".balance").forEach(el => {
+        el.textContent = "Balance: ₦" + parseFloat(d.new_balance).toLocaleString("en-NG",{minimumFractionDigits:2});
+      });
+    }
+
+    // Update my entry status
+    if(d.my_result && betPlaced){
+      if(d.my_result === "WIN"){
+        document.getElementById("statusBar").textContent = `✅ You WON ₦${(d.my_payout||0).toLocaleString("en-NG",{minimumFractionDigits:2})} on ${(d.my_choice||"").toUpperCase()}!`;
+        document.getElementById("statusBar").className = "col-status-bar win";
+      } else if(d.my_result === "LOSS"){
+        document.getElementById("statusBar").textContent = `❌ You lost. Better luck next round!`;
+        document.getElementById("statusBar").className = "col-status-bar loss";
+      }
+    }
+  } catch(e){ /* silent */ }
+}
+
+function showResult(result, rnum, myResult, myPayout, myChoice){
+  const box = document.getElementById("revealBox");
+  const dot = document.getElementById("revealDot");
+  const name = document.getElementById("revealName");
+  const sub = document.getElementById("revealSub");
+
+  dot.className = "col-result-dot " + result;
+  name.textContent = result.toUpperCase();
+  name.style.color = result === "red" ? "#ef4444" : result === "green" ? "#22c55e" : "#8b5cf6";
+  sub.textContent = `Round #${rnum} result`;
+
+  box.style.display = "flex";
+  setTimeout(()=>{ box.style.display = "none"; }, 3000);
+}
+
+pollStatus();
+pollTimer = setInterval(pollStatus, 2000);
+</script>
+{% endblock %}
