@@ -33,8 +33,9 @@
         <!-- Mobile View -->
         <div class="mobile-top-bar mobile-only">
             <button id="settingsBtn" class="btn-settings">
-                ⚙️ Settings
+                ⚙️
             </button>
+             <a href="{{ url_for('game.claim') }}" class="claim-btn">Claim ₦500</a>
              <button id="themeToggle"></button>
             <div class="balance">
                 Balance: <strong>{{ naira(current_user.balance) }}</strong>
@@ -66,6 +67,7 @@
     {% endif %}
 
     <a href="https://t.me/YOUR_TELEGRAM_USERNAME" target="_blank" class="support-fab" title="Customer Support">💬</a>
+    {% if current_user.is_authenticated %}
     <!-- Settings Modal (Mobile Only) -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
@@ -85,9 +87,13 @@
                     {% endif %}
                 </a>
                 <a href="{{ url_for('auth.logout') }}" class="modal-link logout-link">🚪 Logout</a>
+                {% if current_user.role in ["admin", "superadmin"] %}
+                <a href="{{ url_for('admin.dashboard') }}"class="modal-link notif-link">Admin</a>
+                {% endif %}
             </div>
         </div>
     </div>
+    {% endif %}
     {% block content %}{% endblock %}
 
     {% if current_user.is_authenticated %}

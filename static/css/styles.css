@@ -291,10 +291,12 @@ button { font-family: inherit; }
     width: 100%;
     max-width: 720px;
     margin: 0 auto;
-    padding: 24px 20px 110px;
+    padding: 20px 20px 110px;
     padding-top: calc(var(--topbar-h) + 24px);
     min-height: 100vh;
     display: flex;
+    overflow: hidden;
+    min-height: fit-content;
     flex-direction: column;
     width: 100%;
     box-sizing: border-box;
@@ -757,6 +759,7 @@ form {
 .page-content {
     padding-top: calc(var(--topbar-h) + 28px);
     padding-bottom: 110px;
+    height: fit-content;
 }
 .page-card {
     background: var(--bg-card);
@@ -1832,6 +1835,7 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
     border-radius: 16px 16px 0 0;
     overflow: hidden;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    margin-bottom: 80px;
 }
 
 .modal-header {
@@ -1944,7 +1948,7 @@ select:focus-visible {
     .top-bar { padding: 10px 12px; }
     .top-bar a, .top-bar button { padding: 6px 10px; font-size: 11.5px; }
     .balance { font-size: 13px; padding: 6px 12px; }
-    .content { padding: 16px 12px 100px; padding-top: calc(var(--topbar-h) + 80px); }
+    .content { padding: 16px 12px 100px; padding-top: calc(var(--topbar-h) + 20px); }
     .number-picker { gap: 6px; }
     .num-btn { height: 56px; font-size: 20px; }
     .inputs input { height: 70px; font-size: 26px; }
@@ -1971,10 +1975,10 @@ select:focus-visible {
     .top-bar a, .top-bar button { font-size: 12px; padding: 7px 12px; }
     .content {
         padding: 20px 14px 100px;
-        padding-top: calc(var(--topbar-h) + 80px);
+        padding-top: calc(var(--topbar-h) + 10px);
         max-width: 100%;
     }
-    .page-content { padding-top: calc(var(--topbar-h) + 80px); }
+    .page-content { padding-top: calc(var(--topbar-h) + 20px);  }
     .casino-board { padding: 16px 16px; }
     form { padding: 22px 18px; }
     .inputs { gap: 8px; }
