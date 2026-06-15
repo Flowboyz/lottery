@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash
 from app.extensions import db
 from app.models import (User, GamePlay, Transaction, Bet, WithdrawalRequest, PaymentRecord,
                         AuditLog, Notification, GameSettings, Announcement, BankAccount)
+from app.models_games import AviatorEntry
 from app.utils import (admin_required, superadmin_required, credit_wallet, debit_wallet,
                         notify_user, log_audit, format_money, send_email, admin_alert,
                         get_setting)
@@ -134,8 +135,50 @@ def user_detail(user_id):
         flash("User not found.", "error")
         return redirect(url_for("admin.users"))
 
-    recent_bets = Bet.query.filter_by(user_id=user_id).order_by(
-        Bet.created_at.desc()).limit(20).all()
+    # Lottery bets
+    lottery_bets = Bet.query.filter_by(user_id=user_id).order_by(Bet.created_at.desc()).limit(15).all()
+
+    # Other games (Wheel, Coinflip, Scratchcard, Color, etc.)
+    other_games = GamePlay.query.filter_by(user_id=user_id).order_by(GamePlay.created_at.desc()).limit(15).all()
+
+    # Aviator
+    aviator_bets = AviatorEntry.query.filter_by(user_id=user_id).order_by(AviatorEntry.created_at.desc()).limit(15).all()
+
+    # Combine and sort by date
+    all_activity = []
+    for b in lottery_bets:
+        all_activity.append({
+            'type': 'lottery',
+            'created_at': b.created_at,
+            'bet_amount': b.bet_amount,
+            'payout': b.payout,
+            'result': b.result,
+            'game_name': 'Lottery'
+        })
+    for g in other_games:
+        all_activity.append({
+            'type': g.game_type,
+            'created_at': g.created_at,
+            'bet_amount': g.bet_amount,
+            'payout': g.payout,
+            'result': g.result,
+            'game_name': g.game_type.capitalize()
+        })
+    for a in aviator_bets:
+        all_activity.append({
+            'type': 'aviator',
+            'created_at': a.created_at,
+            'bet_amount': a.bet_amount,
+            'payout': a.payout or 0,
+            'result': a.result,
+            'game_name': 'Aviator',
+            'cashout_at': a.cashout_at
+        })
+
+    # Sort by date descending
+    all_activity.sort(key=lambda x: x['created_at'], reverse=True)
+    recent_activity = all_activity[:20]
+
     recent_txns = Transaction.query.filter_by(user_id=user_id).order_by(
         Transaction.created_at.desc()).limit(20).all()
     withdrawals = WithdrawalRequest.query.filter_by(user_id=user_id).order_by(
@@ -144,22 +187,41 @@ def user_detail(user_id):
     referrals = User.query.filter_by(referred_by=user_id).all()
 
     user_stats = dict(
-        total_bets=Bet.query.filter_by(user_id=user_id).count(),
-        total_wins=Bet.query.filter_by(user_id=user_id, result="WIN").count(),
-        total_wagered=db.session.query(db.func.sum(Bet.bet_amount)).filter_by(
-            user_id=user_id).scalar() or 0,
-        total_won=db.session.query(db.func.sum(Bet.payout)).filter(
-            Bet.user_id == user_id, Bet.result == "WIN").scalar() or 0,
-        total_deposited=db.session.query(db.func.sum(Transaction.amount)).filter(
-            Transaction.user_id == user_id, Transaction.action == "DEPOSIT",
-            Transaction.status == "completed").scalar() or 0,
+        total_bets = (
+            Bet.query.filter_by(user_id=user_id).count() +
+            GamePlay.query.filter_by(user_id=user_id).count() +
+            AviatorEntry.query.filter_by(user_id=user_id).count()
+        ),
+
+        total_wins = (
+            Bet.query.filter_by(user_id=user_id, result="WIN").count() +
+            GamePlay.query.filter_by(user_id=user_id, result="WIN").count() +
+            AviatorEntry.query.filter_by(user_id=user_id, result="WIN").count()
+        ),
+
+        total_wagered = (
+            (db.session.query(db.func.sum(Bet.bet_amount)).filter_by(user_id=user_id).scalar() or 0) +
+            (db.session.query(db.func.sum(GamePlay.bet_amount)).filter_by(user_id=user_id).scalar() or 0) +
+            (db.session.query(db.func.sum(AviatorEntry.bet_amount)).filter_by(user_id=user_id).scalar() or 0)
+        ),
+
+        total_won = (
+            (db.session.query(db.func.sum(Bet.payout)).filter(Bet.user_id == user_id, Bet.result == "WIN").scalar() or 0) +
+            (db.session.query(db.func.sum(GamePlay.payout)).filter(GamePlay.user_id == user_id, GamePlay.result == "WIN").scalar() or 0) +
+            (db.session.query(db.func.sum(AviatorEntry.payout)).filter(AviatorEntry.user_id == user_id, AviatorEntry.result == "WIN").scalar() or 0)
+        ),
+
+        total_deposited = db.session.query(db.func.sum(Transaction.amount)).filter(
+            Transaction.user_id == user_id,
+            Transaction.action == "DEPOSIT",
+            Transaction.status == "completed"
+        ).scalar() or 0,
     )
 
     return render_template("admin/user_detail.html", user=user,
-                           recent_bets=recent_bets, recent_txns=recent_txns,
+                           recent_activity=recent_activity, recent_txns=recent_txns,
                            withdrawals=withdrawals, banks=banks,
                            referrals=referrals, user_stats=user_stats)
-
 
 # ────────────────────────── UPDATE BALANCE (superadmin) ──────────────────────────
 @admin_bp.route("/update-balance/<int:user_id>", methods=["POST"])

@@ -22,7 +22,7 @@
                 </div>
                 <div class="form-group">
                     <label>Max Daily Bet (₦)</label>
-                    <input type="number" name="max_daily_bet" value="{{ settings.MAX_DAILY_BET|int }}" step="1000" class="form-input">
+                    <input type="number" name="max_daily_bet" value="{{ settings.MAX_DAILY_BET|int }}" step="any" class="form-input">
                 </div>
                 <div class="form-group">
                     <label>Daily Claim Amount (₦)</label>
@@ -94,7 +94,7 @@
                 </div>
                 <div class="form-group">
                     <label>Max Bet (₦)</label>
-                    <input type="number" name="aviator_max_bet" value="{{ settings.AVIATOR_MAX_BET|int }}" step="1000" min="100" class="form-input">
+                    <input type="number" name="aviator_max_bet" value="{{ settings.AVIATOR_MAX_BET|int }}" step="any" min="100" class="form-input">
                 </div>
             </div>
 

@@ -97,30 +97,42 @@
         </div>
         {% endif %}
 
-        <!-- Recent Bets -->
-        <div class="profile-section">
-            <h3 class="section-title">Recent Bets</h3>
-            {% if recent_bets %}
-            <div class="bet-list">
-                {% for bet in recent_bets %}
-                <div class="bet-card bet-{{ bet.result|lower }}">
-                    <div class="bet-card-top">
-                        <div class="bet-nums">
-                            <span class="bet-num">{{ bet.num1 }}</span><span class="bet-num">{{ bet.num2 }}</span><span class="bet-num">{{ bet.num3 }}</span>
-                            <span class="bet-equals">= {{ bet.picked_total }}</span><span class="bet-vs">vs</span><span class="bet-lucky">{{ bet.lucky_number }}</span>
-                        </div>
-                        <span class="result-badge result-{{ bet.result|lower }}">{{ bet.result }}</span>
-                    </div>
-                    <div class="bet-card-bottom">
-                        <span class="bet-stake">Bet: {{ naira(bet.bet_amount) }}</span>
-                        {% if bet.payout %}<span class="bet-payout">Won: {{ naira(bet.payout) }}</span>{% endif %}
-                        <span class="bet-time"><span class="local-time" data-utc="{{ bet.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ bet.created_at.strftime('%d %b, %H:%M') }}</span></span>
-                    </div>
+<!-- Recent Game Activity -->
+<div class="profile-section">
+    <h3 class="section-title">Recent Game Activity</h3>
+    {% if recent_activity %}
+    <div class="bet-list">
+        {% for act in recent_activity %}
+        <div class="bet-card bet-{{ act.result|lower if act.result else 'idle' }}">
+            <div class="bet-card-top">
+                <div>
+                    <strong>{{ act.game_name }}</strong>
+                    {% if act.type == 'aviator' and act.cashout_at %}
+                        <span style="color:#22c55e; font-size:12px;">@ {{ act.cashout_at }}x</span>
+                    {% endif %}
                 </div>
-                {% endfor %}
+                <span class="result-badge result-{{ act.result|lower if act.result else 'idle' }}">
+                    {{ act.result or '—' }}
+                </span>
             </div>
-            {% else %}<div class="empty-state"><p>No bets yet.</p></div>{% endif %}
+            <div class="bet-card-bottom">
+                <span class="bet-stake">Bet: {{ naira(act.bet_amount) }}</span>
+                {% if act.payout and act.payout > 0 %}
+                    <span class="bet-payout">Won: {{ naira(act.payout) }}</span>
+                {% endif %}
+                <span class="bet-time">
+                    <span class="local-time" data-utc="{{ act.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">
+                        {{ act.created_at.strftime('%d %b, %H:%M') }}
+                    </span>
+                </span>
+            </div>
         </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        <div class="empty-state"><p>No game activity yet.</p></div>
+    {% endif %}
+</div>
 
         <!-- Recent Transactions -->
         <div class="profile-section">
