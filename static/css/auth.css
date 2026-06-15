@@ -48,7 +48,6 @@ html, body {
 
 body {
     min-height: 100vh;
-    display: flex;
     align-items: center;
     justify-content: center;
     padding: 24px;
@@ -60,7 +59,6 @@ body {
         linear-gradient(160deg, var(--bg-secondary), var(--bg-primary));
 }
 body::before {
-    content: "";
     position: fixed;
     inset: -200px;
     background: repeating-linear-gradient(45deg, transparent 0 18px, rgba(255, 255, 255, 0.012) 18px 19px);
@@ -254,9 +252,8 @@ select:focus-visible {
 @media (min-width: 980px) {
     body { padding: 0; }
     body::after {
-        content: "";
         position: fixed;
-        top: 0; left: 0; bottom: 0;
+        top: 0; left: 0; bottom: 0; right: 0;
         width: 44%;
         background:
             radial-gradient(500px 400px at 30% 30%, var(--accent-secondary-soft), transparent 60%),
@@ -266,6 +263,5 @@ select:focus-visible {
         z-index: 0;
         pointer-events: none;
     }
-    body { justify-content: flex-end; padding-right: 8%; }
-    .container { margin-right: 4%; }
+    body { justify-content: center; }
 }
