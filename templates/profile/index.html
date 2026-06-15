@@ -1,5 +1,87 @@
 {% extends "base.html" %}
 {% block title %}My Profile - DITTO DINKY{% endblock %}
+{% block extra_css %}
+<style>
+/* Daily Limit Progress Bar - matches site theme */
+.daily-limit-container {
+    background: var(--bg-elevated, #0f172a);
+    border: 1px solid var(--border-subtle, #334155);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 8px;
+}
+.limit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 12px;
+}
+.limit-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.limit-amount {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary, #e2e8f0);
+    line-height: 1.1;
+}
+.limit-progress-wrapper {
+    position: relative;
+    margin: 8px 0 4px;
+}
+.limit-bar {
+    height: 10px;
+    background: var(--bg-subtle, #1e2937);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle, #334155);
+}
+.limit-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00d4aa, #00b894);
+    border-radius: 999px;
+    transition: width 0.4s cubic-bezier(0.23, 1.0, 0.32, 1);
+    box-shadow: 0 0 8px rgba(0, 212, 170, 0.4);
+}
+.limit-fill.limit-warn {
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+.limit-fill.limit-danger {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+.limit-percentage {
+    position: absolute;
+    right: 0;
+    top: -18px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted, #64748b);
+}
+.limit-alert {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.limit-alert.warn {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+.limit-alert.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+</style>
+{% endblock %}
 {% block content %}
 <div class="content page-content">
     <div class="page-card">
@@ -30,6 +112,44 @@
                     <span class="detail-label">Member Since</span>
                     <span class="detail-value">{{ current_user.created_at.strftime('%d %B %Y') }}</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Daily Betting Limit -->
+        <div class="profile-section">
+            <h3 class="section-title">Daily Betting Limit</h3>
+            <p class="section-desc">Resets every day at midnight. Helps you play responsibly.</p>
+            
+            <div class="daily-limit-container">
+                <div class="limit-header">
+                    <div>
+                        <span class="limit-label">Spent Today</span>
+                        <div class="limit-amount">{{ naira(daily_spent) }}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="limit-label">Daily Limit</span>
+                        <div class="limit-amount">{{ naira(max_daily) }}</div>
+                    </div>
+                </div>
+                
+                {% set progress_pct = (daily_spent / max_daily * 100) if max_daily > 0 else 0 %}
+                <div class="limit-progress-wrapper">
+                    <div class="limit-bar">
+                        <div class="limit-fill {% if progress_pct >= 100 %}limit-danger{% elif progress_pct >= 80 %}limit-warn{% endif %}" 
+                             style="width: {{ progress_pct|round(1) }}%; max-width:100%;"></div>
+                    </div>
+                    <div class="limit-percentage">{{ progress_pct|round(1) }}%</div>
+                </div>
+                
+                {% if progress_pct >= 100 %}
+                <div class="limit-alert danger">
+                    ⚠️ Daily limit reached. You can play again tomorrow.
+                </div>
+                {% elif progress_pct >= 80 %}
+                <div class="limit-alert warn">
+                    ⚡ Approaching daily limit. Consider taking a break.
+                </div>
+                {% endif %}
             </div>
         </div>
 

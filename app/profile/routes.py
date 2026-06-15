@@ -15,6 +15,8 @@ profile_bp = Blueprint("profile", __name__, url_prefix="/profile")
 @login_required
 def index():
     from app.models import GamePlay
+    from app.utils import get_setting, check_daily_bet_limit
+
     banks = BankAccount.query.filter_by(user_id=current_user.id).order_by(
         BankAccount.is_default.desc(), BankAccount.created_at.desc()
     ).all()
@@ -23,8 +25,15 @@ def index():
     game_history = GamePlay.query.filter_by(
         user_id=current_user.id
     ).order_by(GamePlay.created_at.desc()).limit(20).all()
+
+    # Daily betting limit (force date check/reset for accurate display)
+    check_daily_bet_limit(current_user, 0)
+    daily_spent = round(current_user.daily_bet_total or 0.0, 2)
+    max_daily = get_setting("MAX_DAILY_BET", 50000)
+
     return render_template("profile/index.html", banks=banks,
-                           referral_count=referral_count, game_history=game_history)
+                           referral_count=referral_count, game_history=game_history,
+                           daily_spent=daily_spent, max_daily=max_daily)
 
 
 # ────────────────────────── EDIT PROFILE ──────────────────────────

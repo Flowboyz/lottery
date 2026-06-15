@@ -586,26 +586,24 @@ function multToCanvas(mult){
   return yPx;
 }
 
-function addGraphPt(mult, ptIndex = null){
-  if(!canvas.width) return;
-  const W = canvas.width;
-  const pts = graphPts;
-  let xPx;
-  if (ptIndex != null && PRE_PTS.length > 1) {
-    /* Use PRE_PTS progress fraction — identical to planePosFromMult.
-       This guarantees the curve tip ALWAYS aligns with the airplane position. */
-    const maxIdx = Math.max(PRE_PTS.length - 1, 1);
-    const xFrac = Math.min(ptIndex / maxIdx, 1);
-    xPx = 8 + xFrac * (W - 16);
-  } else {
-    /* Fallback (used by old calls or initial rebuild path) */
-    const maxPts = 240;
-    xPx = 8 + (Math.min(pts.length, maxPts) / maxPts) * (W - 16);
-  }
-  const yPx = multToCanvas(mult);
-  pts.push({x: Math.min(xPx, W-8), y: yPx});
-}
+function addGraphPt(mult, ptIndex){
+    if(!canvas.width) return;
+    const W = canvas.width;
+    const pts = graphPts;
 
+    let xPx;
+    if (ptIndex != null && PRE_PTS.length > 1) {
+        const maxIdx = Math.max(PRE_PTS.length - 1, 1);
+        const xFrac = Math.min(ptIndex / maxIdx, 1);
+        xPx = 8 + xFrac * (W - 16);
+    } else {
+        const maxPts = 240;
+        xPx = 8 + (Math.min(pts.length, maxPts) / maxPts) * (W - 16);
+    }
+
+    const yPx = multToCanvas(mult);
+    pts.push({x: Math.min(xPx, W-8), y: yPx});
+}
 function drawGraph(crashed){
   const W=canvas.width, H=canvas.height;
   gCtx.clearRect(0,0,W,H);
@@ -692,32 +690,32 @@ function loadPrecomputed(pre){
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   §5  PLANE POSITIONING
-   Plane follows the canvas curve tip exactly.
+   §5  PLANE ANIMATION SYSTEM
+   Fully independent of the graph. Driven only
+   by elapsed/PRE_DUR ("progress") + curMult.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const avSky   = document.getElementById("avSky");
 const avPlane = document.getElementById("avPlane");
-let planeX=6, planeY=26;  /* % left, px bottom */
+let planeX=6, planeY=26;
 let trails=[];
 
-function planePosFromMult(mult, ptIndex){
-  /* X: use EXACT same px->% mapping as graph curve points for perfect sync
-     Plane now sits exactly at the tip of the drawn line. */
-  const maxIdx = Math.max(PRE_PTS.length - 1, 1);
-  const W = avSky.clientWidth || 560;
-  const xFrac = Math.min(ptIndex / maxIdx, 1);
-  const xPx   = 8 + xFrac * (W - 16);           /* match graph add/rebuild margins */
-  const xPct  = (xPx / W) * 100;
+const PLANE_ACCEL_START     = 0.35; // progress fraction where acceleration begins
+const PLANE_MAX_VISIBLE_MULT = 8;   // hard cap — plane is ALWAYS gone by this multiplier
 
-  /* Y: same log-scale as graph (multToCanvas) */
-  const H = avSky.clientHeight || 280;
-  const logM   = Math.log(Math.max(mult,1));
-  const logMax = Math.log(201);
-  const yFrac  = Math.min(logM/logMax, 1);
-  /* px from bottom: GROUND_PX (on runway) → near top. Slight offset vs graph for plane visual center */
-  const yPx = GROUND_PX + yFrac * (H - GROUND_PX - 44);
+const PLANE = {
+  state: 'takeoff',     // 'takeoff' | 'accelerating' | 'exiting' | 'gone'
+  exitThreshold: 0.68,  // recomputed per round, 0.60–0.75
+  roundId: null,
+  exitTimeout: null
+};
 
-  return {xPct: Math.max(1.5, Math.min(xPct, 98.5)), yPx: Math.max(GROUND_PX, yPx)};
+/* Deterministic per-round exit point (0.60–0.75), seeded by roundId so
+   every client's plane leaves at the same moment regardless of how
+   high the eventual multiplier goes. */
+function computeExitThreshold(seed){
+  let x = Math.sin((seed||1) * 12.9898) * 43758.5453;
+  x = x - Math.floor(x);
+  return 0.60 + x * 0.15;
 }
 
 function movePlane(xPct, yPx){
@@ -743,28 +741,137 @@ function clearTrails(){
   trails=[];
 }
 
+/* Read the plane's REAL rendered position. Needed because mid-way
+   through the CSS exit transition, planeX/planeY no longer reflect
+   where the plane visually is. */
+function syncPlaneVarsFromDOM(){
+  const skyRect   = avSky.getBoundingClientRect();
+  const planeRect = avPlane.getBoundingClientRect();
+  if(skyRect.width===0) return;
+  planeX = ((planeRect.left + planeRect.width/2) - skyRect.left) / skyRect.width * 100;
+  planeY = skyRect.bottom - (planeRect.top + planeRect.height/2);
+}
+
+/* Reset plane to runway position for a new round */
 function resetPlane(){
+  if(PLANE.exitTimeout){ clearTimeout(PLANE.exitTimeout); PLANE.exitTimeout=null; }
+
   avPlane.style.transition="none";
+  avPlane.style.display="";
   avPlane.style.left="6%";
   avPlane.style.bottom=GROUND_PX+"px";
-  avPlane.style.transform="scale(1) rotate(0deg)";
+  avPlane.style.transform="rotate(-6deg) scale(1)";
   avPlane.style.opacity="1";
+  avPlane.style.filter="none";
   planeX=6; planeY=GROUND_PX;
+
+  PLANE.state       = 'takeoff';
+  PLANE.roundId     = STATE.roundId;
+  PLANE.exitThreshold = computeExitThreshold(STATE.roundId);
+
   clearTrails();
   graphPts=[];
   gCtx.clearRect(0,0,canvas.width,canvas.height);
 }
 
-function flyPlaneAway(){
-  /* Force reflow so browser registers current position, then transition */
-  void avPlane.offsetWidth;
-  avPlane.style.transition=
-    "left .9s cubic-bezier(.3,0,.65,1), bottom .9s cubic-bezier(.3,0,.65,1), "+
-    "opacity .7s ease, transform .8s ease";
-  avPlane.style.left     ="115%";
-  avPlane.style.bottom   ="96%";
-  avPlane.style.transform="rotate(-42deg) scale(0.12)";
-  avPlane.style.opacity  ="0";
+/* Pure function: plane transform for this instant. Never touches the graph. */
+function computePlaneFrame(elapsedSec){
+  const progress = PRE_DUR>0 ? Math.min(elapsedSec/PRE_DUR,1) : 0;
+  const t = elapsedSec * 2.4; // turbulence clock
+
+  let xPct, yPx, tilt, turbAmp, accelerating;
+
+  if(progress < PLANE_ACCEL_START){
+    /* ── TAKEOFF: slow creep, gentle nose-up, light vibration ── */
+    const lp = progress / PLANE_ACCEL_START;
+    xPct = 6 + lp * 16;
+    yPx  = GROUND_PX + lp * 12;
+    tilt = -6 - lp * 5;
+    turbAmp = 1.2 + lp * 1.3;
+    accelerating = false;
+  } else {
+    /* ── ACCELERATION: true exponential ramp — flat, then violent ── */
+    const span  = Math.max(PLANE.exitThreshold - PLANE_ACCEL_START, 0.0001);
+    const lp    = Math.min((progress - PLANE_ACCEL_START) / span, 1);
+    const k     = 5.2; // higher = more sudden the zoom feels
+    const eased = (Math.exp(k*lp) - 1) / (Math.exp(k) - 1);
+
+    xPct = 22 + eased * 76;
+    yPx  = GROUND_PX + 12 + eased * (avSky.clientHeight - GROUND_PX - 30);
+    tilt = -11 - eased * 30;
+    turbAmp = 2.5 + eased * 7.5;
+    accelerating = true;
+  }
+
+  /* Shared turbulence so it never feels mechanical */
+  const turbX = Math.sin(t*0.9) * turbAmp * 0.55
+               + (Math.random()-0.5) * turbAmp * 0.25;
+  const turbY = Math.sin(t*1.7 + 0.8) * turbAmp
+               + Math.sin(t*3.1 + 1.5) * turbAmp * 0.4
+               + (Math.random()-0.5) * turbAmp * 0.3;
+
+  xPct = Math.max(1.5, Math.min(98.5, xPct + turbX));
+  yPx  = Math.max(GROUND_PX, yPx + turbY);
+  tilt += Math.sin(t*2.0) * (1.5 + turbAmp*0.25);
+
+  return { xPct, yPx, tilt, progress, accelerating };
+}
+
+/* Off-screen exit run: upper-right, fading, shrinking, motion-blurred */
+function startPlaneExit(){
+  if(PLANE.state==='exiting' || PLANE.state==='gone') return;
+  PLANE.state = 'exiting';
+
+  void avPlane.offsetWidth; // force reflow so transition applies cleanly
+  avPlane.style.transition =
+    "left .85s cubic-bezier(.32,0,.67,1), bottom .85s cubic-bezier(.32,0,.67,1), "+
+    "transform .85s cubic-bezier(.32,0,.67,1), opacity .65s ease, filter .65s ease";
+  avPlane.style.left      = "120%";
+  avPlane.style.bottom    = (avSky.clientHeight + 60) + "px";
+  avPlane.style.transform = "rotate(-46deg) scale(0.15)";
+  avPlane.style.opacity   = "0";
+  avPlane.style.filter    = "blur(7px)";
+
+  PLANE.exitTimeout = setTimeout(()=>{
+    if(PLANE.state==='exiting'){
+      PLANE.state = 'gone';
+      avPlane.style.display = "none";
+    }
+  }, 900);
+}
+
+/* Called every rAF tick while flying. Reads elapsed + curMult only. */
+function updatePlane(elapsedSec){
+  if(PLANE.state==='gone' || PLANE.state==='exiting') return;
+
+  const frame = computePlaneFrame(elapsedSec);
+
+  if(frame.progress >= PLANE.exitThreshold || curMult >= PLANE_MAX_VISIBLE_MULT){
+    startPlaneExit();
+    return;
+  }
+
+  if(frame.accelerating && PLANE.state!=='accelerating') PLANE.state='accelerating';
+
+  movePlane(frame.xPct, frame.yPx);
+  avPlane.style.transform = `rotate(${frame.tilt.toFixed(1)}deg)`;
+
+  if(trailTimer >= 0.18) dropTrail();
+}
+
+/* Crash handling for the PLANE only — graph red/freeze stays in enterCrashed() */
+function handleCrashPlane(){
+  if(PLANE.state==='gone') return; // plane already left — nothing to explode
+
+  if(PLANE.exitTimeout){ clearTimeout(PLANE.exitTimeout); PLANE.exitTimeout=null; }
+  if(PLANE.state==='exiting') syncPlaneVarsFromDOM(); // capture mid-transition spot
+
+  avPlane.style.transition = "none";
+  spawnExplosion();          // uses planeX/planeY
+  avPlane.style.opacity = "0";
+  avPlane.style.display = "none";
+
+  PLANE.state = 'gone';
 }
 
 function spawnExplosion(){
@@ -781,7 +888,6 @@ function spawnExplosion(){
     setTimeout(()=>{ if(p.parentNode)p.parentNode.removeChild(p); },1000);
   }
 }
-
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §6  rAF ANIMATION LOOP
    Runs ONLY during "flying" phase.
@@ -832,17 +938,16 @@ function rafTick(now){
   /* ── Multiplier display ── */
   multEl.textContent = curMult.toFixed(2) + "x";
 
-  /* ── Move plane to match graph curve ── */
-  const pos = planePosFromMult(curMult, ptIdx);
-  movePlane(pos.xPct, pos.yPx);
-
-  /* ── Trail + Graph point every ~0.18s (graph now uses ptIdx for X-sync with plane) ── */
+  /* ── Graph: driven purely by precomputed points ── */
   if(trailTimer >= 0.18){
-    dropTrail();
-    addGraphPt(curMult, ptIdx);   /* pass ptIdx so curve tip x matches plane exactly */
-    trailTimer = 0;
+    addGraphPt(curMult, ptIdx);
   }
   drawGraph(false);
+
+  /* ── Plane: fully independent ── */
+  updatePlane(elapsed);
+
+  if(trailTimer >= 0.18) trailTimer = 0;
 
   /* ── Cash-out button live payout ── */
   if(STATE.hasBet && STATE.myResult===null && cashBtn.style.display!=="none"){
@@ -1033,10 +1138,30 @@ function enterFlying(rid, rno, serverElapsed, pre){
   while(ptIdx<PRE_PTS.length-1 && PRE_PTS[ptIdx+1][0]<=elapsed) ptIdx++;
   curMult = PRE_PTS.length ? PRE_PTS[ptIdx][1] : 1.00;
 
-  /* Position plane at correct point */
-  const pos=planePosFromMult(curMult, ptIdx);
+/* ── Plane: fresh round vs. mid-flight (re)join ── */
+  if(PLANE.roundId !== rid){
+    PLANE.roundId = rid;
+    PLANE.exitThreshold = computeExitThreshold(rid);
+    if(PLANE.exitTimeout){ clearTimeout(PLANE.exitTimeout); PLANE.exitTimeout=null; }
+  }
+
+  const progress = PRE_DUR>0 ? Math.min(elapsed/PRE_DUR,1) : 0;
   avPlane.style.transition="none";
-  movePlane(pos.xPct, pos.yPx);
+  avPlane.style.filter="none";
+
+  if(progress >= PLANE.exitThreshold || curMult >= PLANE_MAX_VISIBLE_MULT){
+    /* Joined after the plane already left for this round */
+    PLANE.state='gone';
+    avPlane.style.display="none";
+    avPlane.style.opacity="0";
+  } else {
+    PLANE.state = (progress < PLANE_ACCEL_START) ? 'takeoff' : 'accelerating';
+    avPlane.style.display="";
+    avPlane.style.opacity="1";
+    const frame = computePlaneFrame(elapsed);
+    movePlane(frame.xPct, frame.yPx);
+    avPlane.style.transform = `rotate(${frame.tilt.toFixed(1)}deg)`;
+  }
 
   /* Rebuild graph to current point */
   graphPts=[];
@@ -1078,9 +1203,8 @@ function enterCrashed(rid, rno, cp, seed, recentCrashes){
   currentBettingRno = null;
 
   stopAnim(); stopEngine();
-  drawGraph(true);   /* turn curve red */
-  spawnExplosion();
-  flyPlaneAway();    /* plane flies off-screen */
+  drawGraph(true);     /* turn curve red, freeze immediately */
+  handleCrashPlane();  /* explosion only if plane is still on screen */
   _playBuf("crash");
 
   multEl.className="avi-mult-num crashed"; multEl.textContent=cp.toFixed(2)+"x";
