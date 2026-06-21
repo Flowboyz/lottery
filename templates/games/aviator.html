@@ -1239,26 +1239,46 @@ async function doCashout(){
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    §11  LIVE PLAYERS PANEL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-let activeTab="all", playersData=[];
+let activeTab="all", playersData=[], topWinsData=[];
 
 function switchTab(tab,el){
   activeTab=tab;
   document.querySelectorAll(".avi-ptab").forEach(t=>t.classList.remove("active"));
   el.classList.add("active");
-  renderPlayers();
+  if(activeTab==="top"){
+    fetchTopWins();
+  } else {
+    renderPlayers();
+  }
+}
+
+async function fetchTopWins(){
+  try{
+    const r=await fetch("/games/aviator/top-wins");
+    const d=await r.json();
+    topWinsData=d.wins||[];
+    renderPlayers();
+  }catch(e){}
 }
 
 function renderPlayers(){
   let data=playersData;
-  if(activeTab==="top")
-    data=[...playersData].filter(p=>p.result==="WIN").sort((a,b)=>(b.payout||0)-(a.payout||0));
+  if(activeTab==="top") {
+    data=topWinsData;
+  }
   if(!data.length){
-    playersEl.innerHTML='<div class="avi-empty">No bets this round yet…</div>'; return;
+    const msg = activeTab === "all" ? "No bets this round yet…" : "No big wins yet this week…";
+    playersEl.innerHTML=`<div class="avi-empty">${msg}</div>`; return;
   }
   playersEl.innerHTML=data.map(p=>{
     let cashHtml="";
-    if(p.result==="WIN"&&p.cashout_at!=null)
-      cashHtml=`<span class="avi-pcash win">✅ ${p.cashout_at.toFixed(2)}x</span>`;
+    if(p.result==="WIN"&&p.cashout_at!=null) {
+      if(activeTab==="top") {
+        cashHtml=`<span class="avi-pcash win">✅ ${p.cashout_at.toFixed(2)}x (₦${Math.floor(p.payout).toLocaleString()})</span>`;
+      } else {
+        cashHtml=`<span class="avi-pcash win">✅ ${p.cashout_at.toFixed(2)}x</span>`;
+      }
+    }
     else if(p.result===null&&STATE.status==="flying")
       cashHtml=`<span class="avi-pcash flying">Flying…</span>`;
     else if(p.result==="LOSS")

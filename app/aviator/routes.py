@@ -710,3 +710,30 @@ def live_players():
             "result":     e.result,
         })
     return jsonify({"round_id": current_round.id, "status": current_round.status, "players": players})
+
+
+@aviator_bp.route("/top-wins")
+@login_required
+def top_wins():
+    """Get historical weekly top wins for the leaderboard/tab."""
+    from datetime import datetime, timedelta
+    since = datetime.utcnow() - timedelta(days=7)
+    entries = AviatorEntry.query.filter(
+        AviatorEntry.result == "WIN",
+        AviatorEntry.created_at >= since
+    ).order_by(AviatorEntry.payout.desc()).limit(30).all()
+
+    from app.models import User
+    wins = []
+    for e in entries:
+        user = db.session.get(User, e.user_id)
+        name = user.username if user else "Player"
+        masked = name[:2] + "*" * max(2, len(name) - 2) if len(name) > 2 else name
+        wins.append({
+            "name":       masked,
+            "bet":        e.bet_amount,
+            "cashout_at": e.cashout_at,
+            "payout":     e.payout,
+            "result":     e.result,
+        })
+    return jsonify({"wins": wins})
