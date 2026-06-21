@@ -226,12 +226,18 @@ def leaderboard():
 
     period = request.args.get("period", "weekly")
 
+    # Align leaderboard resets with West Africa Time (WAT) / Nigeria Timezone (UTC + 1)
+    wat_now = datetime.utcnow() + timedelta(hours=1)
     if period == "daily":
-        since = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        start_wat = wat_now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif period == "monthly":
-        since = datetime.utcnow() - timedelta(days=30)
-    else:
-        since = datetime.utcnow() - timedelta(days=7)
+        start_wat = wat_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:  # weekly: start of current calendar week (Monday)
+        wat_today = wat_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_wat = wat_today - timedelta(days=wat_now.weekday())
+
+    # Convert the WAT start time back to UTC for database queries
+    since = start_wat - timedelta(hours=1)
 
     # Lottery wins
     lottery_wins = db.session.query(
