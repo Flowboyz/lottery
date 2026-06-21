@@ -450,6 +450,23 @@ def cashout():
         return jsonify({"error": "Already settled.", "result": entry.result}), 400
 
     client_mult = max(1.01, client_mult)
+
+    # Server-side validation: calculate maximum allowed multiplier based on elapsed time + 1.5s tolerance
+    now = datetime.utcnow()
+    if current_round.betting_ends_at:
+        elapsed = (now - current_round.betting_ends_at).total_seconds()
+        max_allowed_mult = _calculate_multiplier(elapsed + 1.5)
+    else:
+        max_allowed_mult = 1.01
+
+    # Cap allowed multiplier below the crash point
+    if max_allowed_mult >= current_round.crash_point:
+        max_allowed_mult = current_round.crash_point - 0.01
+
+    # If client attempts to cashout above the physical flight limit, cap it
+    if client_mult > max_allowed_mult:
+        client_mult = round(max_allowed_mult, 2)
+
     if client_mult >= current_round.crash_point:
         entry.result = "LOSS"
         entry.payout = 0.0
