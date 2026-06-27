@@ -130,6 +130,91 @@
                 </div>
             </div>
 
+            <!-- ── Lotto 5/90 Settings ── -->
+            <h3 class="section-title" style="margin-top:28px;margin-bottom:14px;">🎫 Lotto 5/90 Settings</h3>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label>Lotto 5/90 Enabled</label>
+                    <select name="lotto590_enabled" class="form-input">
+                        <option value="1" {% if settings.LOTTO590_ENABLED|string == '1' or settings.LOTTO590_ENABLED|string == '1.0' %}selected{% endif %}>Enabled</option>
+                        <option value="0" {% if settings.LOTTO590_ENABLED|string == '0' or settings.LOTTO590_ENABLED|string == '0.0' %}selected{% endif %}>Disabled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Min Bet (₦)</label>
+                    <input type="number" name="lotto590_min_bet" value="{{ settings.LOTTO590_MIN_BET|int }}" step="50" min="50" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Max Bet (₦)</label>
+                    <input type="number" name="lotto590_max_bet" value="{{ settings.LOTTO590_MAX_BET|int }}" step="any" min="100" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Nap 2 Payout Multiplier</label>
+                    <input type="number" name="lotto590_nap2_payout" value="{{ settings.LOTTO590_NAP2_PAYOUT }}" step="1" min="1" class="form-input">
+                    <small class="form-hint">Default: 240x</small>
+                </div>
+                <div class="form-group">
+                    <label>Nap 3 Payout Multiplier</label>
+                    <input type="number" name="lotto590_nap3_payout" value="{{ settings.LOTTO590_NAP3_PAYOUT }}" step="1" min="1" class="form-input">
+                    <small class="form-hint">Default: 2100x</small>
+                </div>
+            </div>
+
+            <!-- ── Football Predictor Settings ── -->
+            <h3 class="section-title" style="margin-top:28px;margin-bottom:14px;">⚽ Football Predictor Settings</h3>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label>Football Predictor Enabled</label>
+                    <select name="football_enabled" class="form-input">
+                        <option value="1" {% if settings.FOOTBALL_ENABLED|string == '1' or settings.FOOTBALL_ENABLED|string == '1.0' %}selected{% endif %}>Enabled</option>
+                        <option value="0" {% if settings.FOOTBALL_ENABLED|string == '0' or settings.FOOTBALL_ENABLED|string == '0.0' %}selected{% endif %}>Disabled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Min Bet (₦)</label>
+                    <input type="number" name="football_min_bet" value="{{ settings.FOOTBALL_MIN_BET|int }}" step="50" min="50" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Max Bet (₦)</label>
+                    <input type="number" name="football_max_bet" value="{{ settings.FOOTBALL_MAX_BET|int }}" step="any" min="100" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Match Odds Multiplier</label>
+                    <input type="number" name="football_odds" value="{{ settings.FOOTBALL_ODDS }}" step="0.1" min="1" class="form-input">
+                    <small class="form-hint">Default: 1.8x. Accumulators multiply: 1.8³ = 5.8x</small>
+                </div>
+            </div>
+
+            <!-- ── Ludo Quick-Bet Settings ── -->
+            <h3 class="section-title" style="margin-top:28px;margin-bottom:14px;">🎲 Ludo Quick-Bet Settings</h3>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label>Ludo Quick-Bet Enabled</label>
+                    <select name="ludo_enabled" class="form-input">
+                        <option value="1" {% if settings.LUDO_ENABLED|string == '1' or settings.LUDO_ENABLED|string == '1.0' %}selected{% endif %}>Enabled</option>
+                        <option value="0" {% if settings.LUDO_ENABLED|string == '0' or settings.LUDO_ENABLED|string == '0.0' %}selected{% endif %}>Disabled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Min Bet (₦)</label>
+                    <input type="number" name="ludo_min_bet" value="{{ settings.LUDO_MIN_BET|int }}" step="50" min="50" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Max Bet (₦)</label>
+                    <input type="number" name="ludo_max_bet" value="{{ settings.LUDO_MAX_BET|int }}" step="any" min="100" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Under/Over 7 Payout Multiplier</label>
+                    <input type="number" name="ludo_payout_under_over" value="{{ settings.LUDO_PAYOUT_UNDER_OVER }}" step="0.1" min="1" class="form-input">
+                    <small class="form-hint">Default: 1.9x</small>
+                </div>
+                <div class="form-group">
+                    <label>Exactly 7 Payout Multiplier</label>
+                    <input type="number" name="ludo_payout_seven" value="{{ settings.LUDO_PAYOUT_SEVEN }}" step="0.1" min="1" class="form-input">
+                    <small class="form-hint">Default: 5.5x</small>
+                </div>
+            </div>
+
             <div class="form-group" style="margin-top:24px;">
                 <label>Your Password (required to save)</label>
                 <input type="password" name="admin_password" placeholder="Enter your password" class="form-input" required>

@@ -115,9 +115,9 @@
   will-change:left,bottom,transform,opacity;
 }
 .avi-plane.exiting {
-  transition: left .85s cubic-bezier(.32,0,.67,1), bottom .85s cubic-bezier(.32,0,.67,1), transform .85s cubic-bezier(.32,0,.67,1), opacity .65s ease, filter .65s ease !important;
+  transition: left .45s cubic-bezier(.32,0,.67,1), bottom .45s cubic-bezier(.32,0,.67,1), transform .45s cubic-bezier(.32,0,.67,1), opacity .35s ease, filter .35s ease !important;
   left: 120% !important;
-  bottom: 120% !important;
+  bottom: 500px !important;
   transform: rotate(-46deg) scale(0.15) !important;
   opacity: 0 !important;
   filter: blur(7px) !important;
@@ -824,7 +824,7 @@ function startPlaneExit(){
       PLANE.state = 'gone';
       avPlane.style.display = "none";
     }
-  }, 1000);
+  }, 500);
 }
 
 /* Called every rAF tick while flying. Reads elapsed only. */
@@ -917,11 +917,14 @@ function rafTick(now){
   /* ── Detect crash — elapsed >= duration ── */
   if(!crashReported && elapsed >= PRE_DUR){
     crashReported = true;
+    
+    // Immediately trigger local crash animation for zero-latency feedback
+    enterCrashed(STATE.roundId, STATE.roundNo, PRE_CRASH, null, null);
+    
     fetch("/games/aviator/crash-round",{
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({round_id: STATE.roundId})
     }).catch(()=>{});
-    /* Don't stop anim here — next poll will fire enterCrashed */
   }
 
   rafId = requestAnimationFrame(rafTick);

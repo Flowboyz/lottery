@@ -81,6 +81,96 @@
                 </div>
             </div>
 
+            <!-- Lotto 5/90 Stats -->
+            <h3 class="section-title" style="margin-top:24px;">🎫 Lotto 5/90</h3>
+            <div class="stats-grid" style="margin-bottom:24px;">
+                {% set l = lotto590_stats[period] %}
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(l.wagers) }}</div>
+                    <div class="stat-label">Total Wagered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(l.payouts) }}</div>
+                    <div class="stat-label">Total Payouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if l.rtp > 100 %}text-danger{% elif l.rtp < 90 %}text-success{% endif %}">{{ "{:.1f}".format(l.rtp) }}%</div>
+                    <div class="stat-label">Actual RTP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if l.profit > 0 %}text-success{% else %}text-danger{% endif %}">₦{{ "{:,.0f}".format(l.profit) }}</div>
+                    <div class="stat-label">House Profit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ l.plays }}</div>
+                    <div class="stat-label">Bets Placed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ l.players }}</div>
+                    <div class="stat-label">Unique Players</div>
+                </div>
+            </div>
+
+            <!-- Football Predictor Stats -->
+            <h3 class="section-title" style="margin-top:24px;">⚽ Football Predictor</h3>
+            <div class="stats-grid" style="margin-bottom:24px;">
+                {% set f = football_stats[period] %}
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(f.wagers) }}</div>
+                    <div class="stat-label">Total Wagered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(f.payouts) }}</div>
+                    <div class="stat-label">Total Payouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if f.rtp > 100 %}text-danger{% elif f.rtp < 90 %}text-success{% endif %}">{{ "{:.1f}".format(f.rtp) }}%</div>
+                    <div class="stat-label">Actual RTP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if f.profit > 0 %}text-success{% else %}text-danger{% endif %}">₦{{ "{:,.0f}".format(f.profit) }}</div>
+                    <div class="stat-label">House Profit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ f.plays }}</div>
+                    <div class="stat-label">Bets Placed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ f.players }}</div>
+                    <div class="stat-label">Unique Players</div>
+                </div>
+            </div>
+
+            <!-- Ludo Quick-Bet Stats -->
+            <h3 class="section-title" style="margin-top:24px;">🎲 Ludo Quick-Bet</h3>
+            <div class="stats-grid">
+                {% set lu = ludo_stats[period] %}
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(lu.wagers) }}</div>
+                    <div class="stat-label">Total Wagered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">₦{{ "{:,.0f}".format(lu.payouts) }}</div>
+                    <div class="stat-label">Total Payouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if lu.rtp > 100 %}text-danger{% elif lu.rtp < 90 %}text-success{% endif %}">{{ "{:.1f}".format(lu.rtp) }}%</div>
+                    <div class="stat-label">Actual RTP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value {% if lu.profit > 0 %}text-success{% else %}text-danger{% endif %}">₦{{ "{:,.0f}".format(lu.profit) }}</div>
+                    <div class="stat-label">House Profit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ lu.plays }}</div>
+                    <div class="stat-label">Bets Placed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ lu.players }}</div>
+                    <div class="stat-label">Unique Players</div>
+                </div>
+            </div>
+
             {% if period == 'today' %}
             <div style="margin-top:16px;padding:12px 16px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:13px;color:var(--text-muted);">
                 Color rounds today: <strong style="color:var(--text-primary);">{{ color_rounds_today }}</strong>
@@ -94,6 +184,9 @@
         <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;">
             <a href="{{ url_for('admin.game_history') }}?game=aviator" class="small-btn">✈️ Aviator Plays</a>
             <a href="{{ url_for('admin.game_history') }}?game=color"   class="small-btn">🎨 Color Plays</a>
+            <a href="{{ url_for('admin.game_history') }}?game=lotto590" class="small-btn">🎫 Lotto Plays</a>
+            <a href="{{ url_for('admin.game_history') }}?game=football" class="small-btn">⚽ Football Plays</a>
+            <a href="{{ url_for('admin.game_history') }}?game=ludo"     class="small-btn">🎲 Ludo Plays</a>
             <a href="{{ url_for('admin.game_settings') }}"             class="small-btn">⚙️ Game Settings</a>
             <a href="{{ url_for('admin.export_csv', data_type='games') }}" class="small-btn">📥 Export CSV</a>
         </div>

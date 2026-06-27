@@ -3,21 +3,62 @@
 {% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
 {% block content %}
 <div class="content page-content">
-    <div class="header">
-        <h2 class="auth-title">Admin Verification</h2>
-        <p class="auth-subtitle">Enter the 6-digit code sent to your email to continue.</p>
-        <form method="POST" action="{{ url_for('auth.admin_2fa') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group">
-                <label for="otp">Verification Code</label>
-                <input type="text" name="otp" id="otp" required placeholder="6-digit code"
-                       maxlength="6" pattern="[0-9]{6}" class="form-input"
-                       style="text-align:center;font-size:24px;letter-spacing:8px;font-weight:700;">
+    <div class="auth-wrapper">
+        <!-- Left panel (Showcase) -->
+        <div class="auth-showcase">
+            <div class="showcase-content">
+                <div class="showcase-logo">🎰</div>
+                <h1 class="showcase-title">DITTO DINKY</h1>
+                <p class="showcase-tagline">Nigeria's #1 Instant Lottery & Casino Hub</p>
+                
+                <div class="showcase-features">
+                    <div class="showcase-feat-item">🛡️ <div><strong>Admin Security Portal</strong><p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Protecting live financial and operational controls with email 2FA verification.</p></div></div>
+                    <div class="showcase-feat-item">🔒 <div><strong>Strict Session Checks</strong><p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Audited session keys are refreshed upon verification.</p></div></div>
+                </div>
+                
+                <div class="showcase-stats">
+                    <div class="stat-badge">🔒 2FA Verification Active</div>
+                    <div class="stat-badge">🛡️ Audited Security Logs</div>
+                </div>
             </div>
-            <button type="submit" class="auth-btn">Verify & Login</button>
-        </form>
-        <div class="auth-links">
-            <a href="{{ url_for('auth.login') }}">Back to Login</a>
+        </div>
+
+        <!-- Right panel (Verification Form) -->
+        <div class="auth-form-container">
+            <div class="auth-card">
+                <!-- Mobile only logo header -->
+                <div class="mobile-logo-wrapper">
+                    <div class="logo">🎰</div>
+                </div>
+                
+                <h2 class="auth-title">Admin Verification</h2>
+                <p class="auth-subtitle">Enter the 6-digit code sent to your email to continue.</p>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('auth.admin_2fa') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="form-group">
+                        <label for="otp">Verification Code</label>
+                        <input type="text" name="otp" id="otp" required placeholder="6-digit code"
+                               maxlength="6" pattern="[0-9]{6}" class="form-input"
+                               style="text-align:center;font-size:24px;letter-spacing:8px;font-weight:700;">
+                    </div>
+                    
+                    <button type="submit" class="auth-btn">Verify & Login</button>
+                </form>
+
+                <div class="auth-links">
+                    <a href="{{ url_for('auth.login') }}">Back to Login</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

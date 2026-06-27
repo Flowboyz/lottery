@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% block title %}Lotto 5/90 - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 class="page-heading" style="margin:0;">🎫 Lotto 5/90</h2>
+            <a href="{{ url_for('games.hub') }}" class="small-btn">← Hub</a>
+        </div>
+        <p class="page-subtitle" style="margin-bottom:18px;">Classic Baba Ijebu style instant lottery! Select your numbers and draw.</p>
+
+        <!-- Main game layout -->
+        <div class="lotto-container">
+            
+            <!-- Type Selector -->
+            <div class="lotto-modes" style="display:flex;gap:10px;margin-bottom:16px;">
+                <button type="button" class="mode-btn active" data-mode="nap2" onclick="setMode('nap2')">Nap 2 (240x)</button>
+                <button type="button" class="mode-btn" data-mode="nap3" onclick="setMode('nap3')">Nap 3 (2,100x)</button>
+                <button type="button" class="mode-btn" data-mode="perm2" onclick="setMode('perm2')">Perm 2 (Permutation)</button>
+            </div>
+
+            <!-- Mode Description -->
+            <div id="modeHelp" class="info-strip" style="margin-bottom:16px;background:var(--bg-elevated);text-align:left;padding:12px;">
+                <strong>Nap 2:</strong> Choose exactly 2 numbers. If both are drawn among the 5 lucky numbers, you win 240x your bet!
+            </div>
+
+            <!-- Board -->
+            <div class="lotto-board-wrapper">
+                <div class="lotto-board" style="display:grid;grid-template-columns: repeat(10, 1fr);gap:6px;max-width:550px;margin:0 auto 20px;">
+                    {% for i in range(1, 91) %}
+                    <button type="button" class="lotto-num-btn" id="num-{{ i }}" onclick="toggleNumber({{ i }})">{{ i }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Selected info -->
+            <div class="bet-section" style="max-width:400px;margin:0 auto;background:var(--bg-elevated);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Selected Numbers:</div>
+                    <div id="selectedDisplay" style="display:flex;gap:6px;flex-wrap:wrap;min-height:36px;align-items:center;justify-content:center;background:var(--bg-main);border-radius:var(--radius-sm);padding:6px;">
+                        <span style="color:var(--text-muted);font-size:13px;">None selected</span>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block;margin-bottom:6px;font-size:13px;">Bet Amount (₦)</label>
+                    <input type="number" id="lottoBet" class="form-input" min="{{ min_bet }}" max="{{ max_bet }}" step="50" value="100" style="text-align:center;">
+                </div>
+
+                <div class="input-amount" style="margin-bottom:16px;">
+                    <button type="button" class="inp-btn" onclick="setBet(100)">₦100</button>
+                    <button type="button" class="inp-btn" onclick="setBet(500)">₦500</button>
+                    <button type="button" class="inp-btn" onclick="setBet(1000)">₦1K</button>
+                    <button type="button" class="inp-btn" onclick="setBet(5000)">₦5K</button>
+                </div>
+
+                <button type="button" id="drawBtn" class="submit-btn" onclick="playLotto()" style="width:100%;font-size:16px;font-weight:bold;">Draw Lotto</button>
+            </div>
+        </div>
+
+        <!-- Animation Reveal Container -->
+        <div id="drawOverlay" class="draw-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;justify-content:center;align-items:center;color:white;">
+            <h3 style="font-size:24px;margin-bottom:30px;color:var(--accent-primary);">Drawing Numbers...</h3>
+            
+            <!-- Drum Animation placeholder -->
+            <div class="drum-spinner" style="width:120px;height:120px;border:6px dashed var(--accent-primary);border-radius:50%;margin-bottom:40px;animation:spin 1.5s infinite linear;"></div>
+
+            <!-- Drawn Balls display -->
+            <div id="drawnBalls" style="display:flex;gap:15px;margin-bottom:45px;min-height:60px;">
+                <!-- Filled dynamically -->
+            </div>
+
+            <!-- Result Box -->
+            <div id="drawResultBox" style="display:none;text-align:center;animation:fadeIn 0.5s ease;">
+                <h2 id="drawResultTitle" style="font-size:28px;margin-bottom:10px;"></h2>
+                <p id="drawResultSub" style="font-size:18px;margin-bottom:30px;"></p>
+                <button type="button" class="submit-btn" onclick="closeOverlay()" style="min-width:150px;">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- How to Play -->
+    <button class="help-fab" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
+    <div class="help-modal-overlay" id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <h3>How To Play</h3>
+                <button class="help-modal-close" onclick="document.getElementById('helpModal').style.display='none'">✕</button>
+            </div>
+            <div class="help-modal-body">
+                <div class="help-step"><span class="help-icon">⚙️</span><div><strong>Choose Your Mode</strong><p>Select Nap 2 (2 numbers), Nap 3 (3 numbers), or Perm 2 (3 to 10 numbers).</p></div></div>
+                <div class="help-step"><span class="help-icon">🔢</span><div><strong>Pick Numbers</strong><p>Tap numbers on the board (1-90) to add them to your ticket.</p></div></div>
+                <div class="help-step"><span class="help-icon">🎫</span><div><strong>Set Bet & Draw</strong><p>Enter your bet amount and hit "Draw". 5 winning numbers are drawn. Win up to 2100x!</p></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Ludo / Lotto styles */
+.lotto-num-btn {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 0;
+    font-size: 13px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.lotto-num-btn:hover {
+    background: var(--border-color);
+}
+.lotto-num-btn.selected {
+    background: var(--accent-primary, #22c55e);
+    color: #000;
+    border-color: var(--accent-primary, #22c55e);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+.mode-btn {
+    flex: 1;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+.mode-btn.active {
+    background: var(--text-primary);
+    color: var(--bg-main);
+    border-color: var(--text-primary);
+}
+.ball-draw {
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
+    color: #000;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 -4px 6px rgba(0,0,0,0.3);
+    animation: dropBall 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+.ball-draw.matched-ball {
+    background: radial-gradient(circle at 30% 30%, #22c55e, #15803d) !important;
+    color: white;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes dropBall {
+    0% { transform: translateY(-100px) scale(0); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+.draw-overlay {
+    backdrop-filter: blur(5px);
+}
+</style>
+
+<script>
+let currentMode = 'nap2';
+let selectedNumbers = [];
+
+const modeDescriptions = {
+    'nap2': '<strong>Nap 2 (240x):</strong> Choose exactly 2 numbers. Both must be drawn out of the 5 numbers to win.',
+    'nap3': '<strong>Nap 3 (2,100x):</strong> Choose exactly 3 numbers. All 3 must be drawn out of the 5 numbers to win.',
+    'perm2': '<strong>Perm 2:</strong> Choose between 3 and 10 numbers. Your stake is split equally among all possible pairs. Every winning pair pays 240x its portion of the stake!'
+};
+
+function setMode(mode) {
+    currentMode = mode;
+    selectedNumbers = [];
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+    document.getElementById('modeHelp').innerHTML = modeDescriptions[mode];
+    
+    // Reset all buttons
+    document.querySelectorAll('.lotto-num-btn').forEach(btn => btn.classList.remove('selected'));
+    updateSelectedDisplay();
+}
+
+function setBet(amount) {
+    document.getElementById('lottoBet').value = amount;
+}
+
+function toggleNumber(num) {
+    const btn = document.getElementById(`num-${num}`);
+    const index = selectedNumbers.indexOf(num);
+    
+    if (index > -1) {
+        selectedNumbers.splice(index, 1);
+        btn.classList.remove('selected');
+    } else {
+        // Validation limit
+        let limit = 2;
+        if (currentMode === 'nap3') limit = 3;
+        if (currentMode === 'perm2') limit = 10;
+        
+        if (selectedNumbers.length >= limit) {
+            flashMessage(`For ${currentMode.toUpperCase()}, you can select a maximum of ${limit} numbers.`, 'error');
+            return;
+        }
+        
+        selectedNumbers.push(num);
+        btn.classList.add('selected');
+    }
+    
+    // Sort
+    selectedNumbers.sort((a,b) => a-b);
+    updateSelectedDisplay();
+}
+
+function updateSelectedDisplay() {
+    const display = document.getElementById('selectedDisplay');
+    if (selectedNumbers.length === 0) {
+        display.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">None selected</span>';
+        return;
+    }
+    display.innerHTML = selectedNumbers.map(n => `
+        <span style="background:var(--text-primary);color:var(--bg-main);font-weight:bold;width:28px;height:28px;border-radius:50%;display:inline-flex;justify-content:center;align-items:center;font-size:13px;margin:2px;">${n}</span>
+    `).join('');
+}
+
+function flashMessage(msg, category) {
+    const container = document.querySelector('.page-card');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `flash-message flash-${category}`;
+    alertDiv.textContent = msg;
+    alertDiv.style.marginBottom = '12px';
+    container.insertBefore(alertDiv, container.firstChild);
+    setTimeout(() => alertDiv.remove(), 4000);
+}
+
+function playLotto() {
+    const bet = parseFloat(document.getElementById('lottoBet').value);
+    
+    // Validate number count
+    let req = 2;
+    if (currentMode === 'nap3') req = 3;
+    if (currentMode === 'perm2') req = 3; // Min 3
+    
+    if (currentMode !== 'perm2' && selectedNumbers.length !== req) {
+        flashMessage(`You must select exactly ${req} numbers for ${currentMode.toUpperCase()}.`, 'error');
+        return;
+    }
+    if (currentMode === 'perm2' && selectedNumbers.length < 3) {
+        flashMessage(`Select at least 3 numbers to play Perm 2.`, 'error');
+        return;
+    }
+
+    if (isNaN(bet) || bet <= 0) {
+        flashMessage('Invalid bet amount.', 'error');
+        return;
+    }
+
+    document.getElementById('drawBtn').disabled = true;
+    
+    // Perform API call
+    fetch('/games/lotto590/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            bet: bet,
+            play_type: currentMode,
+            picks: selectedNumbers
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            flashMessage(data.error, 'error');
+            document.getElementById('drawBtn').disabled = false;
+            return;
+        }
+        
+        // Success: Trigger the full overlay animation
+        triggerReveal(data);
+    })
+    .catch(err => {
+        console.error(err);
+        flashMessage('Something went wrong. Try again.', 'error');
+        document.getElementById('drawBtn').disabled = false;
+    });
+}
+
+function triggerReveal(data) {
+    const overlay = document.getElementById('drawOverlay');
+    const ballsContainer = document.getElementById('drawnBalls');
+    const resultBox = document.getElementById('drawResultBox');
+    const spinner = document.querySelector('.drum-spinner');
+    
+    ballsContainer.innerHTML = '';
+    resultBox.style.display = 'none';
+    spinner.style.display = 'block';
+    overlay.style.display = 'flex';
+    
+    // Reveal one drawn ball every 1 second
+    let idx = 0;
+    const interval = setInterval(() => {
+        if (idx < data.drawn.length) {
+            const val = data.drawn[idx];
+            const isMatch = data.matched.includes(val);
+            
+            const ball = document.createElement('div');
+            ball.className = `ball-draw ${isMatch ? 'matched-ball' : ''}`;
+            ball.textContent = val;
+            
+            ballsContainer.appendChild(ball);
+            idx++;
+        } else {
+            clearInterval(interval);
+            // Hide spinner and show results
+            spinner.style.display = 'none';
+            
+            const title = document.getElementById('drawResultTitle');
+            const sub = document.getElementById('drawResultSub');
+            
+            if (data.result === 'WIN') {
+                title.textContent = '🎉 YOU WON!';
+                title.style.color = '#22c55e';
+                sub.textContent = `Payout: ₦${data.payout.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            } else {
+                title.textContent = '💔 No Match';
+                title.style.color = '#ef4444';
+                sub.textContent = 'Try again next round!';
+            }
+            
+            resultBox.style.display = 'block';
+            
+            // Update balance in header
+            const headerBal = document.querySelector('.balance strong');
+            if (headerBal) {
+                headerBal.textContent = `₦${data.new_balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+        }
+    }, 1000);
+}
+
+function closeOverlay() {
+    document.getElementById('drawOverlay').style.display = 'none';
+    document.getElementById('drawBtn').disabled = false;
+    
+    // Reset selected
+    document.querySelectorAll('.lotto-num-btn').forEach(btn => btn.classList.remove('selected'));
+    selectedNumbers = [];
+    updateSelectedDisplay();
+}
+</script>
+{% endblock %}

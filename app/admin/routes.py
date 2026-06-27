@@ -51,6 +51,12 @@ def dashboard():
     def count_since(model, since):
         return model.query.filter(model.created_at >= datetime.combine(since, datetime.min.time())).count()
 
+    since_time = datetime.combine(today, datetime.min.time())
+    bet_users = {u.user_id for u in Bet.query.filter(Bet.created_at >= since_time).all()}
+    gp_users = {u.user_id for u in GamePlay.query.filter(GamePlay.created_at >= since_time).all()}
+    aviator_users = {u.user_id for u in AviatorEntry.query.filter(AviatorEntry.created_at >= since_time).all()}
+    active_users_today = len(bet_users.union(gp_users).union(aviator_users))
+
     stats = dict(
         total_users=User.query.count(),
         new_users_today=count_since(User, today),
@@ -88,8 +94,7 @@ def dashboard():
         game_plays_today=count_since(GamePlay, today),
 
         pending_withdrawals=WithdrawalRequest.query.filter_by(status="pending").count(),
-        active_users_today=db.session.query(db.func.count(db.distinct(Bet.user_id))).filter(
-            Bet.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0,
+        active_users_today=active_users_today,
     )
 
     # Net profit = deposits - withdrawals - payouts + bets lost
@@ -156,13 +161,22 @@ def user_detail(user_id):
             'game_name': 'Lottery'
         })
     for g in other_games:
+        friendly_names = {
+            "wheel": "Spin the Wheel",
+            "coinflip": "Coin Flip",
+            "scratchcard": "Scratch Card",
+            "color": "Color Prediction",
+            "lotto590": "Lotto 5/90",
+            "football": "Football Predictor",
+            "ludo": "Ludo Quick-Bet"
+        }
         all_activity.append({
             'type': g.game_type,
             'created_at': g.created_at,
             'bet_amount': g.bet_amount,
             'payout': g.payout,
             'result': g.result,
-            'game_name': g.game_type.capitalize()
+            'game_name': friendly_names.get(g.game_type, g.game_type.capitalize())
         })
     for a in aviator_bets:
         all_activity.append({
@@ -547,6 +561,23 @@ def game_settings():
             "COLOR_GREEN_PAYOUT":   ("Color Green Payout Multiplier",   request.form.get("color_green_payout")),
             "COLOR_VIOLET_PAYOUT":  ("Color Violet Payout Multiplier",  request.form.get("color_violet_payout")),
             "COLOR_ROUND_DURATION": ("Color Round Duration (seconds)",  request.form.get("color_round_duration")),
+            # Lotto 5/90
+            "LOTTO590_ENABLED":     ("Lotto 5/90 Enabled",              request.form.get("lotto590_enabled")),
+            "LOTTO590_MIN_BET":     ("Lotto 5/90 Min Bet (₦)",          request.form.get("lotto590_min_bet")),
+            "LOTTO590_MAX_BET":     ("Lotto 5/90 Max Bet (₦)",          request.form.get("lotto590_max_bet")),
+            "LOTTO590_NAP2_PAYOUT":  ("Lotto 5/90 Nap 2 Payout Multiplier", request.form.get("lotto590_nap2_payout")),
+            "LOTTO590_NAP3_PAYOUT":  ("Lotto 5/90 Nap 3 Payout Multiplier", request.form.get("lotto590_nap3_payout")),
+            # Football Predictor
+            "FOOTBALL_ENABLED":     ("Football Predictor Enabled",      request.form.get("football_enabled")),
+            "FOOTBALL_MIN_BET":     ("Football Predictor Min Bet (₦)",  request.form.get("football_min_bet")),
+            "FOOTBALL_MAX_BET":     ("Football Predictor Max Bet (₦)",  request.form.get("football_max_bet")),
+            "FOOTBALL_ODDS":        ("Football Predictor Odds Multiplier", request.form.get("football_odds")),
+            # Ludo Quick-Bet
+            "LUDO_ENABLED":           ("Ludo Quick-Bet Enabled",          request.form.get("ludo_enabled")),
+            "LUDO_MIN_BET":           ("Ludo Quick-Bet Min Bet (₦)",      request.form.get("ludo_min_bet")),
+            "LUDO_MAX_BET":           ("Ludo Quick-Bet Max Bet (₦)",      request.form.get("ludo_max_bet")),
+            "LUDO_PAYOUT_UNDER_OVER": ("Ludo Under/Over Payout Multiplier", request.form.get("ludo_payout_under_over")),
+            "LUDO_PAYOUT_SEVEN":      ("Ludo Lucky 7 Payout Multiplier",  request.form.get("ludo_payout_seven")),
             "MAINTENANCE_MODE": ("Maintenance Mode", "on" if request.form.get("maintenance_mode") == "on" else "off"),
         }
 
@@ -578,6 +609,11 @@ def game_settings():
         "AVIATOR_MIN_BET": 50, "AVIATOR_MAX_BET": 50000,
         "COLOR_ENABLED": 1, "COLOR_RED_PAYOUT": 2.0, "COLOR_GREEN_PAYOUT": 2.0,
         "COLOR_VIOLET_PAYOUT": 4.5, "COLOR_ROUND_DURATION": 30,
+        "LOTTO590_ENABLED": 1, "LOTTO590_MIN_BET": 50, "LOTTO590_MAX_BET": 50000,
+        "LOTTO590_NAP2_PAYOUT": 240, "LOTTO590_NAP3_PAYOUT": 2100,
+        "FOOTBALL_ENABLED": 1, "FOOTBALL_MIN_BET": 50, "FOOTBALL_MAX_BET": 50000, "FOOTBALL_ODDS": 1.8,
+        "LUDO_ENABLED": 1, "LUDO_MIN_BET": 50, "LUDO_MAX_BET": 50000,
+        "LUDO_PAYOUT_UNDER_OVER": 1.9, "LUDO_PAYOUT_SEVEN": 5.5,
     }
     for key, default in defaults.items():
         settings[key] = get_setting(key, default)
@@ -718,6 +754,9 @@ def games_report():
 
     avi_stats   = {p: gp_stats("aviator", since) for p, since in periods.items()}
     color_stats = {p: gp_stats("color",   since) for p, since in periods.items()}
+    lotto590_stats = {p: gp_stats("lotto590", since) for p, since in periods.items()}
+    football_stats = {p: gp_stats("football", since) for p, since in periods.items()}
+    ludo_stats     = {p: gp_stats("ludo",     since) for p, since in periods.items()}
 
     # Color round counts
     color_rounds_today = ColorRound.query.filter(
@@ -729,6 +768,9 @@ def games_report():
     return render_template("admin/games_report.html",
                            avi_stats=avi_stats,
                            color_stats=color_stats,
+                           lotto590_stats=lotto590_stats,
+                           football_stats=football_stats,
+                           ludo_stats=ludo_stats,
                            color_rounds_today=color_rounds_today,
                            color_rounds_total=color_rounds_total)
 

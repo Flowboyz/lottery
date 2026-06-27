@@ -374,3 +374,442 @@ def scratchcard_buy():
         "tier": tier,
     })
 
+
+# ════════════════════════════════════════════════════════════════
+#  LOTTO 5/90
+# ════════════════════════════════════════════════════════════════
+@games_bp.route("/lotto590")
+@login_required
+def lotto590():
+    enabled = str(get_setting("LOTTO590_ENABLED", "1")) == "1"
+    if not enabled:
+        flash("Lotto 5/90 is currently unavailable.", "info")
+        return redirect(url_for("games.hub"))
+
+    min_bet = float(get_setting("LOTTO590_MIN_BET", 50))
+    max_bet = float(get_setting("LOTTO590_MAX_BET", 50000))
+    payouts = {
+        "nap2": float(get_setting("LOTTO590_NAP2_PAYOUT", 240)),
+        "nap3": float(get_setting("LOTTO590_NAP3_PAYOUT", 2100)),
+    }
+
+    return render_template(
+        "games/lotto590.html",
+        min_bet=min_bet,
+        max_bet=max_bet,
+        payouts=payouts,
+    )
+
+
+@csrf.exempt
+@games_bp.route("/lotto590/play", methods=["POST"])
+@login_required
+def lotto590_play():
+    import math
+    user = current_user
+
+    enabled = str(get_setting("LOTTO590_ENABLED", "1")) == "1"
+    if not enabled:
+        return jsonify({"error": "Lotto 5/90 is currently unavailable."}), 503
+
+    if user.is_self_excluded:
+        return jsonify({"error": "You are self-excluded from playing."}), 403
+
+    data = request.get_json() or {}
+    try:
+        bet_amount = float(data.get("bet", 0))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid bet amount."}), 400
+
+    min_bet = float(get_setting("LOTTO590_MIN_BET", 50))
+    max_bet = float(get_setting("LOTTO590_MAX_BET", 50000))
+
+    if bet_amount < min_bet:
+        return jsonify({"error": f"Minimum bet is {format_money(min_bet)}."}), 400
+    if bet_amount > max_bet:
+        return jsonify({"error": f"Maximum bet is {format_money(max_bet)}."}), 400
+
+    if not check_daily_bet_limit(user, bet_amount):
+        return jsonify({"error": "Daily betting limit reached."}), 400
+
+    if user.balance < bet_amount:
+        return jsonify({"error": "Insufficient balance."}), 400
+
+    if not check_game_cooldown(user.id):
+        return jsonify({"error": "Please wait a few seconds between plays."}), 429
+
+    play_type = data.get("play_type", "").lower()
+    if play_type not in ("nap2", "nap3", "perm2"):
+        return jsonify({"error": "Invalid play type."}), 400
+
+    picks = data.get("picks", [])
+    if not isinstance(picks, list):
+        return jsonify({"error": "Picks must be a list of numbers."}), 400
+
+    try:
+        picks = list(set(int(x) for x in picks))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Picks must be valid integers."}), 400
+
+    if any(x < 1 or x > 90 for x in picks):
+        return jsonify({"error": "Numbers must be between 1 and 90."}), 400
+
+    if play_type == "nap2" and len(picks) != 2:
+        return jsonify({"error": "Nap 2 requires exactly 2 numbers."}), 400
+    elif play_type == "nap3" and len(picks) != 3:
+        return jsonify({"error": "Nap 3 requires exactly 3 numbers."}), 400
+    elif play_type == "perm2" and not (3 <= len(picks) <= 10):
+        return jsonify({"error": "Perm 2 requires between 3 and 10 numbers."}), 400
+
+    # Draw 5 numbers securely
+    drawn = sorted(secrets.SystemRandom().sample(range(1, 91), 5))
+
+    # Debit wallet
+    debit_wallet(user, bet_amount, "BET", description=f"Lotto 5/90 {play_type.upper()} bet — {format_money(bet_amount)}")
+
+    # Track daily bet
+    today = date.today()
+    if user.daily_bet_date != today:
+        user.daily_bet_total = 0.0
+        user.daily_bet_date = today
+    user.daily_bet_total += bet_amount
+
+    # Payout calculation
+    nap2_mult = float(get_setting("LOTTO590_NAP2_PAYOUT", 240))
+    nap3_mult = float(get_setting("LOTTO590_NAP3_PAYOUT", 2100))
+    payout = 0.0
+
+    matched = [x for x in picks if x in drawn]
+
+    if play_type == "nap2":
+        if len(matched) == 2:
+            payout = bet_amount * nap2_mult
+    elif play_type == "nap3":
+        if len(matched) == 3:
+            payout = bet_amount * nap3_mult
+    elif play_type == "perm2":
+        # Total pairs from picks
+        total_combos = math.comb(len(picks), 2)
+        stake_per_combo = bet_amount / total_combos
+        # Winning pairs from matches
+        winning_combos = math.comb(len(matched), 2) if len(matched) >= 2 else 0
+        payout = winning_combos * stake_per_combo * nap2_mult
+
+    payout = round(payout, 2)
+    result = "WIN" if payout > 0 else "LOSS"
+
+    if payout > 0:
+        credit_wallet(user, payout, "WIN", description=f"Lotto 5/90 {play_type.upper()} win — {format_money(payout)}")
+
+    # Record gameplay
+    gp = GamePlay(
+        user_id=user.id,
+        game_type="lotto590",
+        bet_amount=bet_amount,
+        payout=payout,
+        result=result,
+        result_data=json.dumps({
+            "play_type": play_type,
+            "picks": picks,
+            "drawn": drawn,
+            "matched": matched,
+            "payout_multiplier": nap2_mult if play_type in ("nap2", "perm2") else nap3_mult
+        }),
+    )
+    db.session.add(gp)
+    db.session.commit()
+
+    if payout >= bet_amount * 5:
+        notify_user(user.id, "Lotto 5/90 Win! 🎫", f"You matched {len(matched)} numbers and won {format_money(payout)}!", "info")
+
+    return jsonify({
+        "drawn": drawn,
+        "matched": matched,
+        "payout": payout,
+        "result": result,
+        "new_balance": user.balance
+    })
+
+
+# ════════════════════════════════════════════════════════════════
+#  FAST FOOTBALL PREDICTOR
+# ════════════════════════════════════════════════════════════════
+@games_bp.route("/football")
+@login_required
+def football():
+    enabled = str(get_setting("FOOTBALL_ENABLED", "1")) == "1"
+    if not enabled:
+        flash("Football Predictor is currently unavailable.", "info")
+        return redirect(url_for("games.hub"))
+
+    min_bet = float(get_setting("FOOTBALL_MIN_BET", 50))
+    max_bet = float(get_setting("FOOTBALL_MAX_BET", 50000))
+    odds = float(get_setting("FOOTBALL_ODDS", 1.8))
+
+    return render_template(
+        "games/football.html",
+        min_bet=min_bet,
+        max_bet=max_bet,
+        odds=odds,
+    )
+
+
+@csrf.exempt
+@games_bp.route("/football/play", methods=["POST"])
+@login_required
+def football_play():
+    user = current_user
+
+    enabled = str(get_setting("FOOTBALL_ENABLED", "1")) == "1"
+    if not enabled:
+        return jsonify({"error": "Football Predictor is currently unavailable."}), 503
+
+    if user.is_self_excluded:
+        return jsonify({"error": "You are self-excluded from playing."}), 403
+
+    data = request.get_json() or {}
+    try:
+        bet_amount = float(data.get("bet", 0))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid bet amount."}), 400
+
+    min_bet = float(get_setting("FOOTBALL_MIN_BET", 50))
+    max_bet = float(get_setting("FOOTBALL_MAX_BET", 50000))
+
+    if bet_amount < min_bet:
+        return jsonify({"error": f"Minimum bet is {format_money(min_bet)}."}), 400
+    if bet_amount > max_bet:
+        return jsonify({"error": f"Maximum bet is {format_money(max_bet)}."}), 400
+
+    if not check_daily_bet_limit(user, bet_amount):
+        return jsonify({"error": "Daily betting limit reached."}), 400
+
+    if user.balance < bet_amount:
+        return jsonify({"error": "Insufficient balance."}), 400
+
+    if not check_game_cooldown(user.id):
+        return jsonify({"error": "Please wait a few seconds between plays."}), 429
+
+    bet_type = data.get("type", "").lower()
+    if bet_type not in ("single", "accumulator"):
+        return jsonify({"error": "Invalid bet type."}), 400
+
+    predictions = data.get("predictions", [])
+    if len(predictions) != 3:
+        return jsonify({"error": "Predictions are required for all 3 matches."}), 400
+
+    for pred in predictions:
+        if pred not in ("1", "X", "2"):
+            return jsonify({"error": "Predictions must be '1', 'X', or '2'."}), 400
+
+    match_index = int(data.get("match_index", 0)) if bet_type == "single" else None
+
+    # Simulate scores
+    # Match 1: Lagos City vs Enyimba
+    # Match 2: Kano Pillars vs Shooting Stars
+    # Match 3: Bendel Insurance vs Rangers Int'l
+    scores = []
+    outcomes = []
+    for _ in range(3):
+        h_goals = secrets.randbelow(4)
+        a_goals = secrets.randbelow(4)
+        scores.append(f"{h_goals}-{a_goals}")
+        if h_goals > a_goals:
+            outcomes.append("1")
+        elif h_goals == a_goals:
+            outcomes.append("X")
+        else:
+            outcomes.append("2")
+
+    # Debit wallet
+    debit_wallet(user, bet_amount, "BET", description=f"Football Predictor {bet_type.upper()} bet — {format_money(bet_amount)}")
+
+    # Track daily bet
+    today = date.today()
+    if user.daily_bet_date != today:
+        user.daily_bet_total = 0.0
+        user.daily_bet_date = today
+    user.daily_bet_total += bet_amount
+
+    # Compute payout
+    odds = float(get_setting("FOOTBALL_ODDS", 1.8))
+    payout = 0.0
+    won = False
+
+    if bet_type == "single":
+        won = predictions[match_index] == outcomes[match_index]
+        payout = bet_amount * odds if won else 0.0
+    elif bet_type == "accumulator":
+        won = all(predictions[i] == outcomes[i] for i in range(3))
+        payout = bet_amount * (odds ** 3) if won else 0.0
+
+    payout = round(payout, 2)
+    result = "WIN" if won else "LOSS"
+
+    if payout > 0:
+        credit_wallet(user, payout, "WIN", description=f"Football Predictor {bet_type.upper()} win — {format_money(payout)}")
+
+    # Record gameplay
+    gp = GamePlay(
+        user_id=user.id,
+        game_type="football",
+        bet_amount=bet_amount,
+        payout=payout,
+        result=result,
+        result_data=json.dumps({
+            "type": bet_type,
+            "predictions": predictions,
+            "scores": scores,
+            "outcomes": outcomes,
+            "match_index": match_index,
+            "odds": odds
+        }),
+    )
+    db.session.add(gp)
+    db.session.commit()
+
+    if payout >= bet_amount * 3:
+        notify_user(user.id, "Football Win! ⚽", f"Your predictions matched and you won {format_money(payout)}!", "info")
+
+    return jsonify({
+        "scores": scores,
+        "outcomes": outcomes,
+        "payout": payout,
+        "result": result,
+        "new_balance": user.balance
+    })
+
+
+# ════════════════════════════════════════════════════════════════
+#  LUDO QUICK-BET
+# ════════════════════════════════════════════════════════════════
+@games_bp.route("/ludo")
+@login_required
+def ludo():
+    enabled = str(get_setting("LUDO_ENABLED", "1")) == "1"
+    if not enabled:
+        flash("Ludo Quick-Bet is currently unavailable.", "info")
+        return redirect(url_for("games.hub"))
+
+    min_bet = float(get_setting("LUDO_MIN_BET", 50))
+    max_bet = float(get_setting("LUDO_MAX_BET", 50000))
+    payout_under_over = float(get_setting("LUDO_PAYOUT_UNDER_OVER", 1.9))
+    payout_seven = float(get_setting("LUDO_PAYOUT_SEVEN", 5.5))
+
+    return render_template(
+        "games/ludo.html",
+        min_bet=min_bet,
+        max_bet=max_bet,
+        payout_under_over=payout_under_over,
+        payout_seven=payout_seven,
+    )
+
+
+@csrf.exempt
+@games_bp.route("/ludo/play", methods=["POST"])
+@login_required
+def ludo_play():
+    user = current_user
+
+    enabled = str(get_setting("LUDO_ENABLED", "1")) == "1"
+    if not enabled:
+        return jsonify({"error": "Ludo Quick-Bet is currently unavailable."}), 503
+
+    if user.is_self_excluded:
+        return jsonify({"error": "You are self-excluded from playing."}), 403
+
+    data = request.get_json() or {}
+    try:
+        bet_amount = float(data.get("bet", 0))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid bet amount."}), 400
+
+    min_bet = float(get_setting("LUDO_MIN_BET", 50))
+    max_bet = float(get_setting("LUDO_MAX_BET", 50000))
+
+    if bet_amount < min_bet:
+        return jsonify({"error": f"Minimum bet is {format_money(min_bet)}."}), 400
+    if bet_amount > max_bet:
+        return jsonify({"error": f"Maximum bet is {format_money(max_bet)}."}), 400
+
+    if not check_daily_bet_limit(user, bet_amount):
+        return jsonify({"error": "Daily betting limit reached."}), 400
+
+    if user.balance < bet_amount:
+        return jsonify({"error": "Insufficient balance."}), 400
+
+    if not check_game_cooldown(user.id):
+        return jsonify({"error": "Please wait a few seconds between plays."}), 429
+
+    choice = data.get("choice", "").lower()
+    if choice not in ("under7", "over7", "seven"):
+        return jsonify({"error": "Invalid betting choice."}), 400
+
+    # Roll 2 dice
+    d1 = secrets.randbelow(6) + 1
+    d2 = secrets.randbelow(6) + 1
+    total = d1 + d2
+
+    # Debit wallet
+    debit_wallet(user, bet_amount, "BET", description=f"Ludo Quick-Bet {choice.upper()} bet — {format_money(bet_amount)}")
+
+    # Track daily bet
+    today = date.today()
+    if user.daily_bet_date != today:
+        user.daily_bet_total = 0.0
+        user.daily_bet_date = today
+    user.daily_bet_total += bet_amount
+
+    # Compute payout
+    payout_under_over = float(get_setting("LUDO_PAYOUT_UNDER_OVER", 1.9))
+    payout_seven = float(get_setting("LUDO_PAYOUT_SEVEN", 5.5))
+    payout = 0.0
+    won = False
+
+    if choice == "under7" and total < 7:
+        won = True
+        payout = bet_amount * payout_under_over
+    elif choice == "over7" and total > 7:
+        won = True
+        payout = bet_amount * payout_under_over
+    elif choice == "seven" and total == 7:
+        won = True
+        payout = bet_amount * payout_seven
+
+    payout = round(payout, 2)
+    result = "WIN" if won else "LOSS"
+
+    if payout > 0:
+        credit_wallet(user, payout, "WIN", description=f"Ludo Quick-Bet win — {format_money(payout)}")
+
+    # Record gameplay
+    gp = GamePlay(
+        user_id=user.id,
+        game_type="ludo",
+        bet_amount=bet_amount,
+        payout=payout,
+        result=result,
+        result_data=json.dumps({
+            "choice": choice,
+            "d1": d1,
+            "d2": d2,
+            "total": total,
+            "multiplier": payout_seven if choice == "seven" else payout_under_over
+        }),
+    )
+    db.session.add(gp)
+    db.session.commit()
+
+    if payout >= bet_amount * 3:
+        notify_user(user.id, "Ludo Quick-Bet Win! 🎲", f"Dice total was {total}. You won {format_money(payout)}!", "info")
+
+    return jsonify({
+        "d1": d1,
+        "d2": d2,
+        "total": total,
+        "payout": payout,
+        "result": result,
+        "new_balance": user.balance
+    })
+
+

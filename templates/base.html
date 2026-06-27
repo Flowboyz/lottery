@@ -108,7 +108,7 @@
             <span class="footer-icon">🎲</span>
             <span class="footer-label">Lottery</span>
         </a>
-        <a href="{{ url_for('games.hub') }}" class="footer-nav-item {% if request.endpoint and request.endpoint.startswith('games.') %}active{% endif %}">
+        <a href="{{ url_for('games.hub') }}" class="footer-nav-item {% if request.endpoint and (request.endpoint.startswith('games.') or request.endpoint.startswith('aviator.') or request.endpoint.startswith('color.')) %}active{% endif %}">
             <span class="footer-icon">🎮</span>
             <span class="footer-label">Games</span>
         </a>

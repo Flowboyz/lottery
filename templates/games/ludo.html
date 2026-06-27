@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Ludo Quick-Bet - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 class="page-heading" style="margin:0;">🎲 Ludo Quick-Bet</h2>
+            <a href="{{ url_for('games.hub') }}" class="small-btn">← Hub</a>
+        </div>
+        <p class="page-subtitle" style="margin-bottom:18px;">Roll the Ludo dice and guess: Over 7, Under 7, or Lucky 7!</p>
+
+        <div class="ludo-container" style="max-width:500px;margin:0 auto;text-align:center;">
+            
+            <!-- Visual Ludo Board design header -->
+            <div class="ludo-board-header" style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;width:80px;height:80px;margin:0 auto 20px;border:3px solid var(--border-color);border-radius:6px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.15);">
+                <div style="background:#ef4444;"></div>
+                <div style="background:#3b82f6;"></div>
+                <div style="background:#22c55e;"></div>
+                <div style="background:#eab308;"></div>
+            </div>
+
+            <!-- 3D Dice Display Box -->
+            <div class="dice-box" style="display:flex;justify-content:center;gap:35px;margin-bottom:30px;min-height:120px;align-items:center;">
+                <!-- Die 1 -->
+                <div class="die" id="die1" style="width:100px;height:100px;background:white;color:black;border-radius:16px;display:flex;justify-content:center;align-items:center;font-size:64px;font-weight:bold;box-shadow:0 10px 25px rgba(0,0,0,0.35);border:3px solid #ccc;transition:transform 0.5s ease;">⚀</div>
+                <!-- Die 2 -->
+                <div class="die" id="die2" style="width:100px;height:100px;background:white;color:black;border-radius:16px;display:flex;justify-content:center;align-items:center;font-size:64px;font-weight:bold;box-shadow:0 10px 25px rgba(0,0,0,0.35);border:3px solid #ccc;transition:transform 0.5s ease;">⚀</div>
+            </div>
+
+            <!-- Dice Total Indicator -->
+            <div id="diceTotal" style="font-size:18px;font-weight:bold;margin-bottom:25px;color:var(--text-muted);min-height:28px;">
+                Ready to Roll!
+            </div>
+
+            <!-- Betting Pads (Under/Lucky/Over 7) -->
+            <div class="bet-pads" style="display:flex;gap:12px;margin-bottom:24px;">
+                <!-- Under 7 -->
+                <button type="button" class="pad-btn pad-under" onclick="selectChoice('under7')">
+                    <span class="pad-title">UNDER 7</span>
+                    <strong class="pad-odds">{{ payout_under_over }}x</strong>
+                    <span class="pad-desc">(2-6)</span>
+                </button>
+                <!-- Lucky 7 -->
+                <button type="button" class="pad-btn pad-seven" onclick="selectChoice('seven')">
+                    <span class="pad-title">LUCKY 7</span>
+                    <strong class="pad-odds" style="color:#eab308;">{{ payout_seven }}x</strong>
+                    <span class="pad-desc">(Exactly 7)</span>
+                </button>
+                <!-- Over 7 -->
+                <button type="button" class="pad-btn pad-over" onclick="selectChoice('over7')">
+                    <span class="pad-title">OVER 7</span>
+                    <strong class="pad-odds">{{ payout_under_over }}x</strong>
+                    <span class="pad-desc">(8-12)</span>
+                </button>
+            </div>
+
+            <!-- Stake & controls -->
+            <div class="bet-section" style="background:var(--bg-elevated);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-muted);">Bet Amount (₦)</label>
+                    <input type="number" id="ludoBet" class="form-input" min="{{ min_bet }}" max="{{ max_bet }}" step="50" value="100" style="text-align:center;">
+                </div>
+
+                <div class="input-amount" style="margin-bottom:16px;">
+                    <button type="button" class="inp-btn" onclick="setBet(100)">₦100</button>
+                    <button type="button" class="inp-btn" onclick="setBet(500)">₦500</button>
+                    <button type="button" class="inp-btn" onclick="setBet(1000)">₦1K</button>
+                    <button type="button" class="inp-btn" onclick="setBet(5000)">₦5K</button>
+                </div>
+
+                <button type="button" id="rollBtn" class="submit-btn" onclick="playLudo()" style="width:100%;font-size:16px;font-weight:bold;background:#ef4444;border-color:#ef4444;">Roll Dice</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to Play -->
+    <button class="help-fab" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
+    <div class="help-modal-overlay" id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <h3>How To Play</h3>
+                <button class="help-modal-close" onclick="document.getElementById('helpModal').style.display='none'">✕</button>
+            </div>
+            <div class="help-modal-body">
+                <div class="help-step"><span class="help-icon">🎲</span><div><strong>Choose Your Guess</strong><p>Select Under 7 (total < 7), Lucky 7 (total = 7), or Over 7 (total > 7).</p></div></div>
+                <div class="help-step"><span class="help-icon">💵</span><div><strong>Set Bet</strong><p>Enter your wager amount in Naira using input or quick buttons.</p></div></div>
+                <div class="help-step"><span class="help-icon">✨</span><div><strong>Roll and Win</strong><p>Click "Roll Dice". Two Ludo dice spin. Under/Over pays 1.9x; Lucky 7 pays 5.5x!</p></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.pad-btn {
+    flex: 1;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 18px 10px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+.pad-btn:hover {
+    border-color: var(--text-primary);
+}
+.pad-under.selected {
+    background: rgba(59, 130, 246, 0.15) !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+.pad-seven.selected {
+    background: rgba(234, 179, 8, 0.15) !important;
+    border-color: #eab308 !important;
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+}
+.pad-over.selected {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+.pad-title {
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--text-muted);
+}
+.pad-odds {
+    font-size: 20px;
+    font-weight: 900;
+}
+.pad-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.die-roll-anim {
+    animation: shuffleDice 0.6s infinite ease-in-out;
+}
+@keyframes shuffleDice {
+    0% { transform: scale(1.0) rotate(0deg); }
+    25% { transform: scale(1.1) rotate(15deg) translateY(-10px); }
+    50% { transform: scale(0.9) rotate(-15deg) translateY(5px); }
+    75% { transform: scale(1.1) rotate(10deg) translateY(-5px); }
+    100% { transform: scale(1.0) rotate(0deg); }
+}
+</style>
+
+<script>
+let selectedChoice = null;
+const diceUnicode = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+
+function selectChoice(choice) {
+    document.querySelectorAll('.pad-btn').forEach(btn => btn.classList.remove('selected'));
+    
+    if (selectedChoice === choice) {
+        selectedChoice = null;
+    } else {
+        selectedChoice = choice;
+        const selectorMap = {
+            'under7': '.pad-under',
+            'seven': '.pad-seven',
+            'over7': '.pad-over'
+        };
+        document.querySelector(selectorMap[choice]).classList.add('selected');
+    }
+}
+
+function setBet(amount) {
+    document.getElementById('ludoBet').value = amount;
+}
+
+function flashMessage(msg, category) {
+    const container = document.querySelector('.page-card');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `flash-message flash-${category}`;
+    alertDiv.textContent = msg;
+    alertDiv.style.marginBottom = '12px';
+    container.insertBefore(alertDiv, container.firstChild);
+    setTimeout(() => alertDiv.remove(), 4000);
+}
+
+function playLudo() {
+    const bet = parseFloat(document.getElementById('ludoBet').value);
+    
+    if (!selectedChoice) {
+        flashMessage('Please select a betting option (Under 7, Lucky 7, or Over 7).', 'error');
+        return;
+    }
+
+    if (isNaN(bet) || bet <= 0) {
+        flashMessage('Invalid bet amount.', 'error');
+        return;
+    }
+
+    const rollBtn = document.getElementById('rollBtn');
+    rollBtn.disabled = true;
+    
+    // Add shake animation
+    const die1 = document.getElementById('die1');
+    const die2 = document.getElementById('die2');
+    die1.classList.add('die-roll-anim');
+    die2.classList.add('die-roll-anim');
+    document.getElementById('diceTotal').textContent = "Rolling...";
+
+    fetch('/games/ludo/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            bet: bet,
+            choice: selectedChoice
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        setTimeout(() => {
+            // Remove animation
+            die1.classList.remove('die-roll-anim');
+            die2.classList.remove('die-roll-anim');
+            
+            if (data.error) {
+                flashMessage(data.error, 'error');
+                rollBtn.disabled = false;
+                document.getElementById('diceTotal').textContent = "Ready!";
+                return;
+            }
+            
+            // Set final faces
+            die1.textContent = diceUnicode[data.d1];
+            die2.textContent = diceUnicode[data.d2];
+            
+            const totalText = document.getElementById('diceTotal');
+            totalText.textContent = `Total: ${data.total} (${data.d1} + ${data.d2})`;
+            
+            if (data.result === 'WIN') {
+                flashMessage(`🎉 You Won ₦${data.payout.toLocaleString()}!`, 'success');
+            } else {
+                flashMessage('💔 You Lost. Better luck next roll!', 'error');
+            }
+            
+            // Update header balance
+            const headerBal = document.querySelector('.balance strong');
+            if (headerBal) {
+                headerBal.textContent = `₦${data.new_balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+            
+            rollBtn.disabled = false;
+        }, 1200); // 1.2s delay for nice rolling suspense
+    })
+    .catch(err => {
+        console.error(err);
+        die1.classList.remove('die-roll-anim');
+        die2.classList.remove('die-roll-anim');
+        flashMessage('Something went wrong. Try again.', 'error');
+        rollBtn.disabled = false;
+        document.getElementById('diceTotal').textContent = "Ready!";
+    });
+}
+</script>
+{% endblock %}

@@ -7,6 +7,11 @@ A production-grade, multi-game Nigerian betting platform built with Flask, featu
 ## Features
 
 - **Pick-3 Lottery Game** — Choose 3 numbers (1–5), match the Lucky Number to win 5× your bet
+- **Lotto 5/90 (Baba Ijebu style)** — Choose 2 to 10 numbers out of 90, play Nap 2 (240x), Nap 3 (2100x), or Permutation 2
+- **Football Predictor** — fast virtual football leagues: predict match outcomes (1X2) as Single bets (1.8x) or 3-Match Accumulators (5.83x)
+- **Ludo Quick-Bet** — Roll 3D Ludo dice and guess: Under 7 (1.9x), Over 7 (1.9x), or Lucky 7 (5.5x)
+- **Lucky Wheel, Coin Flip, Scratch Cards** — Instant casino classics with customizable multipliers and RTP rates
+- **Aviator (Crash game) & Color Prediction** — Dynamic shared multi-player game engines
 - **Cryptographic Fairness** — Outcomes determined via Python `secrets` module
 - **Paystack Integration** — Card, bank transfer, USSD deposits (Nigerian Naira)
 - **Ledger-Safe Wallet** — Every balance change creates a Transaction with `balance_before`/`balance_after`
@@ -159,15 +164,17 @@ Set `FLASK_ENV=production` and use a strong `SECRET_KEY`.
 
 ---
 
-## Configuration
+## Configuration & Settings
 
-Key settings in `config.py`:
+Settings are stored in the database's `game_settings` table, falling back to defaults if not set. They can be modified live via the **Superadmin Settings Panel** (`/admin/settings`).
+
+### Global Settings
 
 | Setting              | Default    | Description                    |
 |----------------------|------------|--------------------------------|
-| WIN_PROBABILITY      | 0.10       | 10% chance to win              |
-| PAYOUT_MULTIPLIER    | 5          | Win = bet × 5                  |
-| COOLDOWN_SECONDS     | 10         | Seconds between plays          |
+| WIN_PROBABILITY      | 0.10       | 10% chance to win Pick-3       |
+| PAYOUT_MULTIPLIER    | 5          | Pick-3 Win = bet × 5           |
+| COOLDOWN_SECONDS     | 10         | Cooldown between plays         |
 | MIN_DEPOSIT          | 500        | Minimum deposit (₦)            |
 | MIN_WITHDRAWAL       | 1000       | Minimum withdrawal (₦)         |
 | MAX_DAILY_BET        | 50000      | Daily betting limit (₦)        |
@@ -175,6 +182,41 @@ Key settings in `config.py`:
 | DAILY_CLAIM_COOLDOWN | 86400      | Claim cooldown (24h)           |
 | SIGNUP_BONUS         | 100        | New user bonus (₦)             |
 | REFERRAL_BONUS       | 200        | Referrer bonus (₦)             |
+
+### Lotto 5/90 Settings
+
+| Setting               | Default | Description                          |
+|-----------------------|---------|--------------------------------------|
+| `LOTTO590_ENABLED`    | 1       | Toggles game availability            |
+| `LOTTO590_MIN_BET`    | 50      | Minimum bet (₦)                      |
+| `LOTTO590_MAX_BET`    | 50000   | Maximum bet (₦)                      |
+| `LOTTO590_NAP2_PAYOUT`| 240     | Nap 2 / Perm 2 winning combo multiplier |
+| `LOTTO590_NAP3_PAYOUT`| 2100    | Nap 3 winning combo multiplier       |
+
+### Football Predictor Settings
+
+| Setting            | Default | Description                             |
+|--------------------|---------|-----------------------------------------|
+| `FOOTBALL_ENABLED` | 1       | Toggles game availability               |
+| `FOOTBALL_MIN_BET` | 50      | Minimum bet (₦)                         |
+| `FOOTBALL_MAX_BET` | 50000   | Maximum bet (₦)                         |
+| `FOOTBALL_ODDS`    | 1.8     | Payout multiplier for single match win  |
+
+### Ludo Quick-Bet Settings
+
+| Setting                  | Default | Description                          |
+|--------------------------|---------|--------------------------------------|
+| `LUDO_ENABLED`           | 1       | Toggles game availability            |
+| `LUDO_MIN_BET`           | 50      | Minimum bet (₦)                      |
+| `LUDO_MAX_BET`           | 50000   | Maximum bet (₦)                      |
+| `LUDO_PAYOUT_UNDER_OVER` | 1.9     | Under/Over 7 payout multiplier       |
+| `LUDO_PAYOUT_SEVEN`      | 5.5     | Lucky 7 payout multiplier            |
+
+---
+
+## Database Architecture (Zero Migration)
+
+To ensure absolute safety for live platforms, all new games (Lotto 5/90, Football Predictor, Ludo Quick-Bet) record plays inside the standard `GamePlay` table. The game-specific attributes (picks, drawn numbers, match scores, dice outcomes) are saved inside the `result_data` field as a JSON string. **No database migrations or SQL scripts are required.**
 
 ---
 

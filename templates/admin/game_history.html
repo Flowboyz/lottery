@@ -14,6 +14,9 @@
                     <option value="scratchcard" {% if game_filter == 'scratchcard' %}selected{% endif %}>🎰 Scratch Card</option>
                     <option value="aviator" {% if game_filter == 'aviator' %}selected{% endif %}>✈️ Aviator</option>
                     <option value="color" {% if game_filter == 'color' %}selected{% endif %}>🎨 Color Prediction</option>
+                    <option value="lotto590" {% if game_filter == 'lotto590' %}selected{% endif %}>🎫 Lotto 5/90</option>
+                    <option value="football" {% if game_filter == 'football' %}selected{% endif %}>⚽ Football Predictor</option>
+                    <option value="ludo" {% if game_filter == 'ludo' %}selected{% endif %}>🎲 Ludo Quick-Bet</option>
                 </select>
                 <select name="user" class="form-input filter-select">
                     <option value="">All Users</option>
@@ -44,12 +47,15 @@
                 <div class="bet-card-top">
                     <div class="bet-nums">
                         <span class="game-type-badge game-{{ play.game_type }}">
-                            {% if play.game_type == 'wheel' %}🎡
-                            {% elif play.game_type == 'coinflip' %}🪙
-                            {% elif play.game_type == 'aviator' %}✈️
-                            {% elif play.game_type == 'color' %}🎨
-                            {% else %}🎰{% endif %}
-                            {{ play.game_type }}
+                            {% if play.game_type == 'wheel' %}🎡 Wheel
+                            {% elif play.game_type == 'coinflip' %}🪙 Coin Flip
+                            {% elif play.game_type == 'scratchcard' %}🎰 Scratch Card
+                            {% elif play.game_type == 'aviator' %}✈️ Aviator
+                            {% elif play.game_type == 'color' %}🎨 Color Prediction
+                            {% elif play.game_type == 'lotto590' %}🎫 Lotto 5/90
+                            {% elif play.game_type == 'football' %}⚽ Football Predictor
+                            {% elif play.game_type == 'ludo' %}🎲 Ludo Quick-Bet
+                            {% else %}🎮 {{ play.game_type }}{% endif %}
                         </span>
                     </div>
                     <span class="result-badge result-{{ play.result|lower }}">{{ play.result }}</span>

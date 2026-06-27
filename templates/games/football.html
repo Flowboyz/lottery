@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% block title %}Football Predictor - DITTO DINKY{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="page-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 class="page-heading" style="margin:0;">⚽ Football Predictor</h2>
+            <a href="{{ url_for('games.hub') }}" class="small-btn">← Hub</a>
+        </div>
+        <p class="page-subtitle" style="margin-bottom:18px;">Fast virtual football leagues! Guess Home Win (1), Draw (X), or Away Win (2).</p>
+
+        <div class="football-container" style="max-width:550px;margin:0 auto;">
+            
+            <!-- Type Selector -->
+            <div style="display:flex;gap:10px;margin-bottom:16px;">
+                <button type="button" class="mode-btn active" data-type="accumulator" onclick="setType('accumulator')">Accumulator (5.83x)</button>
+                <button type="button" class="mode-btn" data-type="single" onclick="setType('single')">Single Match (1.8x)</button>
+            </div>
+
+            <!-- Single Match Selector dropdown (shown only if type is single) -->
+            <div id="singleMatchSelect" style="display:none;margin-bottom:16px;">
+                <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-muted);">Choose which match to bet on:</label>
+                <select id="selectedMatchIdx" class="form-input" onchange="updateOdds()">
+                    <option value="0">Match 1: Lagos City FC vs Enyimba FC</option>
+                    <option value="1">Match 2: Kano Pillars vs Shooting Stars</option>
+                    <option value="2">Match 3: Bendel Insurance vs Rangers Int'l</option>
+                </select>
+            </div>
+
+            <!-- Fixtures list -->
+            <div class="fixtures-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+                <!-- Match 1 -->
+                <div class="fixture-card" style="background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:12px;color:var(--text-muted);font-weight:bold;">MATCH 1</span>
+                        <span style="font-size:12px;color:var(--accent-primary);font-weight:bold;">Virtual League</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                            <span style="font-size:22px;">🛡️</span>
+                            <strong style="font-size:14px;">Lagos City FC</strong>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-muted);margin:0 10px;font-weight:bold;">VS</div>
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end;">
+                            <strong style="font-size:14px;">Enyimba FC</strong>
+                            <span style="font-size:22px;">🐘</span>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;">
+                        <button type="button" class="pred-btn" id="m0-1" onclick="setPrediction(0, '1')">1 <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                        <button type="button" class="pred-btn" id="m0-X" onclick="setPrediction(0, 'X')">X <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                        <button type="button" class="pred-btn" id="m0-2" onclick="setPrediction(0, '2')">2 <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                    </div>
+                </div>
+
+                <!-- Match 2 -->
+                <div class="fixture-card" style="background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:12px;color:var(--text-muted);font-weight:bold;">MATCH 2</span>
+                        <span style="font-size:12px;color:var(--accent-primary);font-weight:bold;">Virtual League</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                            <span style="font-size:22px;">🕌</span>
+                            <strong style="font-size:14px;">Kano Pillars</strong>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-muted);margin:0 10px;font-weight:bold;">VS</div>
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end;">
+                            <strong style="font-size:14px;">Shooting Stars</strong>
+                            <span style="font-size:22px;">⭐</span>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;">
+                        <button type="button" class="pred-btn" id="m1-1" onclick="setPrediction(1, '1')">1 <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                        <button type="button" class="pred-btn" id="m1-X" onclick="setPrediction(1, 'X')">X <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                        <button type="button" class="pred-btn" id="m1-2" onclick="setPrediction(1, '2')">2 <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                    </div>
+                </div>
+
+                <!-- Match 3 -->
+                <div class="fixture-card" style="background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:12px;color:var(--text-muted);font-weight:bold;">MATCH 3</span>
+                        <span style="font-size:12px;color:var(--accent-primary);font-weight:bold;">Virtual League</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                            <span style="font-size:22px;">🐊</span>
+                            <strong style="font-size:14px;">Bendel Insurance</strong>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-muted);margin:0 10px;font-weight:bold;">VS</div>
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end;">
+                            <strong style="font-size:14px;">Rangers Int'l</strong>
+                            <span style="font-size:22px;">🛡️</span>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;">
+                        <button type="button" class="pred-btn" id="m2-1" onclick="setPrediction(2, '1')">1 <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                        <button type="button" class="pred-btn" id="m2-X" onclick="setPrediction(2, 'X')">X <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                        <button type="button" class="pred-btn" id="m2-2" onclick="setPrediction(2, '2')">2 <span style="font-size:10px;color:var(--text-muted);display:block;">1.80</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Betting Slip -->
+            <div class="bet-section" style="background:var(--bg-elevated);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span style="font-size:14px;color:var(--text-muted);">Total Slip Odds:</span>
+                    <strong id="slipOdds" style="font-size:18px;color:var(--accent-primary);">5.83x</strong>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block;margin-bottom:6px;font-size:13px;">Bet Amount (₦)</label>
+                    <input type="number" id="footBet" class="form-input" min="{{ min_bet }}" max="{{ max_bet }}" step="50" value="100" style="text-align:center;">
+                </div>
+
+                <div class="input-amount" style="margin-bottom:16px;">
+                    <button type="button" class="inp-btn" onclick="setBet(100)">₦100</button>
+                    <button type="button" class="inp-btn" onclick="setBet(500)">₦500</button>
+                    <button type="button" class="inp-btn" onclick="setBet(1000)">₦1K</button>
+                    <button type="button" class="inp-btn" onclick="setBet(5000)">₦5K</button>
+                </div>
+
+                <button type="button" id="placeBtn" class="submit-btn" onclick="playFootball()" style="width:100%;font-size:16px;font-weight:bold;">Place Bet</button>
+            </div>
+        </div>
+
+        <!-- Live Scoreboard Simulation Overlay -->
+        <div id="matchOverlay" class="draw-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;flex-direction:column;justify-content:center;align-items:center;color:white;padding:20px;">
+            <h3 style="font-size:24px;margin-bottom:20px;color:var(--accent-primary);">🔴 Matches Live updates</h3>
+            
+            <div id="liveTime" style="font-size:18px;font-weight:bold;margin-bottom:30px;background:red;padding:4px 10px;border-radius:4px;">MIN 0'</div>
+
+            <!-- Match scores display -->
+            <div style="display:flex;flex-direction:column;gap:15px;width:100%;max-width:400px;margin-bottom:40px;">
+                <div class="live-match-row" style="display:flex;flex-direction:column;background:rgba(255,255,255,0.05);padding:12px;border-radius:6px;gap:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                        <span style="flex:1;text-align:left;">Lagos City FC</span>
+                        <strong id="liveScore0" style="background:#000;padding:4px 10px;border-radius:4px;margin:0 15px;">0-0</strong>
+                        <span style="flex:1;text-align:right;">Enyimba FC</span>
+                    </div>
+                    <div id="predictionMatch0" style="font-size:12px;text-align:center;display:none;font-weight:bold;"></div>
+                </div>
+                <div class="live-match-row" style="display:flex;flex-direction:column;background:rgba(255,255,255,0.05);padding:12px;border-radius:6px;gap:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                        <span style="flex:1;text-align:left;">Kano Pillars</span>
+                        <strong id="liveScore1" style="background:#000;padding:4px 10px;border-radius:4px;margin:0 15px;">0-0</strong>
+                        <span style="flex:1;text-align:right;">Shooting Stars</span>
+                    </div>
+                    <div id="predictionMatch1" style="font-size:12px;text-align:center;display:none;font-weight:bold;"></div>
+                </div>
+                <div class="live-match-row" style="display:flex;flex-direction:column;background:rgba(255,255,255,0.05);padding:12px;border-radius:6px;gap:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                        <span style="flex:1;text-align:left;">Bendel Ins.</span>
+                        <strong id="liveScore2" style="background:#000;padding:4px 10px;border-radius:4px;margin:0 15px;">0-0</strong>
+                        <span style="flex:1;text-align:right;">Rangers Int'l</span>
+                    </div>
+                    <div id="predictionMatch2" style="font-size:12px;text-align:center;display:none;font-weight:bold;"></div>
+                </div>
+            </div>
+
+            <!-- Result Box -->
+            <div id="matchResultBox" style="display:none;text-align:center;animation:fadeIn 0.5s ease;">
+                <h2 id="matchResultTitle" style="font-size:28px;margin-bottom:10px;"></h2>
+                <p id="matchResultSub" style="font-size:18px;margin-bottom:30px;"></p>
+                <button type="button" class="submit-btn" onclick="closeOverlay()" style="min-width:150px;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to Play -->
+    <button class="help-fab" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
+    <div class="help-modal-overlay" id="helpModal" onclick="if(event.target===this)this.style.display='none'">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <h3>How To Play</h3>
+                <button class="help-modal-close" onclick="document.getElementById('helpModal').style.display='none'">✕</button>
+            </div>
+            <div class="help-modal-body">
+                <div class="help-step"><span class="help-icon">📋</span><div><strong>Choose Slip Type</strong><p>Select "Accumulator" (combine 3 matches) or "Single Match" (bet on a single game).</p></div></div>
+                <div class="help-step"><span class="help-icon">⚽</span><div><strong>Make Predictions</strong><p>Click "1" for Home Win, "X" for Draw, or "2" for Away Win for your matches.</p></div></div>
+                <div class="help-step"><span class="help-icon">💰</span><div><strong>Place Bet & Watch</strong><p>Enter your bet amount and hit "Place Bet". Watch live scores change. Accas pay 5.8x!</p></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.fixture-card {
+    transition: all 0.2s ease;
+}
+.fixture-card:hover {
+    border-color: var(--text-primary) !important;
+}
+.pred-btn {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.pred-btn:hover {
+    background: var(--border-color);
+}
+.pred-btn.selected {
+    background: var(--accent-primary, #3b82f6);
+    color: #fff;
+    border-color: var(--accent-primary, #3b82f6);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+.mode-btn {
+    flex: 1;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+.mode-btn.active {
+    background: var(--text-primary);
+    color: var(--bg-main);
+    border-color: var(--text-primary);
+}
+.draw-overlay {
+    backdrop-filter: blur(5px);
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+</style>
+
+<script>
+let betType = 'accumulator';
+let predictions = [null, null, null];
+const matchOdds = 1.8;
+
+function setType(type) {
+    betType = type;
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    
+    const dropdown = document.getElementById('singleMatchSelect');
+    if (type === 'single') {
+        dropdown.style.display = 'block';
+    } else {
+        dropdown.style.display = 'none';
+    }
+    updateOdds();
+}
+
+function updateOdds() {
+    const oddsLabel = document.getElementById('slipOdds');
+    if (betType === 'single') {
+        oddsLabel.textContent = `${matchOdds.toFixed(2)}x`;
+    } else {
+        const total = matchOdds * matchOdds * matchOdds;
+        oddsLabel.textContent = `${total.toFixed(2)}x`;
+    }
+}
+
+function setPrediction(matchIdx, value) {
+    // Deselect other buttons in this match row
+    document.querySelectorAll(`[id^="m${matchIdx}-"]`).forEach(btn => btn.classList.remove('selected'));
+    
+    // Toggle prediction
+    if (predictions[matchIdx] === value) {
+        predictions[matchIdx] = null;
+    } else {
+        predictions[matchIdx] = value;
+        document.getElementById(`m${matchIdx}-${value}`).classList.add('selected');
+    }
+}
+
+function setBet(amount) {
+    document.getElementById('footBet').value = amount;
+}
+
+function flashMessage(msg, category) {
+    const container = document.querySelector('.page-card');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `flash-message flash-${category}`;
+    alertDiv.textContent = msg;
+    alertDiv.style.marginBottom = '12px';
+    container.insertBefore(alertDiv, container.firstChild);
+    setTimeout(() => alertDiv.remove(), 4000);
+}
+
+function playFootball() {
+    const bet = parseFloat(document.getElementById('footBet').value);
+    
+    // Check if predictions are filled
+    if (betType === 'accumulator') {
+        if (predictions.includes(null)) {
+            flashMessage('Please select outcomes for all 3 matches.', 'error');
+            return;
+        }
+    } else {
+        const idx = parseInt(document.getElementById('selectedMatchIdx').value);
+        if (predictions[idx] === null) {
+            flashMessage(`Please select an outcome for Match ${idx + 1}.`, 'error');
+            return;
+        }
+    }
+
+    if (isNaN(bet) || bet <= 0) {
+        flashMessage('Invalid bet amount.', 'error');
+        return;
+    }
+
+    document.getElementById('placeBtn').disabled = true;
+
+    fetch('/games/football/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            bet: bet,
+            type: betType,
+            predictions: predictions,
+            match_index: parseInt(document.getElementById('selectedMatchIdx').value)
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            flashMessage(data.error, 'error');
+            document.getElementById('placeBtn').disabled = false;
+            return;
+        }
+        
+        triggerReveal(data);
+    })
+    .catch(err => {
+        console.error(err);
+        flashMessage('Something went wrong. Try again.', 'error');
+        document.getElementById('placeBtn').disabled = false;
+    });
+}
+
+function triggerReveal(data) {
+    const overlay = document.getElementById('matchOverlay');
+    const timeLabel = document.getElementById('liveTime');
+    const resultBox = document.getElementById('matchResultBox');
+    
+    document.getElementById('liveScore0').textContent = '0-0';
+    document.getElementById('liveScore1').textContent = '0-0';
+    document.getElementById('liveScore2').textContent = '0-0';
+    
+    resultBox.style.display = 'none';
+    timeLabel.style.display = 'inline-block';
+    overlay.style.display = 'flex';
+    
+    // Fast simulated ticker
+    // 0s -> MIN 15 (0-0, 0-0, 0-0)
+    // 1s -> MIN 45 (halftimes)
+    // 2s -> MIN 75 (mid second half)
+    // 3s -> MIN 90 (fulltimes)
+    let step = 0;
+    const times = ["MIN 15'", "HT 45'", "MIN 75'", "FT 90'"];
+    
+    const interval = setInterval(() => {
+        timeLabel.textContent = times[step];
+        
+        if (step === 0) {
+            // Early game: no goals or 1 goal
+            document.getElementById('liveScore0').textContent = '0-0';
+        } else if (step === 1) {
+            // Half time scores
+            document.getElementById('liveScore0').textContent = simulateScore(data.scores[0], 0.5);
+            document.getElementById('liveScore1').textContent = simulateScore(data.scores[1], 0.5);
+            document.getElementById('liveScore2').textContent = simulateScore(data.scores[2], 0.5);
+        } else if (step === 2) {
+            // 75 min
+            document.getElementById('liveScore0').textContent = simulateScore(data.scores[0], 0.8);
+            document.getElementById('liveScore1').textContent = simulateScore(data.scores[1], 0.8);
+            document.getElementById('liveScore2').textContent = simulateScore(data.scores[2], 0.8);
+        } else if (step === 3) {
+            clearInterval(interval);
+            // Full time scores
+            document.getElementById('liveScore0').textContent = data.scores[0];
+            document.getElementById('liveScore1').textContent = data.scores[1];
+            document.getElementById('liveScore2').textContent = data.scores[2];
+            
+            // Display user predictions and if they won
+            const betMatchIdx = parseInt(document.getElementById('selectedMatchIdx').value);
+            for (let i = 0; i < 3; i++) {
+                const div = document.getElementById(`predictionMatch${i}`);
+                if (betType === 'accumulator' || (betType === 'single' && i === betMatchIdx)) {
+                    const pred = predictions[i];
+                    const actual = data.outcomes[i];
+                    const isWin = pred === actual;
+                    
+                    let predLabel = '';
+                    if (pred === '1') predLabel = 'Home Win (1)';
+                    else if (pred === 'X') predLabel = 'Draw (X)';
+                    else if (pred === '2') predLabel = 'Away Win (2)';
+                    
+                    div.textContent = `Your Pick: ${predLabel} — ${isWin ? 'Won ✅' : 'Lost ❌'}`;
+                    div.style.color = isWin ? '#22c55e' : '#ef4444';
+                    div.style.display = 'block';
+                } else {
+                    div.style.display = 'none';
+                }
+            }
+
+            timeLabel.style.display = 'none';
+            
+            const title = document.getElementById('matchResultTitle');
+            const sub = document.getElementById('matchResultSub');
+            
+            if (data.result === 'WIN') {
+                title.textContent = '🎉 WINNER!';
+                title.style.color = '#22c55e';
+                sub.textContent = `Payout: ₦${data.payout.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            } else {
+                title.textContent = '💔 Ticket Lost';
+                title.style.color = '#ef4444';
+                sub.textContent = 'Try again next round!';
+            }
+            
+            resultBox.style.display = 'block';
+            
+            // Update header balance
+            const headerBal = document.querySelector('.balance strong');
+            if (headerBal) {
+                headerBal.textContent = `₦${data.new_balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+        }
+        step++;
+    }, 1000);
+}
+
+function simulateScore(finalScore, progress) {
+    const parts = finalScore.split('-');
+    const h = Math.floor(parseInt(parts[0]) * progress);
+    const a = Math.floor(parseInt(parts[1]) * progress);
+    return `${h}-${a}`;
+}
+
+function closeOverlay() {
+    document.getElementById('matchOverlay').style.display = 'none';
+    document.getElementById('placeBtn').disabled = false;
+    
+    // Hide prediction displays
+    for (let i = 0; i < 3; i++) {
+        const div = document.getElementById(`predictionMatch${i}`);
+        div.style.display = 'none';
+        div.textContent = '';
+    }
+    
+    // Reset selected
+    document.querySelectorAll('.pred-btn').forEach(btn => btn.classList.remove('selected'));
+    predictions = [null, null, null];
+}
+</script>
+{% endblock %}
