@@ -216,7 +216,17 @@ Settings are stored in the database's `game_settings` table, falling back to def
 
 ## Database Architecture (Zero Migration)
 
-To ensure absolute safety for live platforms, all new games (Lotto 5/90, Football Predictor, Ludo Quick-Bet) record plays inside the standard `GamePlay` table. The game-specific attributes (picks, drawn numbers, match scores, dice outcomes) are saved inside the `result_data` field as a JSON string. **No database migrations or SQL scripts are required.**
+To ensure absolute safety for live platforms, all new games (Lotto 5/90, Football Predictor, Ludo Quick-Bet) record plays inside the standard `GamePlay` table. The game-specific wagers (picks, drawn numbers, match scores, dice outcomes) are saved inside the `result_data` field as a JSON string. **No database migrations or SQL schema changes are required.**
+
+### Seeding New Game Configurations
+
+To add the configuration control entries (limits, odds, status flags) to your existing database, run the following command from your project root:
+
+```bash
+python scripts/migrate_new_settings.py
+```
+
+This will automatically query the `game_settings` table, seed any missing values with their secure defaults, and leave all existing records untouched.
 
 ---
 
