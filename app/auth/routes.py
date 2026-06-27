@@ -224,13 +224,16 @@ def admin_2fa():
 
 # ────────────────────────── LOGOUT ──────────────────────────
 @auth_bp.route("/logout")
-@login_required
 def logout():
-    log_audit("LOGOUT", f"User {current_user.username} logged out")
+    if current_user.is_authenticated:
+        try:
+            log_audit("LOGOUT", f"User {current_user.username} logged out")
+        except Exception:
+            pass
+        logout_user()
     session.pop("admin_2fa_verified", None)
     session.pop("admin_last_active", None)
     session.pop("pending_admin_2fa", None)
-    logout_user()
     flash("You have been logged out.", "info")
     return redirect(url_for("auth.login"))
 

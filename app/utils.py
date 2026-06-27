@@ -233,21 +233,34 @@ def log_audit(action, details=None, user_id=None):
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return redirect(url_for("auth.login"))
-        if current_user.role not in ("admin", "superadmin"):
-            flash("Access denied.", "error")
-            return redirect(url_for("game.home"))
+        try:
+            if not current_user.is_authenticated:
+                return redirect(url_for("auth.login"))
+            if current_user.role not in ("admin", "superadmin"):
+                flash("Access denied.", "error")
+                return redirect(url_for("game.home"))
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return redirect(url_for("auth.logout"))
+
         # Admin session timeout check
         last_active = session.get("admin_last_active")
         if last_active:
             from datetime import datetime
-            elapsed = (datetime.utcnow() - datetime.fromisoformat(last_active)).total_seconds()
-            timeout = current_app.config.get("ADMIN_SESSION_TIMEOUT", 1200)  # 20 min
-            if elapsed > timeout:
+            try:
+                elapsed = (datetime.utcnow() - datetime.fromisoformat(last_active)).total_seconds()
+                timeout = current_app.config.get("ADMIN_SESSION_TIMEOUT", 1200)  # 20 min
+                if elapsed > timeout:
+                    session.pop("admin_last_active", None)
+                    session.pop("admin_2fa_verified", None)
+                    flash("Admin session expired. Please login again.", "error")
+                    return redirect(url_for("auth.logout"))
+            except Exception:
                 session.pop("admin_last_active", None)
                 session.pop("admin_2fa_verified", None)
-                flash("Admin session expired. Please login again.", "error")
                 return redirect(url_for("auth.logout"))
         session["admin_last_active"] = datetime.utcnow().isoformat()
         return f(*args, **kwargs)
@@ -257,11 +270,18 @@ def admin_required(f):
 def superadmin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return redirect(url_for("auth.login"))
-        if current_user.role != "superadmin":
-            flash("Access denied.", "error")
-            return redirect(url_for("game.home"))
+        try:
+            if not current_user.is_authenticated:
+                return redirect(url_for("auth.login"))
+            if current_user.role != "superadmin":
+                flash("Access denied.", "error")
+                return redirect(url_for("game.home"))
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return redirect(url_for("auth.logout"))
         session["admin_last_active"] = datetime.utcnow().isoformat()
         return f(*args, **kwargs)
     return decorated
