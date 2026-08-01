@@ -50,7 +50,43 @@ def register():
                 flash(e, "error")
             return render_template("auth/register.html")
 
-        user = User(username=username, email=email or None)
+        # If email is provided, verify it first before creating account
+        if email:
+            import secrets
+            import string
+            import time
+
+            verification_code = "".join(secrets.choice(string.digits) for _ in range(6))
+
+            session["pending_registration"] = {
+                "username": username,
+                "email": email,
+                "password": password,
+                "referral_code": referral,
+                "telegram_init_data": request.form.get("telegram_init_data", ""),
+                "verification_code": verification_code,
+                "expires_at": time.time() + 600,
+            }
+
+            try:
+                send_email(
+                    email,
+                    "Verify Your Email - Ditto Dinky",
+                    f"Hi {username},\n\n"
+                    f"Your registration verification code is: {verification_code}\n\n"
+                    f"This code will expire in 10 minutes.\n\n"
+                    f"- Ditto Dinky Team"
+                )
+                flash("A verification code has been sent to your email. Please verify it to complete registration.", "info")
+            except Exception as e:
+                current_app.logger.error(f"Failed to send verification email to {email}: {e}")
+                flash("Failed to send verification email. Please try again.", "error")
+                return render_template("auth/register.html")
+
+            return redirect(url_for("auth.verify_email"))
+
+        # No email provided - register immediately
+        user = User(username=username, email=None)
         user.set_password(password)
         user.generate_referral_code()
         user.registration_ip = get_real_ip()
@@ -340,3 +376,150 @@ def reset_password(user_id):
         return redirect(url_for("auth.login"))
 
     return render_template("auth/reset_password.html", user_id=user_id)
+
+
+# ────────────────────────── EMAIL VERIFICATION ──────────────────────────
+@auth_bp.route("/verify-email", methods=["GET", "POST"])
+def verify_email():
+    pending = session.get("pending_registration")
+    if not pending:
+        flash("No registration in progress. Please sign up first.", "error")
+        return redirect(url_for("auth.register"))
+
+    import time
+    if time.time() > pending.get("expires_at", 0):
+        session.pop("pending_registration", None)
+        flash("Verification code has expired. Please register again.", "error")
+        return redirect(url_for("auth.register"))
+
+    if request.method == "POST":
+        code_input = request.form.get("verification_code", "").strip()
+        if not code_input:
+            flash("Please enter the verification code.", "error")
+            return render_template("auth/verify_email.html", email=pending.get("email"))
+
+        if code_input != pending.get("verification_code"):
+            flash("Invalid verification code. Please try again.", "error")
+            return render_template("auth/verify_email.html", email=pending.get("email"))
+
+        # Code is valid! Create the user account
+        username = pending.get("username")
+        email = pending.get("email")
+        password = pending.get("password")
+        referral = pending.get("referral_code")
+        telegram_init_data = pending.get("telegram_init_data")
+
+        # Double check email and username uniqueness
+        if User.query.filter_by(username=username).first():
+            session.pop("pending_registration", None)
+            flash("Username was taken while verifying. Please register again.", "error")
+            return redirect(url_for("auth.register"))
+        if User.query.filter_by(email=email).first():
+            session.pop("pending_registration", None)
+            flash("Email was registered while verifying. Please register again.", "error")
+            return redirect(url_for("auth.register"))
+
+        user = User(username=username, email=email)
+        user.set_password(password)
+        user.generate_referral_code()
+        user.registration_ip = get_real_ip()
+        db.session.add(user)
+        db.session.commit()
+
+        # Sign-up bonus
+        bonus = current_app.config.get("SIGNUP_BONUS", 100)
+        if bonus > 0:
+            credit_wallet(user, bonus, "BONUS", description="Welcome signup bonus")
+            notify_user(user.id, "Welcome Bonus!", f"You received ₦{bonus:,.0f} as a signup bonus!", "info")
+
+        # Referral bonus processing
+        if referral:
+            referrer = User.query.filter_by(referral_code=referral).first()
+            if referrer and referrer.id != user.id:
+                user.referred_by = referrer.id
+                db.session.commit()
+
+                # IP fraud check
+                ip = get_real_ip()
+                duplicate_ip = User.query.filter(
+                    User.referred_by == referrer.id,
+                    User.registration_ip == ip,
+                    User.id != user.id,
+                ).first()
+
+                if duplicate_ip:
+                    log_audit("REFERRAL_FLAGGED",
+                              f"Blocked referral bonus: {username} has same IP ({ip}) as {duplicate_ip.username}",
+                              referrer.id)
+                else:
+                    ref_bonus = current_app.config.get("REFERRAL_BONUS", 200)
+                    credit_wallet(referrer, ref_bonus, "REFERRAL",
+                                  description=f"Referral bonus for inviting {username}")
+                    notify_user(referrer.id, "Referral Bonus!",
+                                f"You earned ₦{ref_bonus:,.0f} for referring {username}!", "info")
+                    check_referral_tiers(referrer)
+
+        # Telegram linking (if registration was inside Telegram WebApp)
+        if telegram_init_data:
+            from app.telegram.helpers import verify_telegram_init_data
+            from app.utils import get_setting
+            bot_token = get_setting("TELEGRAM_BOT_TOKEN") or current_app.config.get("TELEGRAM_BOT_TOKEN")
+            if bot_token:
+                verified = verify_telegram_init_data(telegram_init_data, bot_token)
+                if verified:
+                    try:
+                        import json
+                        tg_user = json.loads(verified.get("user", "{}"))
+                        tg_user_id = tg_user.get("id")
+                        if tg_user_id:
+                            existing_tg = User.query.filter_by(telegram_user_id=str(tg_user_id)).first()
+                            if existing_tg:
+                                existing_tg.telegram_user_id = None
+                            user.telegram_user_id = str(tg_user_id)
+                            db.session.commit()
+                    except Exception:
+                        pass
+
+        log_audit("REGISTER", f"New user registered: {username}", user.id)
+        session.pop("pending_registration", None)
+        flash("Email verified successfully! Your account has been created. Please log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/verify_email.html", email=pending.get("email"))
+
+
+@auth_bp.route("/resend-verification")
+def resend_verification():
+    pending = session.get("pending_registration")
+    if not pending:
+        flash("No registration in progress. Please sign up first.", "error")
+        return redirect(url_for("auth.register"))
+
+    import secrets
+    import string
+    import time
+
+    # Generate new code
+    verification_code = "".join(secrets.choice(string.digits) for _ in range(6))
+    
+    # Update code in session
+    pending["verification_code"] = verification_code
+    pending["expires_at"] = time.time() + 600
+    session["pending_registration"] = pending
+
+    # Send verification email
+    try:
+        send_email(
+            pending.get("email"), 
+            "Verify Your Email - Ditto Dinky",
+            f"Hi {pending.get('username')},\n\n"
+            f"Your new registration verification code is: {verification_code}\n\n"
+            f"This code will expire in 10 minutes.\n\n"
+            f"- Ditto Dinky Team"
+        )
+        flash("A new verification code has been sent to your email.", "success")
+    except Exception as e:
+        current_app.logger.error(f"Failed to resend verification email to {pending.get('email')}: {e}")
+        flash("Failed to resend verification email. Please try again.", "error")
+
+    return redirect(url_for("auth.verify_email"))

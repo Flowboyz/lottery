@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Verify Email - DITTO DINKY{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
+{% block content %}
+<div class="content page-content">
+    <div class="auth-wrapper">
+        <!-- Left panel (Showcase) -->
+        <div class="auth-showcase">
+            <div class="showcase-content">
+                <div class="showcase-logo">🎰</div>
+                <h1 class="showcase-title">DITTO DINKY</h1>
+                <p class="showcase-tagline">Nigeria's #1 Instant Lottery & Casino Hub</p>
+                
+                <div class="showcase-features">
+                    <div class="showcase-feat-item">🎁 <div><strong>Referral Bonus</strong><p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Get ₦200 for every friend you refer, and they get ₦100 instantly!</p></div></div>
+                    <div class="showcase-feat-item">🎫 <div><strong>Daily Free Claim</strong><p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Claim ₦500 free daily reward every 24 hours to test your luck!</p></div></div>
+                    <div class="showcase-feat-item">🛡️ <div><strong>Responsible Gambling</strong><p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Customizable daily bet limits and self-exclusion periods.</p></div></div>
+                </div>
+                
+                <div class="showcase-stats">
+                    <div class="stat-badge">💸 Instant Paystack Payouts</div>
+                    <div class="stat-badge">🛡️ 100% Cryptographically Fair</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right panel (Verify Form) -->
+        <div class="auth-form-container">
+            <div class="auth-card">
+                <!-- Mobile only logo header -->
+                <div class="mobile-logo-wrapper">
+                    <div class="logo">🎰</div>
+                </div>
+                
+                <h2 class="auth-title">Verify Email</h2>
+                <p class="auth-subtitle">We sent a 6-digit verification code to <strong>{{ email }}</strong>. Please check your inbox (and spam folder).</p>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form action="{{ url_for('auth.verify_email') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="form-group">
+                        <label for="verification_code">6-Digit Code</label>
+                        <input name="verification_code" id="verification_code" placeholder="------" required autocomplete="off" pattern="\d{6}" maxlength="6" style="text-align:center; font-size:24px; letter-spacing:8px; font-weight:bold;">
+                    </div>
+
+                    <button type="submit" class="auth-btn">Verify & Create Account</button>
+                </form>
+
+                <div class="auth-links">
+                    <a href="{{ url_for('auth.resend_verification') }}" style="color:var(--accent-primary); font-weight:600; text-decoration:none;">Didn't receive the email? Resend code</a>
+                    <a href="{{ url_for('auth.register') }}">Back to Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
