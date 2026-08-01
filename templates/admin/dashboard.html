@@ -111,6 +111,36 @@
                 <a href="{{ url_for('admin.export_csv', data_type='games') }}" class="small-btn">📥 Games CSV</a>
             </div>
         </div>
+
+        {% if current_user.role == 'superadmin' %}
+        <!-- Reset Demo Data Section -->
+        <div class="dash-section" style="border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.05); padding: 16px; border-radius: 12px; margin-top: 24px;">
+            <h3 class="section-title" style="color: #ff4d4d;">⚠️ Danger Zone (Demo Testing Only)</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+                Reset the platform for new testing. This will set all user balances to zero (₦0.0) and completely delete all transaction history, betting logs, gameplay entries, notification logs, and withdrawal requests.
+            </p>
+            <form action="{{ url_for('admin.reset_demo_data') }}" method="post" onsubmit="return confirmReset(event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                    <input type="password" name="admin_password" placeholder="Confirm with Superadmin Password" required 
+                           style="padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-body); color: var(--text-primary); font-size: 13px; max-width: 280px; flex: 1;">
+                    <button type="submit" class="submit-btn" style="background: #ff4d4d; color: white; width: auto; padding: 10px 20px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.2s;">
+                        Reset Platform & Balances
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <script>
+            function confirmReset(e) {
+                if (!confirm("🚨 WARNING: This will permanently delete ALL transactions, game logs, bet history, notifications, and reset all user balances to zero. This cannot be undone!\n\nAre you absolutely sure you want to proceed?")) {
+                    e.preventDefault();
+                    return false;
+                }
+                return true;
+            }
+        </script>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

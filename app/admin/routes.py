@@ -848,3 +848,39 @@ def game_history():
     return render_template("admin/game_history.html", plays=plays,
                            game_filter=game_filter, user_filter=user_filter,
                            user_list=user_list)
+
+
+# ────────────────────────── RESET PLATFORM DATA ──────────────────────────
+@admin_bp.route("/reset-demo-data", methods=["POST"])
+@login_required
+@superadmin_required
+def reset_demo_data():
+    if not verify_admin_password():
+        flash("Invalid admin password. Action aborted.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    try:
+        # Reset all user balances to 0.0
+        db.session.query(User).update({User.balance: 0.0})
+        
+        # Delete history tables
+        Transaction.query.delete()
+        GamePlay.query.delete()
+        Bet.query.delete()
+        AviatorEntry.query.delete()
+        WithdrawalRequest.query.delete()
+        PaymentRecord.query.delete()
+        Notification.query.delete()
+        
+        # Clear audit logs (except this action itself)
+        AuditLog.query.delete()
+        
+        db.session.commit()
+        
+        log_audit("DEMO_RESET", "Superadmin reset all user balances and cleared all transactional/gameplay history data", current_user.id)
+        flash("Demo platform successfully reset! All history cleared and balances set to zero.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error resetting data: {e}", "error")
+        
+    return redirect(url_for("admin.dashboard"))
