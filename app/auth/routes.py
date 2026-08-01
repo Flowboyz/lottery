@@ -88,6 +88,28 @@ def register():
                                 f"You earned ₦{ref_bonus:,.0f} for referring {username}!", "info")
                     check_referral_tiers(referrer)
 
+        # Auto-link Telegram if register is initiated from Telegram WebApp
+        telegram_init_data = request.form.get("telegram_init_data", "").strip()
+        if telegram_init_data:
+            from app.telegram.helpers import verify_telegram_init_data
+            from app.utils import get_setting
+            bot_token = get_setting("TELEGRAM_BOT_TOKEN") or current_app.config.get("TELEGRAM_BOT_TOKEN")
+            if bot_token:
+                verified = verify_telegram_init_data(telegram_init_data, bot_token)
+                if verified:
+                    try:
+                        import json
+                        tg_user = json.loads(verified.get("user", "{}"))
+                        tg_user_id = tg_user.get("id")
+                        if tg_user_id:
+                            existing_tg = User.query.filter_by(telegram_user_id=str(tg_user_id)).first()
+                            if existing_tg:
+                                existing_tg.telegram_user_id = None
+                            user.telegram_user_id = str(tg_user_id)
+                            db.session.commit()
+                    except Exception:
+                        pass
+
         log_audit("REGISTER", f"New user registered: {username}", user.id)
         flash("Account created successfully! Please login.", "success")
         return redirect(url_for("auth.login"))
@@ -155,6 +177,28 @@ def login():
         user.failed_login_attempts = 0
         user.locked_until = None
         user.last_login_ip = get_real_ip()
+
+        # Auto-link Telegram if login is initiated from Telegram WebApp
+        telegram_init_data = request.form.get("telegram_init_data", "").strip()
+        if telegram_init_data:
+            from app.telegram.helpers import verify_telegram_init_data
+            from app.utils import get_setting
+            bot_token = get_setting("TELEGRAM_BOT_TOKEN") or current_app.config.get("TELEGRAM_BOT_TOKEN")
+            if bot_token:
+                verified = verify_telegram_init_data(telegram_init_data, bot_token)
+                if verified:
+                    try:
+                        import json
+                        tg_user = json.loads(verified.get("user", "{}"))
+                        tg_user_id = tg_user.get("id")
+                        if tg_user_id:
+                            existing_tg = User.query.filter_by(telegram_user_id=str(tg_user_id)).first()
+                            if existing_tg:
+                                existing_tg.telegram_user_id = None
+                            user.telegram_user_id = str(tg_user_id)
+                    except Exception:
+                        pass
+
         db.session.commit()
 
         # Admin 2FA: if admin/superadmin, send OTP before granting access
@@ -225,15 +269,20 @@ def admin_2fa():
 # ────────────────────────── LOGOUT ──────────────────────────
 @auth_bp.route("/logout")
 def logout():
-    if current_user.is_authenticated:
+    try:
+        if current_user.is_authenticated:
+            try:
+                log_audit("LOGOUT", f"User {current_user.username} logged out")
+            except Exception:
+                pass
+            logout_user()
+    except Exception:
         try:
-            log_audit("LOGOUT", f"User {current_user.username} logged out")
+            db.session.rollback()
         except Exception:
             pass
-        logout_user()
-    session.pop("admin_2fa_verified", None)
-    session.pop("admin_last_active", None)
-    session.pop("pending_admin_2fa", None)
+    finally:
+        session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("auth.login"))
 

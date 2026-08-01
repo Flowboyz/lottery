@@ -153,6 +153,49 @@
             </div>
         </div>
 
+        <!-- Telegram Connection -->
+        <div class="profile-section">
+            <h3 class="section-title">Telegram Connection</h3>
+            <p class="section-desc">Link your account to our Telegram bot to play games directly inside Telegram.</p>
+
+            {% if current_user.telegram_user_id %}
+            <div class="referral-box" style="border: 1px solid #00b894; background: rgba(0, 184, 148, 0.05); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <div class="referral-code-display" style="display: flex; flex-direction: column;">
+                    <span class="referral-label" style="font-size: 11px; color: var(--text-muted);">Linked Telegram ID</span>
+                    <span class="referral-code" style="color: #00b894; font-size: 20px; font-weight: 800;">✓ Connected (ID: {{ current_user.telegram_user_id }})</span>
+                </div>
+                <div class="referral-actions" style="margin-top: 10px;">
+                    <form method="POST" action="{{ url_for('telegram.unlink_telegram') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="small-btn btn-reject" onclick="return confirm('Unlink Telegram Account?')">Disconnect Bot</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="referral-box" style="padding: 16px; border-radius: 12px;">
+                {% if is_link_active %}
+                <div class="referral-code-display" style="display: flex; flex-direction: column; margin-bottom: 12px;">
+                    <span class="referral-label" style="font-size: 11px; color: var(--text-muted);">Your Linking Code</span>
+                    <span class="referral-code" style="letter-spacing: 2px; font-size: 22px; font-weight: 800;">{{ current_user.telegram_link_token }}</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.4;">
+                    Send <code>/link {{ current_user.telegram_link_token }}</code> to the bot, or click the direct link below:
+                </p>
+                <div class="referral-actions" style="margin-top: 12px; display: flex; gap: 8px;">
+                    <a href="https://t.me/{{ bot_username }}?start={{ current_user.telegram_link_token }}" target="_blank" class="small-btn" style="text-decoration: none; display: inline-block; text-align: center; line-height: 1.6;">Open Telegram Bot</a>
+                </div>
+                {% else %}
+                <div style="text-align: center; padding: 10px 0;">
+                    <form method="POST" action="{{ url_for('telegram.generate_link_token') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="submit-btn" style="width: auto; padding: 10px 24px;">Link Telegram Account</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
         <!-- Referral Section -->
         <div class="profile-section">
             <h3 class="section-title">Refer & Earn</h3>

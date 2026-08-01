@@ -43,8 +43,13 @@
                 {% endif %}
                 {% endwith %}
 
+                <div id="tg-link-alert" class="flash-msg flash-info" style="display:none; border:1px solid #00d4aa; background:rgba(0,212,170,0.1); color:#e2e8f0; border-radius:8px; padding:12px; margin-bottom:16px;">
+                    🔗 <b>Connecting Telegram:</b> Creating an account now will automatically link it to your Telegram bot.
+                </div>
+
                 <form method="post" action="{{ url_for('auth.register') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="telegram_init_data" id="telegram_init_data">
 
                     <div class="form-group">
                         <label for="username">Username</label>
@@ -95,4 +100,22 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+        const initData = window.Telegram.WebApp.initData;
+        
+        // Populate hidden input field
+        const tgInput = document.getElementById("telegram_init_data");
+        if (tgInput) tgInput.value = initData;
+        
+        // Show alert notification
+        const alertBox = document.getElementById("tg-link-alert");
+        if (alertBox) alertBox.style.display = "block";
+    }
+});
+</script>
 {% endblock %}

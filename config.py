@@ -58,6 +58,10 @@ class Config:
     REFERRAL_BONUS = 200     # ₦200 per referral
     SIGNUP_BONUS = 100       # ₦100 for new users
 
+    # --- Telegram Bot ---
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")
+
     # --- Security ---
     MAX_LOGIN_ATTEMPTS = 5
     LOGIN_LOCKOUT_MINUTES = 15

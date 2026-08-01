@@ -31,9 +31,18 @@ def index():
     daily_spent = round(current_user.daily_bet_total or 0.0, 2)
     max_daily = get_setting("MAX_DAILY_BET", 50000)
 
+    from datetime import datetime
+    from flask import current_app
+    is_link_active = False
+    if current_user.telegram_link_token and current_user.telegram_link_expires:
+        if current_user.telegram_link_expires > datetime.utcnow():
+            is_link_active = True
+    bot_username = get_setting("TELEGRAM_BOT_USERNAME") or current_app.config.get("TELEGRAM_BOT_USERNAME") or "your_bot_username"
+
     return render_template("profile/index.html", banks=banks,
                            referral_count=referral_count, game_history=game_history,
-                           daily_spent=daily_spent, max_daily=max_daily)
+                           daily_spent=daily_spent, max_daily=max_daily,
+                           is_link_active=is_link_active, bot_username=bot_username)
 
 
 # ────────────────────────── EDIT PROFILE ──────────────────────────

@@ -57,6 +57,11 @@ class User(UserMixin, db.Model):
     referred_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     referral_tier_claimed = db.Column(db.Integer, default=0)  # highest tier milestone claimed
 
+    # Telegram Bot
+    telegram_user_id = db.Column(db.String(50), unique=True, nullable=True, index=True)
+    telegram_link_token = db.Column(db.String(32), nullable=True)
+    telegram_link_expires = db.Column(db.DateTime, nullable=True)
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -17,6 +17,7 @@
             <div class="profile-details">
                 <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">{{ user.email or 'Not set' }}</span></div>
                 <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">{{ user.phone or 'Not set' }}</span></div>
+                <div class="detail-row"><span class="detail-label">Telegram ID</span><span class="detail-value"><code>{{ user.telegram_user_id or '—' }}</code></span></div>
                 <div class="detail-row"><span class="detail-label">Balance</span><span class="detail-value balance-text">{{ naira(user.balance) }}</span></div>
                 <div class="detail-row"><span class="detail-label">Referral Code</span><span class="detail-value">{{ user.referral_code or '—' }}</span></div>
                 <div class="detail-row"><span class="detail-label">Referred By</span><span class="detail-value">{{ 'User #' ~ user.referred_by if user.referred_by else '—' }}</span></div>

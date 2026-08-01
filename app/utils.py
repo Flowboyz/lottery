@@ -246,6 +246,11 @@ def admin_required(f):
                 pass
             return redirect(url_for("auth.logout"))
 
+        # Verify that the user has passed the 2FA step
+        if not session.get("admin_2fa_verified"):
+            flash("Admin verification required. Please login again.", "error")
+            return redirect(url_for("auth.logout"))
+
         # Admin session timeout check
         last_active = session.get("admin_last_active")
         if last_active:
@@ -254,14 +259,14 @@ def admin_required(f):
                 elapsed = (datetime.utcnow() - datetime.fromisoformat(last_active)).total_seconds()
                 timeout = current_app.config.get("ADMIN_SESSION_TIMEOUT", 1200)  # 20 min
                 if elapsed > timeout:
-                    session.pop("admin_last_active", None)
-                    session.pop("admin_2fa_verified", None)
                     flash("Admin session expired. Please login again.", "error")
                     return redirect(url_for("auth.logout"))
             except Exception:
-                session.pop("admin_last_active", None)
-                session.pop("admin_2fa_verified", None)
                 return redirect(url_for("auth.logout"))
+        else:
+            flash("Admin session expired. Please login again.", "error")
+            return redirect(url_for("auth.logout"))
+
         session["admin_last_active"] = datetime.utcnow().isoformat()
         return f(*args, **kwargs)
     return decorated
@@ -282,6 +287,28 @@ def superadmin_required(f):
             except Exception:
                 pass
             return redirect(url_for("auth.logout"))
+
+        # Verify that the superadmin has passed 2FA
+        if not session.get("admin_2fa_verified"):
+            flash("Superadmin verification required. Please login again.", "error")
+            return redirect(url_for("auth.logout"))
+
+        # Superadmin session timeout check
+        last_active = session.get("admin_last_active")
+        if last_active:
+            from datetime import datetime
+            try:
+                elapsed = (datetime.utcnow() - datetime.fromisoformat(last_active)).total_seconds()
+                timeout = current_app.config.get("ADMIN_SESSION_TIMEOUT", 1200)
+                if elapsed > timeout:
+                    flash("Superadmin session expired. Please login again.", "error")
+                    return redirect(url_for("auth.logout"))
+            except Exception:
+                return redirect(url_for("auth.logout"))
+        else:
+            flash("Superadmin session expired. Please login again.", "error")
+            return redirect(url_for("auth.logout"))
+
         session["admin_last_active"] = datetime.utcnow().isoformat()
         return f(*args, **kwargs)
     return decorated

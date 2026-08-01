@@ -37,6 +37,8 @@ def create_app(config_name=None):
 
     # Exempt Paystack webhook from CSRF
     csrf.exempt("app.wallet.routes.paystack_webhook")
+    csrf.exempt("app.telegram.routes.webhook")
+    csrf.exempt("app.telegram.routes.telegram_login")
 
     # Register blueprints
     from app.auth import auth_bp
@@ -49,6 +51,7 @@ def create_app(config_name=None):
     from app.games import games_bp
     from app.aviator import aviator_bp
     from app.color import color_bp
+    from app.telegram import telegram_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(game_bp)
@@ -60,6 +63,7 @@ def create_app(config_name=None):
     app.register_blueprint(games_bp)
     app.register_blueprint(aviator_bp)
     app.register_blueprint(color_bp)
+    app.register_blueprint(telegram_bp)
     
 
     # Template context processors
