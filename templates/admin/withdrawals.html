@@ -5,6 +5,13 @@
     <div class="page-card">
         <h2 class="page-heading">Withdrawal Requests</h2>
 
+        <div class="tab-filters" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;">
+            <a href="{{ url_for('admin.withdrawals', status='pending') }}" class="small-btn" style="background:{% if status_filter == 'pending' %}var(--accent-primary){% else %}var(--bg-elevated, #242526){% endif %}; color:{% if status_filter == 'pending' %}#042b22{% else %}var(--text-primary){% endif %}; text-decoration:none; font-weight:bold; border:1px solid var(--border-subtle); padding: 8px 14px; border-radius: 6px;">🕒 Pending</a>
+            <a href="{{ url_for('admin.withdrawals', status='approved') }}" class="small-btn" style="background:{% if status_filter == 'approved' %}#00b894{% else %}var(--bg-elevated, #242526){% endif %}; color:{% if status_filter == 'approved' %}#fff{% else %}var(--text-primary){% endif %}; text-decoration:none; font-weight:bold; border:1px solid var(--border-subtle); padding: 8px 14px; border-radius: 6px;">✓ Approved</a>
+            <a href="{{ url_for('admin.withdrawals', status='rejected') }}" class="small-btn" style="background:{% if status_filter == 'rejected' %}#ff4d4d{% else %}var(--bg-elevated, #242526){% endif %}; color:{% if status_filter == 'rejected' %}#fff{% else %}var(--text-primary){% endif %}; text-decoration:none; font-weight:bold; border:1px solid var(--border-subtle); padding: 8px 14px; border-radius: 6px;">✗ Rejected</a>
+            <a href="{{ url_for('admin.withdrawals', status='all') }}" class="small-btn" style="background:{% if status_filter == 'all' %}var(--accent-primary){% else %}var(--bg-elevated, #242526){% endif %}; color:{% if status_filter == 'all' %}#042b22{% else %}var(--text-primary){% endif %}; text-decoration:none; font-weight:bold; border:1px solid var(--border-subtle); padding: 8px 14px; border-radius: 6px;">📋 All History</a>
+        </div>
+
         {% if withdrawals.items %}
         <div class="table-wrap">
             <table class="admin-table">
@@ -53,11 +60,11 @@
         {% if withdrawals.pages > 1 %}
         <div class="pagination">
             {% if withdrawals.has_prev %}
-            <a href="{{ url_for('admin.withdrawals', page=withdrawals.prev_num) }}" class="page-link">← Prev</a>
+            <a href="{{ url_for('admin.withdrawals', status=status_filter, page=withdrawals.prev_num) }}" class="page-link">← Prev</a>
             {% endif %}
             <span class="page-info">Page {{ withdrawals.page }} of {{ withdrawals.pages }}</span>
             {% if withdrawals.has_next %}
-            <a href="{{ url_for('admin.withdrawals', page=withdrawals.next_num) }}" class="page-link">Next →</a>
+            <a href="{{ url_for('admin.withdrawals', status=status_filter, page=withdrawals.next_num) }}" class="page-link">Next →</a>
             {% endif %}
         </div>
         {% endif %}
