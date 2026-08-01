@@ -1673,7 +1673,7 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
     text-align: center;
 }
 .promo-text { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px; }
-.promo-links { display: flex; justify-content: center; gap: 10px; }
+.promo-links { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .promo-link {
     padding: 8px 16px; background: var(--accent-primary-soft, rgba(0,212,170,0.12));
     border: 1px solid var(--accent-primary); color: var(--accent-primary);

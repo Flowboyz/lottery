@@ -274,15 +274,20 @@ def logout():
             try:
                 log_audit("LOGOUT", f"User {current_user.username} logged out")
             except Exception:
-                pass
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
             logout_user()
     except Exception:
         try:
             db.session.rollback()
         except Exception:
             pass
-    finally:
-        session.clear()
+            
+    session.pop("admin_2fa_verified", None)
+    session.pop("admin_last_active", None)
+    session.pop("pending_admin_2fa", None)
     flash("You have been logged out.", "info")
     return redirect(url_for("auth.login"))
 
