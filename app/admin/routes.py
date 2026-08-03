@@ -611,6 +611,7 @@ def game_settings():
             "LUDO_PAYOUT_UNDER_OVER": ("Ludo Under/Over Payout Multiplier", request.form.get("ludo_payout_under_over")),
             "LUDO_PAYOUT_SEVEN":      ("Ludo Lucky 7 Payout Multiplier",  request.form.get("ludo_payout_seven")),
             "MAINTENANCE_MODE": ("Maintenance Mode", "on" if request.form.get("maintenance_mode") == "on" else "off"),
+            "DEMO_MODE": ("Demo Mode Notice", "on" if request.form.get("demo_mode") == "on" else "off"),
         }
 
         for key, (label, value) in settings_map.items():
@@ -646,6 +647,7 @@ def game_settings():
         "FOOTBALL_ENABLED": 1, "FOOTBALL_MIN_BET": 50, "FOOTBALL_MAX_BET": 50000, "FOOTBALL_ODDS": 1.8,
         "LUDO_ENABLED": 1, "LUDO_MIN_BET": 50, "LUDO_MAX_BET": 50000,
         "LUDO_PAYOUT_UNDER_OVER": 1.9, "LUDO_PAYOUT_SEVEN": 5.5,
+        "DEMO_MODE": "on",
     }
     for key, default in defaults.items():
         settings[key] = get_setting(key, default)

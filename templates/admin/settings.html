@@ -66,6 +66,14 @@
                     </select>
                     <small class="form-hint">Locks deposits & withdrawals when ON</small>
                 </div>
+                <div class="form-group">
+                    <label>Demo Mode Notice</label>
+                    <select name="demo_mode" class="form-input">
+                        <option value="on" {% if settings.DEMO_MODE == 'on' %}selected{% endif %}>On</option>
+                        <option value="off" {% if settings.DEMO_MODE == 'off' %}selected{% endif %}>Off</option>
+                    </select>
+                    <small class="form-hint">Shows demo warnings on withdrawals when ON</small>
+                </div>
             </div>
 
             <!-- ── Aviator Settings ── -->

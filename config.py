@@ -48,6 +48,12 @@ class Config:
     PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
     PAYSTACK_BASE_URL = "https://api.paystack.co"
 
+    # --- Flutterwave ---
+    FLUTTERWAVE_SECRET_KEY = os.getenv("FLUTTERWAVE_SECRET_KEY", "")
+    FLUTTERWAVE_PUBLIC_KEY = os.getenv("FLUTTERWAVE_PUBLIC_KEY", "")
+    FLUTTERWAVE_WEBHOOK_HASH = os.getenv("FLUTTERWAVE_WEBHOOK_HASH", "")
+    FLUTTERWAVE_BASE_URL = "https://api.flutterwave.com/v3"
+
     # --- Email / SMTP ---
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
     MAIL_PORT = int(os.getenv("MAIL_PORT", 587))

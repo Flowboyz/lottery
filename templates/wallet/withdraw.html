@@ -6,6 +6,15 @@
         <h2 class="page-heading">Withdraw Funds</h2>
         <p class="page-subtitle">Available balance: {{ naira(current_user.balance) }}</p>
 
+        {% if get_setting("DEMO_MODE", "on") == "on" %}
+        <div class="warning-box" style="background: rgba(255, 193, 7, 0.15); border-color: #ffc107; color: #b78a02; padding: 12px; border-radius: 8px; font-size: 13px; margin: 12px 0 16px; display: flex; align-items: center; gap: 8px;">
+            <span>⚠️</span>
+            <div>
+                <strong>Demo Platform:</strong> Withdrawals are processed as mock transactions using demo funds. No real payouts will be completed.
+            </div>
+        </div>
+        {% endif %}
+
         {% if pending_withdrawals > 0 %}
         <div class="warning-box">
             You have {{ pending_withdrawals }} pending withdrawal(s). Please wait for approval before submitting another.

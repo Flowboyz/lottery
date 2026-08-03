@@ -51,12 +51,16 @@ def initialize_deposit():
         flash(f"Minimum deposit is {format_money(min_deposit)}.", "error")
         return redirect(url_for("wallet.deposit_page"))
 
+    gateway = request.form.get("gateway", "paystack").strip().lower()
+    if gateway not in ("paystack", "flutterwave"):
+        gateway = "paystack"
+
     reference = generate_reference("DEP")
 
     # Create payment record
     record = PaymentRecord(
         user_id=current_user.id,
-        provider="paystack",
+        provider=gateway,
         payment_type="deposit",
         amount=amount,
         reference=reference,
@@ -65,12 +69,16 @@ def initialize_deposit():
     db.session.add(record)
     db.session.commit()
 
-    # Initialize Paystack transaction
-    secret_key = current_app.config["PAYSTACK_SECRET_KEY"]
+    # Determine secret key
+    if gateway == "paystack":
+        secret_key = current_app.config["PAYSTACK_SECRET_KEY"]
+    else:
+        secret_key = current_app.config["FLUTTERWAVE_SECRET_KEY"]
+
     if not secret_key:
-        # Fallback: direct credit for testing without Paystack
+        # Fallback: direct credit for testing without credentials
         credit_wallet(current_user, amount, "DEPOSIT",
-                      description="Direct deposit (test mode)", method="direct",
+                      description=f"Direct deposit ({gateway} test mode)", method=gateway,
                       reference=reference)
         record.status = "success"
         db.session.commit()
@@ -82,36 +90,72 @@ def initialize_deposit():
                    f"New Balance: {format_money(current_user.balance)}\n"
                    f"Reference: {reference}\n\n"
                    f"Thank you for playing!\n- Ditto Dinky Team")
-        flash(f"Deposited {format_money(amount)} successfully! (Test mode)", "success")
+        flash(f"Deposited {format_money(amount)} successfully! ({gateway.capitalize()} test mode)", "success")
         return redirect(url_for("game.home"))
 
-    headers = {
-        "Authorization": f"Bearer {secret_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "email": current_user.email or f"{current_user.username}@dittodinky.local",
-        "amount": int(amount * 100),  # Paystack uses kobo
-        "reference": reference,
-        "callback_url": url_for("wallet.verify_deposit", _external=True),
-    }
-
-    try:
-        resp = requests.post(
-            f"{current_app.config['PAYSTACK_BASE_URL']}/transaction/initialize",
-            json=payload, headers=headers, timeout=15
-        )
-        data = resp.json()
-        if data.get("status"):
-            return redirect(data["data"]["authorization_url"])
-        else:
-            flash("Payment initialization failed. Try again.", "error")
+    if gateway == "paystack":
+        headers = {
+            "Authorization": f"Bearer {secret_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "email": current_user.email or f"{current_user.username}@dittodinky.local",
+            "amount": int(amount * 100),  # Paystack uses kobo
+            "reference": reference,
+            "callback_url": url_for("wallet.verify_deposit", _external=True),
+        }
+        try:
+            resp = requests.post(
+                f"{current_app.config['PAYSTACK_BASE_URL']}/transaction/initialize",
+                json=payload, headers=headers, timeout=15
+            )
+            data = resp.json()
+            if data.get("status"):
+                return redirect(data["data"]["authorization_url"])
+            else:
+                flash("Paystack payment initialization failed. Try again.", "error")
+                record.status = "failed"
+                db.session.commit()
+        except Exception:
+            flash("Payment service unavailable. Try again later.", "error")
             record.status = "failed"
             db.session.commit()
-    except Exception as e:
-        flash("Payment service unavailable. Try again later.", "error")
-        record.status = "failed"
-        db.session.commit()
+    else:  # flutterwave
+        headers = {
+            "Authorization": f"Bearer {secret_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "tx_ref": reference,
+            "amount": str(amount),
+            "currency": "NGN",
+            "redirect_url": url_for("wallet.verify_flutterwave_deposit", _external=True),
+            "customer": {
+                "email": current_user.email or f"{current_user.username}@dittodinky.local",
+                "name": current_user.username
+            },
+            "customizations": {
+                "title": "Ditto Dinky Wallet Deposit",
+                "description": f"Credit {format_money(amount)} to your gaming wallet"
+            }
+        }
+        try:
+            resp = requests.post(
+                f"{current_app.config['FLUTTERWAVE_BASE_URL']}/payments",
+                json=payload, headers=headers, timeout=15
+            )
+            data = resp.json()
+            if data.get("status") == "success":
+                return redirect(data["data"]["link"])
+            else:
+                flash("Flutterwave payment initialization failed. Try again.", "error")
+                record.status = "failed"
+                db.session.commit()
+        except Exception as e:
+            current_app.logger.error(f"Flutterwave init exception: {e}")
+            flash("Payment service unavailable. Try again later.", "error")
+            record.status = "failed"
+            db.session.commit()
 
     return redirect(url_for("wallet.deposit_page"))
 
@@ -212,6 +256,110 @@ def paystack_webhook():
     return jsonify({"status": "ok"}), 200
 
 
+# ────────────────────────── VERIFY FLUTTERWAVE DEPOSIT ──────────────────────────
+@wallet_bp.route("/deposit/verify-flutterwave")
+@login_required
+def verify_flutterwave_deposit():
+    status = request.args.get("status", "")
+    tx_ref = request.args.get("tx_ref", "")
+    transaction_id = request.args.get("transaction_id", "")
+
+    if status != "successful" or not tx_ref:
+        flash("Payment was not successful or reference is missing.", "error")
+        return redirect(url_for("wallet.deposit_page"))
+
+    record = PaymentRecord.query.filter_by(reference=tx_ref).first()
+    if not record:
+        flash("Payment record not found.", "error")
+        return redirect(url_for("wallet.deposit_page"))
+
+    if record.status == "success":
+        flash("This payment has already been verified.", "info")
+        return redirect(url_for("game.home"))
+
+    secret_key = current_app.config["FLUTTERWAVE_SECRET_KEY"]
+    headers = {"Authorization": f"Bearer {secret_key}"}
+    try:
+        resp = requests.get(
+            f"{current_app.config['FLUTTERWAVE_BASE_URL']}/transactions/{transaction_id}/verify",
+            headers=headers, timeout=15
+        )
+        data = resp.json()
+        if data.get("status") == "success" and data["data"]["status"] == "successful":
+            amount = float(data["data"]["amount"])
+            
+            if data["data"]["currency"] != "NGN" or abs(amount - record.amount) > 0.01:
+                current_app.logger.warning(f"Tampering detected! Ref: {tx_ref}, DB Amt: {record.amount}, API Amt: {amount}")
+                flash("Payment validation failed: amount or currency mismatch.", "error")
+                return redirect(url_for("wallet.deposit_page"))
+
+            record.status = "success"
+            record.provider_reference = str(transaction_id)
+            credit_wallet(current_user, amount, "DEPOSIT",
+                          description="Flutterwave deposit", method="flutterwave",
+                          reference=tx_ref)
+            db.session.commit()
+            notify_user(current_user.id, "Deposit Successful",
+                        f"Your deposit of {format_money(amount)} was successful!", "deposit")
+            send_email(current_user.email, "Deposit Successful - Ditto Dinky",
+                       f"Hi {current_user.username},\n\n"
+                       f"Your deposit of {format_money(amount)} has been credited to your wallet.\n\n"
+                       f"New Balance: {format_money(current_user.balance)}\n"
+                       f"Reference: {tx_ref}\n\n"
+                       f"Thank you for playing!\n- Ditto Dinky Team")
+            flash(f"Deposited {format_money(amount)} successfully!", "success")
+        else:
+            record.status = "failed"
+            db.session.commit()
+            flash("Payment verification failed.", "error")
+    except Exception as e:
+        current_app.logger.error(f"Flutterwave verify exception: {e}")
+        flash("Could not verify payment. Contact support.", "error")
+
+    return redirect(url_for("game.home"))
+
+
+# ────────────────────────── FLUTTERWAVE WEBHOOK ──────────────────────────
+@wallet_bp.route("/webhook/flutterwave", methods=["POST"])
+def flutterwave_webhook():
+    """Handle Flutterwave webhook for failed transaction recovery."""
+    webhook_hash = current_app.config["FLUTTERWAVE_WEBHOOK_HASH"]
+    signature = request.headers.get("verif-hash", "")
+    
+    if webhook_hash and signature != webhook_hash:
+        return jsonify({"error": "Invalid signature"}), 400
+
+    payload = request.json or {}
+    event = payload.get("event", "")
+    data = payload.get("data", {})
+
+    if event == "charge.completed" and data.get("status") == "successful":
+        reference = data.get("tx_ref")
+        record = PaymentRecord.query.filter_by(reference=reference).first()
+        if record and record.status != "success":
+            from app.models import User
+            user = db.session.get(User, record.user_id)
+            if user:
+                amount = float(data["amount"])
+                if data.get("currency") == "NGN" and abs(amount - record.amount) < 0.01:
+                    record.status = "success"
+                    record.provider_reference = str(data.get("id"))
+                    credit_wallet(user, amount, "DEPOSIT",
+                                  description="Flutterwave webhook recovery",
+                                  method="flutterwave", reference=reference)
+                    db.session.commit()
+                    notify_user(user.id, "Deposit Confirmed",
+                                f"Your deposit of {format_money(amount)} has been confirmed.", "deposit")
+                    send_email(user.email, "Deposit Confirmed - Ditto Dinky",
+                               f"Hi {user.username},\n\n"
+                               f"Your deposit of {format_money(amount)} has been confirmed and credited.\n\n"
+                               f"New Balance: {format_money(user.balance)}\n"
+                               f"Reference: {reference}\n\n"
+                               f"- Ditto Dinky Team")
+
+    return jsonify({"status": "ok"}), 200
+
+
 # ────────────────────────── WITHDRAWAL PAGE ──────────────────────────
 @wallet_bp.route("/withdraw", methods=["GET"])
 @login_required
@@ -277,19 +425,38 @@ def submit_withdrawal():
     db.session.add(wr)
     db.session.commit()
 
-    notify_user(current_user.id, "Withdrawal Submitted",
-                f"Your withdrawal of {format_money(amount)} is pending approval.", "withdrawal")
-    send_email(current_user.email, "Withdrawal Request Submitted - Ditto Dinky",
-               f"Hi {current_user.username},\n\n"
-               f"Your withdrawal request has been submitted.\n\n"
-               f"Amount: {format_money(amount)}\n"
-               f"Bank: {bank_name}\n"
-               f"Account: {account_number}\n"
-               f"Account Name: {account_name}\n\n"
-               f"Your request will be reviewed within 24 hours. "
-               f"Funds have been held from your balance until approval.\n\n"
-               f"- Ditto Dinky Team")
-    flash(f"Withdrawal of {format_money(amount)} submitted for approval.", "success")
+    # Notification message
+    notif_msg = f"Your withdrawal of {format_money(amount)} is pending approval."
+    if get_setting("DEMO_MODE", "on") == "on":
+        notif_msg += " (Note: These are demo funds)."
+    notify_user(current_user.id, "Withdrawal Submitted", notif_msg, "withdrawal")
+
+    # Email message
+    email_body = (
+        f"Hi {current_user.username},\n\n"
+        f"Your withdrawal request has been submitted.\n\n"
+        f"Amount: {format_money(amount)}\n"
+        f"Bank: {bank_name}\n"
+        f"Account: {account_number}\n"
+        f"Account Name: {account_name}\n\n"
+    )
+    if get_setting("DEMO_MODE", "on") == "on":
+        email_body += (
+            "⚠️ DEMO NOTICE: This is a demo platform. The withdrawal has been processed "
+            "as a demo transaction using mock funds. No real money will be sent to your bank account.\n\n"
+        )
+    email_body += (
+        f"Your request will be reviewed within 24 hours. "
+        f"Funds have been held from your balance until approval.\n\n"
+        f"- Ditto Dinky Team"
+    )
+    send_email(current_user.email, "Withdrawal Request Submitted - Ditto Dinky", email_body)
+
+    # Success Flash
+    flash_msg = f"Withdrawal of {format_money(amount)} submitted for approval."
+    if get_setting("DEMO_MODE", "on") == "on":
+        flash_msg += " (Note: This is a demo platform. Withdrawals are processed as mock transactions using demo funds)."
+    flash(flash_msg, "success")
     return redirect(url_for("game.home"))
 
 
