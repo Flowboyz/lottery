@@ -101,7 +101,39 @@ def dashboard():
     stats["net_profit_today"] = stats["deposits_today"] - stats["withdrawals_today"] - stats["payouts_today"]
     stats["net_profit_total"] = stats["total_deposits"] - stats["total_withdrawals"] - stats["total_payouts"]
 
-    return render_template("admin/dashboard.html", stats=stats)
+    # Scan for backups
+    import os
+    backups_dir = os.path.join(current_app.root_path, "..", "backups")
+    os.makedirs(backups_dir, exist_ok=True)
+    backups = []
+    try:
+        for f in os.listdir(backups_dir):
+            if f.endswith(".json") and f.startswith("backup_"):
+                parts = f[:-5].split("_")
+                if len(parts) >= 3:
+                    reset_type = parts[1]
+                    raw_time = "_".join(parts[2:])
+                    try:
+                        dt = datetime.strptime(raw_time, "%Y%m%d_%H%M%S")
+                        time_str = dt.strftime("%d %b %Y, %I:%M %p")
+                    except Exception:
+                        time_str = raw_time
+                else:
+                    reset_type = "unknown"
+                    time_str = f
+                
+                file_size = os.path.getsize(os.path.join(backups_dir, f))
+                backups.append({
+                    "filename": f,
+                    "reset_type": reset_type.capitalize(),
+                    "timestamp": time_str,
+                    "size": f"{file_size / 1024:.1f} KB"
+                })
+    except Exception:
+        pass
+    backups.sort(key=lambda x: x["filename"], reverse=True)
+
+    return render_template("admin/dashboard.html", stats=stats, backups=backups)
 
 
 # ────────────────────────── USERS ──────────────────────────
@@ -851,6 +883,44 @@ def game_history():
 
 
 # ────────────────────────── RESET PLATFORM DATA ──────────────────────────
+def serialize_records(query_all):
+    serialized = []
+    from datetime import datetime, date
+    for item in query_all:
+        data = {}
+        for col in item.__table__.columns:
+            val = getattr(item, col.name)
+            if isinstance(val, (datetime, date)):
+                val = val.isoformat()
+            data[col.name] = val
+        serialized.append(data)
+    return serialized
+
+
+def deserialize_records(model_class, data_list):
+    from datetime import datetime, date
+    for item_data in data_list:
+        pk_name = model_class.__table__.primary_key.columns.keys()[0]
+        pk_val = item_data.get(pk_name)
+        if pk_val:
+            existing = db.session.get(model_class, pk_val)
+            if existing:
+                continue
+
+        parsed_data = {}
+        for col in model_class.__table__.columns:
+            val = item_data.get(col.name)
+            if val is not None and col.type.python_type in (datetime, date):
+                try:
+                    val = datetime.fromisoformat(val)
+                except Exception:
+                    pass
+            parsed_data[col.name] = val
+
+        instance = model_class(**parsed_data)
+        db.session.add(instance)
+
+
 @admin_bp.route("/reset-demo-data", methods=["POST"])
 @login_required
 @superadmin_required
@@ -859,28 +929,178 @@ def reset_demo_data():
         flash("Invalid admin password. Action aborted.", "error")
         return redirect(url_for("admin.dashboard"))
 
+    reset_action = request.form.get("reset_action", "").strip()
+    if reset_action not in ("balances", "games", "financial", "all"):
+        flash("Invalid reset action selected.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    import json
+    import os
+    from datetime import datetime
+
+    backups_dir = os.path.join(current_app.root_path, "..", "backups")
+    os.makedirs(backups_dir, exist_ok=True)
+
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    backup_filename = f"backup_{reset_action}_{timestamp}.json"
+    backup_filepath = os.path.join(backups_dir, backup_filename)
+
+    backup_data = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "reset_type": reset_action,
+        "balances": [],
+        "transactions": [],
+        "gameplays": [],
+        "bets": [],
+        "aviator_entries": [],
+        "withdrawal_requests": [],
+        "payment_records": [],
+        "notifications": [],
+        "audit_logs": []
+    }
+
     try:
-        # Reset all user balances to 0.0
-        db.session.query(User).update({User.balance: 0.0})
-        
-        # Delete history tables
-        Transaction.query.delete()
-        GamePlay.query.delete()
-        Bet.query.delete()
-        AviatorEntry.query.delete()
-        WithdrawalRequest.query.delete()
-        PaymentRecord.query.delete()
-        Notification.query.delete()
-        
-        # Clear audit logs (except this action itself)
-        AuditLog.query.delete()
-        
+        # 1. Back up data based on selection
+        if reset_action in ("balances", "all"):
+            backup_data["balances"] = [{"id": u.id, "balance": u.balance} for u in User.query.all()]
+
+        if reset_action in ("games", "all"):
+            backup_data["bets"] = serialize_records(Bet.query.all())
+            backup_data["gameplays"] = serialize_records(GamePlay.query.all())
+            backup_data["aviator_entries"] = serialize_records(AviatorEntry.query.all())
+
+        if reset_action in ("financial", "all"):
+            backup_data["transactions"] = serialize_records(Transaction.query.all())
+            backup_data["withdrawal_requests"] = serialize_records(WithdrawalRequest.query.all())
+            backup_data["payment_records"] = serialize_records(PaymentRecord.query.all())
+
+        if reset_action == "all":
+            backup_data["notifications"] = serialize_records(Notification.query.all())
+            backup_data["audit_logs"] = serialize_records(AuditLog.query.all())
+
+        # Save backup file
+        with open(backup_filepath, "w", encoding="utf-8") as f:
+            json.dump(backup_data, f, indent=2, ensure_ascii=False)
+
+        # 2. Execute deletion/reset based on selection
+        if reset_action in ("balances", "all"):
+            db.session.query(User).update({User.balance: 0.0})
+
+        if reset_action in ("games", "all"):
+            Bet.query.delete()
+            GamePlay.query.delete()
+            AviatorEntry.query.delete()
+
+        if reset_action in ("financial", "all"):
+            Transaction.query.delete()
+            WithdrawalRequest.query.delete()
+            PaymentRecord.query.delete()
+
+        if reset_action == "all":
+            Notification.query.delete()
+            AuditLog.query.delete()
+
         db.session.commit()
-        
-        log_audit("DEMO_RESET", "Superadmin reset all user balances and cleared all transactional/gameplay history data", current_user.id)
-        flash("Demo platform successfully reset! All history cleared and balances set to zero.", "success")
+
+        # Log the reset action
+        log_audit("DEMO_RESET", f"Superadmin triggered platform reset action: {reset_action} (Backup: {backup_filename})", current_user.id)
+        flash(f"Platform reset action '{reset_action}' executed successfully. A safety backup has been cached.", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Error resetting data: {e}", "error")
-        
+        if os.path.exists(backup_filepath):
+            try:
+                os.remove(backup_filepath)
+            except Exception:
+                pass
+        current_app.logger.error(f"Platform reset failed: {e}")
+        flash(f"Error resetting platform data: {e}", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/restore-backup/<string:filename>", methods=["POST"])
+@login_required
+@superadmin_required
+def restore_backup(filename):
+    if not verify_admin_password():
+        flash("Invalid admin password. Action aborted.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    import json
+    import os
+
+    backups_dir = os.path.join(current_app.root_path, "..", "backups")
+    backup_filepath = os.path.join(backups_dir, filename)
+
+    if not os.path.exists(backup_filepath) or ".." in filename or "/" in filename or "\\" in filename:
+        flash("Backup file not found or invalid filename.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    try:
+        with open(backup_filepath, "r", encoding="utf-8") as f:
+            backup_data = json.load(f)
+
+        # 1. Restore balances
+        if "balances" in backup_data and backup_data["balances"]:
+            for u_data in backup_data["balances"]:
+                user = db.session.get(User, u_data["id"])
+                if user:
+                    user.balance = u_data["balance"]
+
+        # 2. Restore game records
+        if "bets" in backup_data:
+            deserialize_records(Bet, backup_data["bets"])
+        if "gameplays" in backup_data:
+            deserialize_records(GamePlay, backup_data["gameplays"])
+        if "aviator_entries" in backup_data:
+            deserialize_records(AviatorEntry, backup_data["aviator_entries"])
+
+        # 3. Restore financial records
+        if "transactions" in backup_data:
+            deserialize_records(Transaction, backup_data["transactions"])
+        if "withdrawal_requests" in backup_data:
+            deserialize_records(WithdrawalRequest, backup_data["withdrawal_requests"])
+        if "payment_records" in backup_data:
+            deserialize_records(PaymentRecord, backup_data["payment_records"])
+
+        # 4. Restore notification and audit logs
+        if "notifications" in backup_data:
+            deserialize_records(Notification, backup_data["notifications"])
+        if "audit_logs" in backup_data:
+            deserialize_records(AuditLog, backup_data["audit_logs"])
+
+        db.session.commit()
+        log_audit("DEMO_RESTORE", f"Superadmin restored platform data from backup: {filename}", current_user.id)
+        flash(f"Platform data successfully restored from backup '{filename}'!", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Backup restore failed: {e}")
+        flash(f"Failed to restore platform data: {e}", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/delete-backup/<string:filename>", methods=["POST"])
+@login_required
+@superadmin_required
+def delete_backup(filename):
+    if not verify_admin_password():
+        flash("Invalid admin password. Action aborted.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    import os
+    backups_dir = os.path.join(current_app.root_path, "..", "backups")
+    backup_filepath = os.path.join(backups_dir, filename)
+
+    if not os.path.exists(backup_filepath) or ".." in filename or "/" in filename or "\\" in filename:
+        flash("Backup file not found or invalid filename.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    try:
+        os.remove(backup_filepath)
+        log_audit("DEMO_BACKUP_DELETE", f"Superadmin permanently deleted backup cache: {filename}", current_user.id)
+        flash(f"Backup '{filename}' has been permanently deleted from storage.", "success")
+    except Exception as e:
+        flash(f"Failed to delete backup: {e}", "error")
+
     return redirect(url_for("admin.dashboard"))

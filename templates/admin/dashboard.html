@@ -117,23 +117,82 @@
         <div class="dash-section" style="border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.05); padding: 16px; border-radius: 12px; margin-top: 24px;">
             <h3 class="section-title" style="color: #ff4d4d;">⚠️ Danger Zone (Demo Testing Only)</h3>
             <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
-                Reset the platform for new testing. This will set all user balances to zero (₦0.0) and completely delete all transaction history, betting logs, gameplay entries, notification logs, and withdrawal requests.
+                Select a reset action to wipe specific platform data. A safety backup of the deleted records will be saved automatically, allowing you to restore them later if needed.
             </p>
             <form action="{{ url_for('admin.reset_demo_data') }}" method="post" onsubmit="return confirmReset(event)">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px;">
+                    <select name="reset_action" required style="padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-body, #18191a); color: var(--text-primary); font-size: 13px; min-width: 240px; height: 38px;">
+                        <option value="" disabled selected>-- Select Reset Action --</option>
+                        <option value="balances">💰 Wipe User Balances Only (Set to ₦0.0)</option>
+                        <option value="games">🎮 Wipe Game History Only (Bets & Plays)</option>
+                        <option value="financial">💳 Wipe Financial Logs Only (Transactions & Withdrawals)</option>
+                        <option value="all">🚨 Full Platform Reset (Wipe Everything)</option>
+                    </select>
+                    
                     <input type="password" name="admin_password" placeholder="Confirm with Superadmin Password" required 
-                           style="padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-body); color: var(--text-primary); font-size: 13px; max-width: 280px; flex: 1;">
-                    <button type="submit" class="submit-btn" style="background: #ff4d4d; color: white; width: auto; padding: 10px 20px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.2s;">
-                        Reset Platform & Balances
-                    </button>
+                           style="padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-body); color: var(--text-primary); font-size: 13px; max-width: 280px; flex: 1; height: 38px;">
                 </div>
+                <button type="submit" class="submit-btn" style="background: #ff4d4d; color: white; width: auto; padding: 10px 20px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.2s; height: 38px; display: inline-flex; align-items: center;">
+                    Execute Selected Reset
+                </button>
             </form>
+        </div>
+
+        <!-- Active Safety Backups List -->
+        <div class="dash-section" style="margin-top: 24px;">
+            <h3 class="section-title">🕒 Active Safety Backups (Recycle Bin Cache)</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                Restoring a backup will restore the deleted records back into the live database. You can permanently delete backups when they are no longer needed.
+            </p>
+            {% if backups %}
+            <div class="table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Backup Timestamp</th>
+                            <th>Reset Type</th>
+                            <th>File Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in backups %}
+                        <tr>
+                            <td><strong>{{ b.timestamp }}</strong></td>
+                            <td><span class="role-badge role-user">{{ b.reset_type }}</span></td>
+                            <td><code style="color: var(--text-muted);">{{ b.size }}</code></td>
+                            <td>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <form method="POST" action="{{ url_for('admin.restore_backup', filename=b.filename) }}" style="display:inline-block;" onsubmit="return confirm('Restore this data back to the live database? It will overwrite/merge records.')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="password" name="admin_password" placeholder="Password" required class="small-input" style="width: 110px; padding: 6px 8px; margin-right: 4px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-body); color: var(--text-primary);">
+                                        <button type="submit" class="small-btn btn-approve">Restore 🔄</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('admin.delete_backup', filename=b.filename) }}" style="display:inline-block;" onsubmit="return confirm('🚨 PERMANENTLY DELETE this backup from disk storage? This action is irreversible.')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="password" name="admin_password" placeholder="Password" required class="small-input" style="width: 110px; padding: 6px 8px; margin-right: 4px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-body); color: var(--text-primary);">
+                                        <button type="submit" class="small-btn btn-reject">Delete 🗑️</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 20px; border: 1px dashed var(--border-subtle); border-radius: 8px; color: var(--text-muted); font-size: 13px;">
+                No safety backups found. Backups will appear here when you execute a reset action.
+            </div>
+            {% endif %}
         </div>
         
         <script>
             function confirmReset(e) {
-                if (!confirm("🚨 WARNING: This will permanently delete ALL transactions, game logs, bet history, notifications, and reset all user balances to zero. This cannot be undone!\n\nAre you absolutely sure you want to proceed?")) {
+                const actionSelect = document.querySelector('select[name="reset_action"]');
+                const action = actionSelect.options[actionSelect.selectedIndex].text;
+                if (!confirm(`🚨 WARNING: You are about to execute:\n"${action}"\n\nThis will modify or delete active platform data. Are you absolutely sure you want to proceed?`)) {
                     e.preventDefault();
                     return false;
                 }
