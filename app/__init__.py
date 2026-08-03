@@ -35,8 +35,9 @@ def create_app(config_name=None):
     # Initialize SocketIO
     socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent")
 
-    # Exempt Paystack webhook from CSRF
+    # Exempt Paystack & Flutterwave webhooks from CSRF
     csrf.exempt("app.wallet.routes.paystack_webhook")
+    csrf.exempt("app.wallet.routes.flutterwave_webhook")
     csrf.exempt("app.telegram.routes.webhook")
     csrf.exempt("app.telegram.routes.telegram_login")
 
@@ -69,11 +70,11 @@ def create_app(config_name=None):
     # Template context processors
     @app.context_processor
     def inject_helpers():
-        from app.utils import naira
+        from app.utils import naira, get_setting
         from flask_login import current_user as cu
         from datetime import datetime
 
-        ctx = {"naira": naira}
+        ctx = {"naira": naira, "get_setting": get_setting}
 
         if cu.is_authenticated:
             from app.models import Notification
