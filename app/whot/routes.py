@@ -8,7 +8,7 @@ from flask_login import login_required, current_user
 
 from app.extensions import db, csrf
 from app.models import WhotGame, User
-from app.utils import get_setting, credit_wallet, notify_user, debit_wallet
+from app.utils import get_setting, credit_wallet, notify_user, debit_wallet, log_audit
 from app.whot import whot_engine
 import random
 import time
@@ -797,3 +797,292 @@ def start_bot_game():
     db.session.commit()
 
     return jsonify({"status": "started", "room_id": room_id})
+
+
+# ────────────────────────── HTTP GAME ACTIONS ──────────────────────────
+
+@whot_bp.route("/game/<string:room_id>/propose_stake", methods=["POST"])
+@csrf.exempt
+@login_required
+def http_propose_stake(room_id):
+    """Propose a stake during negotiation phase."""
+    data = request.get_json() or {}
+    try:
+        stake = int(data.get("stake"))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid stake."}), 400
+
+    if stake not in [500, 1000, 2000, 5000]:
+        return jsonify({"error": "Unsupported stake tier."}), 400
+
+    game = WhotGame.query.filter_by(room_id=room_id).first()
+    if not game or game.status != "negotiating":
+        return jsonify({"error": "Game not found or not in negotiation."}), 400
+
+    if current_user.balance < stake:
+        return jsonify({"error": "You cannot afford this stake."}), 400
+
+    state = game.game_state
+    is_p1 = (game.player1_id == current_user.id)
+
+    if is_p1:
+        state["p1_proposal"] = stake
+        state["last_action"] = f"{current_user.username} proposed a stake of ₦{stake}."
+    else:
+        state["p2_proposal"] = stake
+        state["last_action"] = f"{current_user.username} proposed a stake of ₦{stake}."
+
+    # Check if proposals match
+    if state["p1_proposal"] == state["p2_proposal"] and state["p1_proposal"] is not None:
+        final_stake = state["p1_proposal"]
+        p1 = User.query.get(game.player1_id)
+        p2 = User.query.get(game.player2_id)
+
+        if not p1 or not p2 or p1.balance < final_stake or p2.balance < final_stake:
+            state["last_action"] = "Stake agreement failed due to insufficient wallet balances."
+            state["p1_proposal"] = None
+            state["p2_proposal"] = None
+            game.game_state = state
+            db.session.commit()
+            return jsonify({"status": "failed", "message": "Insufficient balance."})
+
+        # Debit wallets
+        debit_wallet(p1, final_stake, "GAME", description=f"Whot Stake (Room {room_id})")
+        debit_wallet(p2, final_stake, "GAME", description=f"Whot Stake (Room {room_id})")
+
+        # Deal cards
+        deck = whot_engine.create_deck()
+        p1_hand = [deck.pop() for _ in range(5)]
+        p2_hand = [deck.pop() for _ in range(5)]
+
+        discard_pile = []
+        while deck:
+            first_card = deck.pop()
+            if first_card["value"] not in (1, 2, 5, 8, 14, 20):
+                discard_pile = [first_card]
+                break
+            else:
+                deck.insert(0, first_card)
+
+        state["deck"] = deck
+        state["p1_hand"] = p1_hand
+        state["p2_hand"] = p2_hand
+        state["discard_pile"] = discard_pile
+        state["active_penalty_picks"] = 0
+        state["penalty_type"] = None
+        state["called_suit"] = None
+        state["last_action"] = f"Agreed on ₦{final_stake} stake! Match started. {p1.username} plays first."
+        state["turn_deadline"] = time.time() + 15.0
+
+        total_wagered = final_stake * 2
+        commission = total_wagered * 0.05
+        pool = total_wagered - commission
+
+        game.status = "active"
+        game.stake = float(final_stake)
+        game.pool = float(pool)
+        game.commission = float(commission)
+        game.active_turn_id = p1.id
+
+    game.game_state = state
+    db.session.commit()
+
+    return jsonify({"status": "ok"})
+
+
+@whot_bp.route("/game/<string:room_id>/leave", methods=["POST"])
+@csrf.exempt
+@login_required
+def http_leave_negotiation(room_id):
+    """Leave negotiation and cancel the game."""
+    game = WhotGame.query.filter_by(room_id=room_id).first()
+    if not game or game.status != "negotiating":
+        return jsonify({"error": "Game not found or not in negotiation."}), 400
+
+    game.status = "cancelled"
+    state = game.game_state
+    state["last_action"] = f"{current_user.username} left the room. Game cancelled."
+    game.game_state = state
+    db.session.commit()
+
+    return jsonify({"status": "cancelled"})
+
+
+@whot_bp.route("/game/<string:room_id>/play_card", methods=["POST"])
+@csrf.exempt
+@login_required
+def http_play_card(room_id):
+    """Play a card from hand."""
+    data = request.get_json() or {}
+    card_index = data.get("card_index")
+    called_shape = data.get("called_shape")
+
+    if card_index is None:
+        return jsonify({"error": "No card selected."}), 400
+
+    game = WhotGame.query.filter_by(room_id=room_id).first()
+    if not game or game.status != "active":
+        return jsonify({"error": "Game not found or not active."}), 400
+
+    if game.active_turn_id != current_user.id:
+        return jsonify({"error": "It is not your turn!"}), 400
+
+    state = game.game_state
+    is_p1 = (game.player1_id == current_user.id)
+    hand = state["p1_hand"] if is_p1 else state["p2_hand"]
+
+    if card_index < 0 or card_index >= len(hand):
+        return jsonify({"error": "Invalid card selected."}), 400
+
+    card = hand[card_index]
+    top_card = state["discard_pile"][-1]
+
+    if not whot_engine.is_card_playable(
+        card, top_card, state.get("called_suit"),
+        state.get("active_penalty_picks", 0), state.get("penalty_type")
+    ):
+        return jsonify({"error": "That card cannot be played."}), 400
+
+    hand.pop(card_index)
+    state["discard_pile"].append(card)
+
+    action_text = f"{current_user.username} played {card['suit']} {card['value']}."
+    val = card["value"]
+    next_turn_id = game.player2_id if is_p1 else game.player1_id
+    if game.is_bot_game and is_p1:
+        next_turn_id = 0
+
+    if val == 1 or val == 8:
+        next_turn_id = current_user.id
+        action_text += " (Plays again!)"
+    elif val == 2:
+        state["active_penalty_picks"] = state.get("active_penalty_picks", 0) + 2
+        state["penalty_type"] = 2
+        action_text += f" (Pick Two stacked! Penalty: {state['active_penalty_picks']})"
+    elif val == 5:
+        state["active_penalty_picks"] = state.get("active_penalty_picks", 0) + 3
+        state["penalty_type"] = 3
+        action_text += f" (Pick Three stacked! Penalty: {state['active_penalty_picks']})"
+    elif val == 14:
+        opp_hand = state["p1_hand"] if not is_p1 else state["p2_hand"]
+        if state["deck"]:
+            opp_hand.append(state["deck"].pop())
+        action_text += " (General Market - opponent draws 1 card!)"
+        state["called_suit"] = None
+    elif val == 20:
+        if not called_shape or called_shape not in whot_engine.SUITS:
+            # Put card back
+            hand.insert(card_index, card)
+            state["discard_pile"].pop()
+            return jsonify({"error": "Select shape call!"}), 400
+        state["called_suit"] = called_shape
+        state["active_penalty_picks"] = 0
+        state["penalty_type"] = None
+        action_text += f" (Whot wildcard! Called {called_shape.capitalize()}.)"
+    else:
+        state["called_suit"] = None
+
+    # Check win
+    if len(hand) == 0:
+        game.status = "completed"
+        game.winner_id = current_user.id
+        credit_wallet(current_user, game.pool, "WIN", description=f"Won Whot match (Room {room_id})")
+        action_text = f"Game Over! {current_user.username} won ₦{game.pool:,.2f}!"
+        notify_user(current_user.id, "Whot Victory!", f"You won ₦{game.pool:,.0f} in Whot room {room_id}!", "win")
+        log_audit("WHOT_WIN", f"User {current_user.username} won Whot match {room_id} (Stake: {game.stake}, Pool: {game.pool})", current_user.id)
+        state["last_action"] = action_text
+        game.game_state = state
+        db.session.commit()
+        return jsonify({"status": "win"})
+
+    game.active_turn_id = next_turn_id
+    state["last_action"] = action_text
+    state["turn_deadline"] = time.time() + 15.0
+    game.game_state = state
+    db.session.commit()
+
+    return jsonify({"status": "ok"})
+
+
+@whot_bp.route("/game/<string:room_id>/draw_card", methods=["POST"])
+@csrf.exempt
+@login_required
+def http_draw_card(room_id):
+    """Draw a card from the deck."""
+    game = WhotGame.query.filter_by(room_id=room_id).first()
+    if not game or game.status != "active":
+        return jsonify({"error": "Game not found or not active."}), 400
+
+    if game.active_turn_id != current_user.id:
+        return jsonify({"error": "It is not your turn!"}), 400
+
+    state = game.game_state
+    is_p1 = (game.player1_id == current_user.id)
+    hand = state["p1_hand"] if is_p1 else state["p2_hand"]
+
+    verify_deck_size_http(state)
+
+    action_text = ""
+    penalty_picks = state.get("active_penalty_picks", 0)
+    if penalty_picks > 0:
+        drawn = []
+        for _ in range(penalty_picks):
+            if state["deck"]:
+                drawn.append(state["deck"].pop())
+        hand.extend(drawn)
+        action_text = f"{current_user.username} drew {penalty_picks} penalty cards."
+        state["active_penalty_picks"] = 0
+        state["penalty_type"] = None
+    else:
+        if state["deck"]:
+            hand.append(state["deck"].pop())
+            action_text = f"{current_user.username} went to market (drew 1 card)."
+
+    next_turn_id = game.player2_id if is_p1 else game.player1_id
+    if game.is_bot_game and is_p1:
+        next_turn_id = 0
+    game.active_turn_id = next_turn_id
+
+    state["last_action"] = action_text
+    state["turn_deadline"] = time.time() + 15.0
+    game.game_state = state
+    db.session.commit()
+
+    return jsonify({"status": "ok"})
+
+
+@whot_bp.route("/game/<string:room_id>/forfeit", methods=["POST"])
+@csrf.exempt
+@login_required
+def http_forfeit_game(room_id):
+    """Forfeit the game — opponent wins the pool."""
+    game = WhotGame.query.filter_by(room_id=room_id).first()
+    if not game or game.status != "active":
+        return jsonify({"error": "Game not found or not active."}), 400
+
+    if current_user.id not in [game.player1_id, game.player2_id]:
+        return jsonify({"error": "Unauthorized."}), 403
+
+    game.status = "completed"
+    state = game.game_state
+
+    winner_id = game.player2_id if current_user.id == game.player1_id else game.player1_id
+    if game.is_bot_game:
+        winner_id = 0
+
+    if winner_id == 0:
+        game.winner_id = None
+        state["last_action"] = f"Game Over! {current_user.username} forfeited the match. Computer Bot wins."
+    else:
+        game.winner_id = winner_id
+        winner = User.query.get(winner_id)
+        if winner:
+            credit_wallet(winner, game.pool, "WIN", description=f"Won Whot match via forfeit (Room {room_id})")
+            state["last_action"] = f"Game Over! {current_user.username} forfeited. {winner.username} wins ₦{game.pool:,.2f}!"
+            notify_user(winner.id, "Whot Forfeit Victory!", f"Your opponent forfeited! You won ₦{game.pool:,.0f}!", "win")
+            log_audit("WHOT_WIN_FORFEIT", f"User {winner.username} won Whot match {room_id} via forfeit (Pool: {game.pool})", winner.id)
+
+    game.game_state = state
+    db.session.commit()
+
+    return jsonify({"status": "forfeited"})

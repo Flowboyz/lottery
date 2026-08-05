@@ -803,13 +803,16 @@
     }
 
     function proposeNegStake(stake) {
-        if (socket) {
-            try {
-                socket.emit("propose_stake", { room_id: roomId, stake: stake });
-            } catch (err) {
-                console.error("Failed to propose stake:", err);
-            }
-        }
+        fetch(`/whot/game/${roomId}/propose_stake`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stake: stake })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) showToast(data.error, "error");
+        })
+        .catch(err => console.error("Propose stake error:", err));
     }
 
     function leaveNegotiation() {
@@ -819,13 +822,10 @@
             icon: "🚪",
             isDanger: true,
             onConfirm: () => {
-                if (socket) {
-                    try {
-                        socket.emit("leave_negotiation", { room_id: roomId });
-                    } catch (err) {
-                        console.error("Failed to leave negotiation:", err);
-                    }
-                }
+                fetch(`/whot/game/${roomId}/leave`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                }).catch(() => {});
                 window.location.href = "/whot/";
             }
         });
@@ -838,13 +838,15 @@
             icon: "⚠️",
             isDanger: true,
             onConfirm: () => {
-                if (socket) {
-                    try {
-                        socket.emit("forfeit_game", { room_id: roomId });
-                    } catch (err) {
-                        console.error("Failed to emit forfeit:", err);
-                    }
-                }
+                fetch(`/whot/game/${roomId}/forfeit`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) showToast(data.error, "error");
+                })
+                .catch(err => console.error("Forfeit error:", err));
             }
         });
     }
@@ -935,44 +937,45 @@
         if (card.value === 20) {
             document.getElementById("wildcardSelector").style.display = "block";
         } else {
-            if (socket) {
-                try {
-                    socket.emit("play_card", {
-                        room_id: roomId,
-                        card_index: index
-                    });
-                } catch (err) {
-                    console.error("Failed to emit play_card:", err);
-                }
-            }
+            fetch(`/whot/game/${roomId}/play_card`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ card_index: index })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) showToast(data.error, "error");
+            })
+            .catch(err => console.error("Play card error:", err));
         }
     }
 
     function submitWhotCall(shape) {
         document.getElementById("wildcardSelector").style.display = "none";
-        if (socket) {
-            try {
-                socket.emit("play_card", {
-                    room_id: roomId,
-                    card_index: selectedPlayIndex,
-                    called_shape: shape
-                });
-            } catch (err) {
-                console.error("Failed to emit play_card for wildcard:", err);
-            }
-        }
+        fetch(`/whot/game/${roomId}/play_card`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ card_index: selectedPlayIndex, called_shape: shape })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) showToast(data.error, "error");
+        })
+        .catch(err => console.error("Whot call error:", err));
         selectedPlayIndex = null;
     }
 
     function triggerDraw() {
         if (activeTurnId !== myUserId) return;
-        if (socket) {
-            try {
-                socket.emit("draw_card", { room_id: roomId });
-            } catch (err) {
-                console.error("Failed to emit draw_card:", err);
-            }
-        }
+        fetch(`/whot/game/${roomId}/draw_card`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) showToast(data.error, "error");
+        })
+        .catch(err => console.error("Draw card error:", err));
     }
 
     function resetTurnTimer(isMyTurn) {
