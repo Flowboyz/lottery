@@ -226,50 +226,91 @@ def leaderboard():
 
     period = request.args.get("period", "weekly")
 
-    # Align leaderboard resets with West Africa Time (WAT) / Nigeria Timezone (UTC + 1)
-    wat_now = datetime.utcnow() + timedelta(hours=1)
-    if period == "daily":
-        start_wat = wat_now.replace(hour=0, minute=0, second=0, microsecond=0)
-    elif period == "monthly":
-        start_wat = wat_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    else:  # weekly: start of current calendar week (Monday)
-        wat_today = wat_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_wat = wat_today - timedelta(days=wat_now.weekday())
+    if period == "whot":
+        # Whot leaderboard: Rank by number of wins all-time, showing win counts
+        from app.models import WhotGame
+        whot_wins = db.session.query(
+            User.username,
+            func.count(WhotGame.id).label("wins"),
+            func.sum(WhotGame.pool).label("total_won")
+        ).join(User, User.id == WhotGame.winner_id).filter(
+            WhotGame.status.in_(["completed", "forfeited"])
+        ).group_by(User.id).order_by(
+            func.count(WhotGame.id).desc()
+        ).limit(20).all()
 
-    # Convert the WAT start time back to UTC for database queries
-    since = start_wat - timedelta(hours=1)
+        top_winners = [{"username": row.username, "wins": row.wins, "total_won": float(row.total_won or 0)} for row in whot_wins]
+    else:
+        # Align leaderboard resets with West Africa Time (WAT) / Nigeria Timezone (UTC + 1)
+        wat_now = datetime.utcnow() + timedelta(hours=1)
+        if period == "daily":
+            start_wat = wat_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif period == "monthly":
+            start_wat = wat_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:  # weekly: start of current calendar week (Monday)
+            wat_today = wat_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_wat = wat_today - timedelta(days=wat_now.weekday())
 
-    # Lottery wins
-    lottery_wins = db.session.query(
-        User.username,
-        func.count(Bet.id).label("wins"),
-        func.sum(Bet.payout).label("total_won"),
-    ).join(User).filter(
-        Bet.result == "WIN", Bet.created_at >= since,
-    ).group_by(User.id).all()
+        # Convert the WAT start time back to UTC for database queries
+        since = start_wat - timedelta(hours=1)
 
-    # Game wins (wheel, coinflip, scratchcard)
-    game_wins = db.session.query(
-        User.username,
-        func.count(GamePlay.id).label("wins"),
-        func.sum(GamePlay.payout).label("total_won"),
-    ).join(User).filter(
-        GamePlay.result == "WIN", GamePlay.created_at >= since,
-    ).group_by(User.id).all()
+        # Lottery wins
+        lottery_wins = db.session.query(
+            User.username,
+            func.count(Bet.id).label("wins"),
+            func.sum(Bet.payout).label("total_won"),
+        ).join(User).filter(
+            Bet.result == "WIN", Bet.created_at >= since,
+        ).group_by(User.id).all()
 
-    # Combine results
-    combined = defaultdict(lambda: {"wins": 0, "total_won": 0.0})
-    for row in lottery_wins:
-        combined[row.username]["wins"] += row.wins
-        combined[row.username]["total_won"] += float(row.total_won or 0)
-    for row in game_wins:
-        combined[row.username]["wins"] += row.wins
-        combined[row.username]["total_won"] += float(row.total_won or 0)
+        # Game wins (wheel, coinflip, scratchcard)
+        game_wins = db.session.query(
+            User.username,
+            func.count(GamePlay.id).label("wins"),
+            func.sum(GamePlay.payout).label("total_won"),
+        ).join(User).filter(
+            GamePlay.result == "WIN", GamePlay.created_at >= since,
+        ).group_by(User.id).all()
 
-    top_winners = sorted(
-        [{"username": k, "wins": v["wins"], "total_won": v["total_won"]} for k, v in combined.items()],
-        key=lambda x: x["total_won"], reverse=True
-    )[:20]
+        # Real-time Aviator wins
+        from app.models_games import AviatorEntry
+        aviator_wins = db.session.query(
+            User.username,
+            func.count(AviatorEntry.id).label("wins"),
+            func.sum(AviatorEntry.payout).label("total_won"),
+        ).join(User).filter(
+            AviatorEntry.result == "WIN", AviatorEntry.created_at >= since,
+        ).group_by(User.id).all()
+
+        # Whot game wins for this period
+        from app.models import WhotGame
+        whot_period_wins = db.session.query(
+            User.username,
+            func.count(WhotGame.id).label("wins"),
+            func.sum(WhotGame.pool).label("total_won"),
+        ).join(User, User.id == WhotGame.winner_id).filter(
+            WhotGame.status.in_(["completed", "forfeited"]), WhotGame.created_at >= since,
+        ).group_by(User.id).all()
+
+        # Combine results
+        combined = defaultdict(lambda: {"wins": 0, "total_won": 0.0})
+        for row in lottery_wins:
+            combined[row.username]["wins"] += row.wins
+            combined[row.username]["total_won"] += float(row.total_won or 0)
+        for row in game_wins:
+            combined[row.username]["wins"] += row.wins
+            combined[row.username]["total_won"] += float(row.total_won or 0)
+        for row in aviator_wins:
+            combined[row.username]["wins"] += row.wins
+            combined[row.username]["total_won"] += float(row.total_won or 0)
+        for row in whot_period_wins:
+            combined[row.username]["wins"] += row.wins
+            combined[row.username]["total_won"] += float(row.total_won or 0)
+
+        top_winners = sorted(
+            [{"username": k, "wins": v["wins"], "total_won": v["total_won"]} for k, v in combined.items()],
+            key=lambda x: x["total_won"], reverse=True
+        )[:20]
 
     # Top referrers
     referred = db.aliased(User)

@@ -53,6 +53,7 @@ def create_app(config_name=None):
     from app.aviator import aviator_bp
     from app.color import color_bp
     from app.telegram import telegram_bp
+    from app.whot import whot_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(game_bp)
@@ -65,6 +66,7 @@ def create_app(config_name=None):
     app.register_blueprint(aviator_bp)
     app.register_blueprint(color_bp)
     app.register_blueprint(telegram_bp)
+    app.register_blueprint(whot_bp)
     
 
     # Template context processors

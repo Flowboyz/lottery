@@ -83,6 +83,25 @@
             </div>
         </div>
 
+        <!-- Whot Multiplayer Stats -->
+        <div class="dash-section">
+            <h3 class="section-title">🎴 Whot Multiplayer</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Whot Wagered</div>
+                    <div class="stat-value">{{ naira(stats.total_whot_wagered) }}</div>
+                </div>
+                <div class="stat-card stat-green">
+                    <div class="stat-label">House Commission Earned</div>
+                    <div class="stat-value">{{ naira(stats.whot_commission) }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active Whot Matches</div>
+                    <div class="stat-value">{{ stats.active_whot_games }}</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Admin Navigation -->
         <div class="dash-section">
             <h3 class="section-title">Management</h3>

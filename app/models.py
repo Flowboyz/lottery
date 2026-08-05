@@ -334,3 +334,45 @@ class GamePlay(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref=db.backref("game_plays", lazy="dynamic"))
+
+
+# ---------------------------------------------------------------------------
+# Whot Game
+# ---------------------------------------------------------------------------
+class WhotGame(db.Model):
+    __tablename__ = "whot_games"
+
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.String(100), unique=True, nullable=False)
+    player1_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    player2_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    is_bot_game = db.Column(db.Boolean, default=False)
+    stake = db.Column(db.Float, default=0.0)
+    pool = db.Column(db.Float, default=0.0)
+    commission = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default="waiting") # waiting | active | completed | forfeited
+    winner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    active_turn_id = db.Column(db.Integer, nullable=True)
+    game_state_raw = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    player1 = db.relationship("User", foreign_keys=[player1_id], backref="whot_games_p1")
+    player2 = db.relationship("User", foreign_keys=[player2_id], backref="whot_games_p2")
+    winner = db.relationship("User", foreign_keys=[winner_id], backref="whot_games_won")
+
+    @property
+    def game_state(self):
+        import json
+        if self.game_state_raw:
+            try:
+                return json.loads(self.game_state_raw)
+            except Exception:
+                return {}
+        return {}
+
+    @game_state.setter
+    def game_state(self, val):
+        import json
+        self.game_state_raw = json.dumps(val)

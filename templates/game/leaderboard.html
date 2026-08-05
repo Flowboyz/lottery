@@ -18,6 +18,7 @@
                 <a href="{{ url_for('game.leaderboard', period='daily') }}" class="lb-period-btn {% if period == 'daily' %}active{% endif %}">Today</a>
                 <a href="{{ url_for('game.leaderboard', period='weekly') }}" class="lb-period-btn {% if period == 'weekly' %}active{% endif %}">This Week</a>
                 <a href="{{ url_for('game.leaderboard', period='monthly') }}" class="lb-period-btn {% if period == 'monthly' %}active{% endif %}">This Month</a>
+                <a href="{{ url_for('game.leaderboard', period='whot') }}" class="lb-period-btn {% if period == 'whot' %}active{% endif %}">Top Whot</a>
             </div>
 
             {% if top_winners %}
@@ -32,9 +33,17 @@
                     </div>
                     <div class="lb-info">
                         <div class="lb-name">{{ winner["username"] }}</div>
+                        {% if period != 'whot' %}
                         <div class="lb-sub">{{ winner["wins"] }} win{{ 's' if winner["wins"] != 1 else '' }}</div>
+                        {% endif %}
                     </div>
-                    <div class="lb-amount lb-win">{{ naira(winner["total_won"]) }}</div>
+                    <div class="lb-amount lb-win">
+                        {% if period == 'whot' %}
+                        {{ winner["wins"] }} Win{{ 's' if winner["wins"] != 1 else '' }}
+                        {% else %}
+                        {{ naira(winner["total_won"]) }}
+                        {% endif %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>

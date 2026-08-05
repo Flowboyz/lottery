@@ -12,7 +12,7 @@ from werkzeug.security import check_password_hash
 
 from app.extensions import db
 from app.models import (User, GamePlay, Transaction, Bet, WithdrawalRequest, PaymentRecord,
-                        AuditLog, Notification, GameSettings, Announcement, BankAccount)
+                        AuditLog, Notification, GameSettings, Announcement, BankAccount, WhotGame)
 from app.models_games import AviatorEntry
 from app.utils import (admin_required, superadmin_required, credit_wallet, debit_wallet,
                         notify_user, log_audit, format_money, send_email, admin_alert,
@@ -55,7 +55,22 @@ def dashboard():
     bet_users = {u.user_id for u in Bet.query.filter(Bet.created_at >= since_time).all()}
     gp_users = {u.user_id for u in GamePlay.query.filter(GamePlay.created_at >= since_time).all()}
     aviator_users = {u.user_id for u in AviatorEntry.query.filter(AviatorEntry.created_at >= since_time).all()}
-    active_users_today = len(bet_users.union(gp_users).union(aviator_users))
+    whot_p1_users = {g.player1_id for g in WhotGame.query.filter(WhotGame.created_at >= since_time).all()}
+    whot_p2_users = {g.player2_id for g in WhotGame.query.filter(WhotGame.created_at >= since_time).all() if g.player2_id is not None}
+    active_users_today = len(bet_users.union(gp_users).union(aviator_users).union(whot_p1_users).union(whot_p2_users))
+
+    # Whot stats
+    total_whot_wagered = float(db.session.query(db.func.sum(WhotGame.stake * 2)).filter(WhotGame.status.in_(["active", "completed", "forfeited"])).scalar() or 0.0)
+    whot_wagered_today = float(db.session.query(db.func.sum(WhotGame.stake * 2)).filter(WhotGame.status.in_(["active", "completed", "forfeited"]), WhotGame.created_at >= since_time).scalar() or 0.0)
+    
+    total_whot_payouts = float(db.session.query(db.func.sum(WhotGame.pool)).filter(WhotGame.status.in_(["completed", "forfeited"])).scalar() or 0.0)
+    whot_payouts_today = float(db.session.query(db.func.sum(WhotGame.pool)).filter(WhotGame.status.in_(["completed", "forfeited"]), WhotGame.created_at >= since_time).scalar() or 0.0)
+    
+    total_whot_commission = float(db.session.query(db.func.sum(WhotGame.commission)).filter(WhotGame.status.in_(["active", "completed", "forfeited"])).scalar() or 0.0)
+    whot_commission_today = float(db.session.query(db.func.sum(WhotGame.commission)).filter(WhotGame.status.in_(["active", "completed", "forfeited"]), WhotGame.created_at >= since_time).scalar() or 0.0)
+    
+    total_whot_plays = WhotGame.query.filter(WhotGame.status.in_(["active", "completed", "forfeited"])).count()
+    whot_plays_today = WhotGame.query.filter(WhotGame.status.in_(["active", "completed", "forfeited"]), WhotGame.created_at >= since_time).count()
 
     stats = dict(
         total_users=User.query.count(),
@@ -70,36 +85,43 @@ def dashboard():
         total_withdrawals=sum_txn("WITHDRAWAL"),
         withdrawals_today=sum_txn("WITHDRAWAL", today),
 
-        total_bets=Bet.query.count(),
-        bets_today=count_since(Bet, today),
+        total_bets=Bet.query.count() + total_whot_plays,
+        bets_today=count_since(Bet, today) + whot_plays_today,
         total_wagered=(db.session.query(db.func.sum(Bet.bet_amount)).scalar() or 0) +
-                      (db.session.query(db.func.sum(GamePlay.bet_amount)).scalar() or 0),
+                      (db.session.query(db.func.sum(GamePlay.bet_amount)).scalar() or 0) +
+                      total_whot_wagered,
         wagered_today=(db.session.query(db.func.sum(Bet.bet_amount)).filter(
             Bet.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0) +
                       (db.session.query(db.func.sum(GamePlay.bet_amount)).filter(
-            GamePlay.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0),
+            GamePlay.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0) +
+                      whot_wagered_today,
 
         total_payouts=(db.session.query(db.func.sum(Bet.payout)).filter(
             Bet.result == "WIN").scalar() or 0) +
                       (db.session.query(db.func.sum(GamePlay.payout)).filter(
-            GamePlay.result == "WIN").scalar() or 0),
+            GamePlay.result == "WIN").scalar() or 0) +
+                      total_whot_payouts,
         payouts_today=(db.session.query(db.func.sum(Bet.payout)).filter(
             Bet.result == "WIN",
             Bet.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0) +
                       (db.session.query(db.func.sum(GamePlay.payout)).filter(
             GamePlay.result == "WIN",
-            GamePlay.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0),
+            GamePlay.created_at >= datetime.combine(today, datetime.min.time())).scalar() or 0) +
+                      whot_payouts_today,
 
-        total_game_plays=GamePlay.query.count(),
-        game_plays_today=count_since(GamePlay, today),
+        total_game_plays=GamePlay.query.count() + total_whot_plays,
+        game_plays_today=count_since(GamePlay, today) + whot_plays_today,
 
         pending_withdrawals=WithdrawalRequest.query.filter_by(status="pending").count(),
         active_users_today=active_users_today,
+        total_whot_wagered=total_whot_wagered,
+        whot_commission=total_whot_commission,
+        active_whot_games=WhotGame.query.filter_by(status="active").count(),
     )
 
-    # Net profit = deposits - withdrawals - payouts + bets lost
-    stats["net_profit_today"] = stats["deposits_today"] - stats["withdrawals_today"] - stats["payouts_today"]
-    stats["net_profit_total"] = stats["total_deposits"] - stats["total_withdrawals"] - stats["total_payouts"]
+    # Net Profit = Total Wagered - Total Payouts (Gross Gaming Revenue / Platform Earnings)
+    stats["net_profit_today"] = stats["wagered_today"] - stats["payouts_today"]
+    stats["net_profit_total"] = stats["total_wagered"] - stats["total_payouts"]
 
     # Scan for backups
     import os
@@ -232,29 +254,39 @@ def user_detail(user_id):
     banks = BankAccount.query.filter_by(user_id=user_id).all()
     referrals = User.query.filter_by(referred_by=user_id).all()
 
+    # Whot user stats
+    whot_bets = WhotGame.query.filter(((WhotGame.player1_id == user_id) | (WhotGame.player2_id == user_id)) & WhotGame.status.in_(["active", "completed", "forfeited"])).count()
+    whot_wins = WhotGame.query.filter_by(winner_id=user_id).filter(WhotGame.status.in_(["completed", "forfeited"])).count()
+    whot_wagered = float(db.session.query(db.func.sum(WhotGame.stake)).filter(((WhotGame.player1_id == user_id) | (WhotGame.player2_id == user_id)) & WhotGame.status.in_(["active", "completed", "forfeited"])).scalar() or 0.0)
+    whot_won = float(db.session.query(db.func.sum(WhotGame.pool)).filter(WhotGame.winner_id == user_id).filter(WhotGame.status.in_(["completed", "forfeited"])).scalar() or 0.0)
+
     user_stats = dict(
         total_bets = (
             Bet.query.filter_by(user_id=user_id).count() +
             GamePlay.query.filter_by(user_id=user_id).count() +
-            AviatorEntry.query.filter_by(user_id=user_id).count()
+            AviatorEntry.query.filter_by(user_id=user_id).count() +
+            whot_bets
         ),
 
         total_wins = (
             Bet.query.filter_by(user_id=user_id, result="WIN").count() +
             GamePlay.query.filter_by(user_id=user_id, result="WIN").count() +
-            AviatorEntry.query.filter_by(user_id=user_id, result="WIN").count()
+            AviatorEntry.query.filter_by(user_id=user_id, result="WIN").count() +
+            whot_wins
         ),
 
         total_wagered = (
             (db.session.query(db.func.sum(Bet.bet_amount)).filter_by(user_id=user_id).scalar() or 0) +
             (db.session.query(db.func.sum(GamePlay.bet_amount)).filter_by(user_id=user_id).scalar() or 0) +
-            (db.session.query(db.func.sum(AviatorEntry.bet_amount)).filter_by(user_id=user_id).scalar() or 0)
+            (db.session.query(db.func.sum(AviatorEntry.bet_amount)).filter_by(user_id=user_id).scalar() or 0) +
+            whot_wagered
         ),
 
         total_won = (
             (db.session.query(db.func.sum(Bet.payout)).filter(Bet.user_id == user_id, Bet.result == "WIN").scalar() or 0) +
             (db.session.query(db.func.sum(GamePlay.payout)).filter(GamePlay.user_id == user_id, GamePlay.result == "WIN").scalar() or 0) +
-            (db.session.query(db.func.sum(AviatorEntry.payout)).filter(AviatorEntry.user_id == user_id, AviatorEntry.result == "WIN").scalar() or 0)
+            (db.session.query(db.func.sum(AviatorEntry.payout)).filter(AviatorEntry.user_id == user_id, AviatorEntry.result == "WIN").scalar() or 0) +
+            whot_won
         ),
 
         total_deposited = db.session.query(db.func.sum(Transaction.amount)).filter(
