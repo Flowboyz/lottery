@@ -2,14 +2,60 @@
 HTTP Routes for the Whot Card Game.
 Lobby list, room routing, and past histories.
 """
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
 from app.extensions import db, csrf
 from app.models import WhotGame, User
-from app.utils import get_setting
+from app.utils import get_setting, credit_wallet, notify_user
 
 whot_bp = Blueprint("whot", __name__, url_prefix="/whot")
+
+STALE_TIMEOUT_SECONDS = 600  # 10 minutes
+
+
+def cleanup_stale_whot_games(user_id):
+    """
+    Expire any negotiating or active Whot games for this user
+    that have been idle for more than STALE_TIMEOUT_SECONDS.
+    Refunds stakes for active games.
+    """
+    stale_games = WhotGame.query.filter(
+        ((WhotGame.player1_id == user_id) | (WhotGame.player2_id == user_id)),
+        WhotGame.status.in_(["negotiating", "active"])
+    ).all()
+
+    cleaned = 0
+    for game in stale_games:
+        elapsed = (datetime.utcnow() - (game.updated_at or game.created_at)).total_seconds()
+        if elapsed < STALE_TIMEOUT_SECONDS:
+            continue  # Still within the active window
+
+        # Refund stakes for active games (money was already debited)
+        if game.status == "active" and game.stake > 0:
+            p1 = User.query.get(game.player1_id)
+            if p1:
+                credit_wallet(p1, game.stake, "REFUND",
+                              description=f"Refund for expired Whot match (Room {game.room_id})")
+                notify_user(p1.id, "Whot Game Expired",
+                            f"Your Whot match (₦{game.stake:,.0f} stake) expired due to inactivity. Your stake has been refunded.",
+                            "info")
+
+            if game.player2_id and not game.is_bot_game:
+                p2 = User.query.get(game.player2_id)
+                if p2:
+                    credit_wallet(p2, game.stake, "REFUND",
+                                  description=f"Refund for expired Whot match (Room {game.room_id})")
+                    notify_user(p2.id, "Whot Game Expired",
+                                f"Your Whot match (₦{game.stake:,.0f} stake) expired due to inactivity. Your stake has been refunded.",
+                                "info")
+
+        game.status = "expired"
+        cleaned += 1
+
+    if cleaned:
+        db.session.commit()
 
 
 @whot_bp.route("/")
@@ -22,6 +68,9 @@ def index():
     if get_setting("MAINTENANCE_MODE", "off") == "on":
         flash("Whot is temporarily paused for maintenance.", "warning")
         return redirect(url_for("game.home"))
+
+    # Auto-expire stale games and refund trapped stakes
+    cleanup_stale_whot_games(current_user.id)
 
     # Load active user history
     history = WhotGame.query.filter(

@@ -156,14 +156,16 @@
                                     {% else %}
                                     <span class="role-badge role-user" style="background: rgba(220, 53, 69, 0.15); color: #dc3545;">LOSS</span>
                                     {% endif %}
-                                {% else %}
-                                    {% if g.status in ['active', 'negotiating'] %}
+                                {% elif g.status in ['active', 'negotiating'] %}
                                     <a href="/whot/game/{{ g.room_id }}" class="role-badge" style="background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); text-decoration: none; font-weight: bold; padding: 4px 8px; border-radius: 6px; font-size: 11px;">
                                         {{ g.status.upper() }} (REJOIN)
                                     </a>
-                                    {% else %}
+                                {% elif g.status == 'expired' %}
+                                    <span class="role-badge" style="background: rgba(255, 165, 0, 0.12); color: #e09400; font-weight: bold; padding: 4px 8px; border-radius: 6px; font-size: 11px;">⏳ EXPIRED</span>
+                                {% elif g.status == 'cancelled' %}
+                                    <span class="role-badge" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted); font-weight: bold; padding: 4px 8px; border-radius: 6px; font-size: 11px;">⛔ CANCELLED</span>
+                                {% else %}
                                     <span class="role-badge" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted);">{{ g.status.upper() }}</span>
-                                    {% endif %}
                                 {% endif %}
                             </td>
                         </tr>
