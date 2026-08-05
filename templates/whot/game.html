@@ -6,17 +6,16 @@
     .game-table {
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        height: calc(100vh - 120px);
-        max-height: 720px;
+        justify-content: flex-start;
+        flex-grow: 1; /* Take up available space but don't force it */
         background: #0d2315; /* Dark felt green poker theme */
-        border: 4px solid #1c472d;
-        border-radius: 20px;
-        padding: 16px;
+        border: 2px solid #1c472d;
+        border-radius: 12px;
+        padding: 8px;
         position: relative;
         overflow: hidden;
-        margin-top: 10px;
-        box-shadow: inset 0 0 100px rgba(0,0,0,0.6);
+        margin-top: 5px;
+        box-shadow: inset 0 0 50px rgba(0,0,0,0.6);
     }
 
     /* Opponent & User Areas */
@@ -25,8 +24,8 @@
         justify-content: space-between;
         align-items: center;
         background: rgba(0, 0, 0, 0.4);
-        padding: 10px 16px;
-        border-radius: 12px;
+        padding: 6px 12px;
+        border-radius: 8px;
         color: #fff;
     }
     .user-info {
@@ -46,8 +45,8 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 32px;
-        margin: 20px 0;
+        gap: 16px;
+        margin: auto 0; /* Auto margin pushes it to the vertical center */
         flex: 1;
         position: relative;
     }
@@ -230,44 +229,18 @@
             justify-content: flex-start;
             gap: 10px; /* no negative margin, easy to click! */
             padding: 10px 45px 10px 20px; /* right padding to leave space for indicator */
+            justify-content: flex-start;
+        }
+        .hand-cards {
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 10px 20px;
         }
         .hand-cards .whot-card {
             cursor: pointer;
             margin-left: 0 !important;
-            flex-shrink: 0; /* do not shrink cards on mobile */
+            flex-shrink: 0;
         }
-    }
-
-    /* Chevron Scroll Indicator */
-    .hand-indicator-chevron {
-        position: absolute;
-        right: 15px;
-        bottom: 50%;
-        transform: translateY(50%);
-        width: 36px;
-        height: 36px;
-        background: rgba(139, 0, 0, 0.95);
-        border: 2px solid var(--accent-primary);
-        border-radius: 50%;
-        color: white;
-        display: none; /* controlled dynamically */
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 18px;
-        z-index: 1000;
-        pointer-events: none;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-        animation: pulseIndicator 1.5s infinite;
-    }
-    @keyframes pulseIndicator {
-        0%, 100% { transform: translateY(50%) scale(1); opacity: 0.9; }
-        50% { transform: translateY(50%) scale(1.15); opacity: 1; }
-    }
-
-    @keyframes pulseBadge {
-        0%, 100% { opacity: 0.85; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.05); }
     }
 
     /* Called Suit Alert indicator */
@@ -292,7 +265,7 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(13, 35, 21, 0.95);
+        background: rgba(0, 0, 0, 0.95);
         border: 2px solid #8B0000;
         border-radius: 16px;
         padding: 16px;
@@ -431,17 +404,19 @@
         </div>
 
         <!-- Active Gameboard Section -->
-        <div id="gamePlayBoard" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
+        <div id="gamePlayBoard" style="display: none; flex-direction: column; justify-content: flex-start; height: 100%; gap: 10px;">
             <!-- Opponent Panel -->
             <div class="player-area">
-                <div class="user-info" style="display: flex; align-items: center; gap: 6px;">
-                    <span class="user-tag">Opponent</span>
-                    <strong id="oppNameText">{{ opponent.username }}</strong>
-                    <span id="oppTurnBadge" style="display: none; background: var(--accent-primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; animation: pulseBadge 1.2s infinite;">OPPONENT TURN 🔴</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <span class="user-tag">OPPONENT</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong id="oppNameText" style="font-size: 16px;">{{ opponent.username }}</strong>
+                        <span id="oppTurnBadge" style="display: none; background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; animation: pulseBadge 1.2s infinite;">TURN 🔴</span>
+                    </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div id="oppTurnLight" class="turn-light"></div>
-                    <div style="font-size: 13px;">Cards: <strong id="oppCardCountText" style="color: var(--accent-primary);">5</strong></div>
+                    <div style="font-size: 13px; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">Cards: <strong id="oppCardCountText" style="color: var(--accent-primary);">5</strong></div>
                 </div>
             </div>
 
@@ -472,25 +447,28 @@
 
             <!-- Player Panel -->
             <div class="player-area" style="margin-bottom: 8px;">
-                <div class="user-info" style="display: flex; align-items: center; gap: 6px;">
-                    <span class="user-tag">You</span>
-                    <strong>{{ current_user.username }}</strong>
-                    <span id="myTurnBadge" style="display: none; background: #28a745; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; animation: pulseBadge 1.2s infinite;">YOUR TURN 🟢</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <span class="user-tag" style="color: #28a745;">YOU</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong style="font-size: 16px;">{{ current_user.username }}</strong>
+                        <span id="myTurnBadge" style="display: none; background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; animation: pulseBadge 1.2s infinite;">YOUR TURN 🟢</span>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
                     <button id="soundToggleBtn" onclick="toggleSound()" style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: bold; cursor: pointer;">🔊 On</button>
                     <button id="forfeitBtn" onclick="triggerForfeit()" style="background: rgba(220, 53, 69, 0.15); color: #ff4d5a; border: 1px solid rgba(220, 53, 69, 0.4); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: all 0.2s;">🏳️ Forfeit</button>
-                    <div id="myTurnLight" class="turn-light"></div>
-                    <div id="timerText" style="font-size: 16px; font-weight: bold; color: var(--accent-primary);">15s</div>
+                    <div style="display: flex; align-items: center; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 4px 8px; gap: 6px;">
+                        <div id="myTurnLight" class="turn-light" style="margin:0;"></div>
+                        <span id="timerText" style="font-size: 14px; font-weight: bold; color: var(--accent-primary);">15s</span>
+                    </div>
                 </div>
             </div>
 
             <!-- Player Hand Container -->
-            <div class="hand-container" style="position: relative;" onscroll="handleHandScroll(this)">
+            <div class="hand-container" id="handContainer">
                 <div class="hand-cards" id="playerHandCards">
-                    <!-- Cards will render here -->
+                    <!-- Cards injected here -->
                 </div>
-                <div id="handScrollIndicator" class="hand-indicator-chevron">&gt;</div>
             </div>
         </div>
     </div>
@@ -501,11 +479,11 @@
     <h4 style="margin: 0 0 6px; color: white;">Whot Wildcard!</h4>
     <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 10px;">Select Shape to Call</p>
     <div class="wildcard-grid">
-        <button class="wildcard-option" onclick="submitWhotCall('circle')">🟢<br><span style="font-size:10px;">O</span></button>
-        <button class="wildcard-option" onclick="submitWhotCall('triangle')">🔴<br><span style="font-size:10px;">▲</span></button>
-        <button class="wildcard-option" onclick="submitWhotCall('cross')">🔵<br><span style="font-size:10px;">+</span></button>
-        <button class="wildcard-option" onclick="submitWhotCall('star')">🟡<br><span style="font-size:10px;">★</span></button>
-        <button class="wildcard-option" onclick="submitWhotCall('square')">⚫<br><span style="font-size:10px;">■</span></button>
+        <button class="wildcard-option" onclick="submitWhotCall('circle')"><div class="card-center-symbol suit-circle" style="font-size: 28px;"></div><span style="font-size:11px;">Circle</span></button>
+        <button class="wildcard-option" onclick="submitWhotCall('triangle')"><div class="card-center-symbol suit-triangle" style="font-size: 28px;"></div><span style="font-size:11px;">Triangle</span></button>
+        <button class="wildcard-option" onclick="submitWhotCall('cross')"><div class="card-center-symbol suit-cross" style="font-size: 28px;"></div><span style="font-size:11px;">Cross</span></button>
+        <button class="wildcard-option" onclick="submitWhotCall('star')"><div class="card-center-symbol suit-star" style="font-size: 28px;"></div><span style="font-size:11px;">Star</span></button>
+        <button class="wildcard-option" onclick="submitWhotCall('square')"><div class="card-center-symbol suit-square" style="font-size: 28px;"></div><span style="font-size:11px;">Square</span></button>
     </div>
 </div>
 
@@ -759,6 +737,13 @@
 
 
     function proposeNegStake(stake) {
+        const btn = document.getElementById(`negBtn${stake}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = "0.6";
+            btn.innerText = "Wait...";
+        }
+        
         fetch(`/whot/game/${roomId}/propose_stake`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -767,8 +752,20 @@
         .then(r => r.json())
         .then(data => {
             if (data.error) showToast(data.error, "error");
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.innerText = `₦${stake.toLocaleString()}`;
+            }
         })
-        .catch(err => console.error("Propose stake error:", err));
+        .catch(err => {
+            console.error("Propose stake error:", err);
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.innerText = `₦${stake.toLocaleString()}`;
+            }
+        });
     }
 
     function leaveNegotiation() {
@@ -829,33 +826,13 @@
         hand.forEach((card, index) => {
             const cardEl = createCardElement(card);
             cardEl.onclick = () => selectCardToPlay(card, index);
+            cardEl.draggable = true;
+            cardEl.ondragstart = (e) => {
+                e.dataTransfer.setData("cardIndex", index);
+                e.dataTransfer.setData("cardObj", JSON.stringify(card));
+            };
             handCards.appendChild(cardEl);
         });
-
-        // Trigger horizontal scroll chevron indicator display check
-        setTimeout(() => {
-            const indicator = document.getElementById("handScrollIndicator");
-            if (indicator) {
-                // If scroll width is larger than view width, show chevron indicator
-                if (handContainer.scrollWidth > handContainer.clientWidth + 5) {
-                    indicator.style.display = "flex";
-                } else {
-                    indicator.style.display = "none";
-                }
-            }
-        }, 150);
-    }
-
-    function handleHandScroll(el) {
-        const indicator = document.getElementById("handScrollIndicator");
-        if (indicator) {
-            // If user scrolled to the end, hide the scroll chevron indicator
-            if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) {
-                indicator.style.display = "none";
-            } else {
-                indicator.style.display = "flex";
-            }
-        }
     }
 
     function createCardElement(card) {
@@ -987,7 +964,30 @@
         
         modal.style.display = "flex";
     }
+    // Make Discard pile accept drops
+    const discardContainer = document.getElementById("discardPileContainer");
+    if (discardContainer) {
+        discardContainer.ondragover = (e) => e.preventDefault(); // allow drop
+        discardContainer.ondrop = (e) => {
+            e.preventDefault();
+            const idxStr = e.dataTransfer.getData("cardIndex");
+            const objStr = e.dataTransfer.getData("cardObj");
+            if (idxStr !== "" && objStr !== "") {
+                selectCardToPlay(JSON.parse(objStr), parseInt(idxStr));
+            }
+        };
+    }
 
+    // Convert vertical mouse wheel scrolling into horizontal scrolling for the hand on laptops
+    const handScrollContainer = document.getElementById("handContainer");
+    if (handScrollContainer) {
+        handScrollContainer.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                handScrollContainer.scrollLeft += e.deltaY;
+            }
+        });
+    }
     // Sound system configuration
     const soundEnabledKey = "whot_sound_enabled";
     let isSoundEnabled = localStorage.getItem(soundEnabledKey) !== "false";

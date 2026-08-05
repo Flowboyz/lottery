@@ -123,7 +123,7 @@ button { font-family: inherit; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: max(10px, env(safe-area-inset-top, 10px)) 20px 10px 20px;
     position: fixed;
     top: 0;
     left: 0;
@@ -1893,26 +1893,30 @@ select.small-input { width: auto; cursor: pointer; padding-right: 22px; }
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 8px; /* Reduced padding */
+    gap: 4px; /* Slight gap */
 }
 
-.mobile-balance {
+.mobile-balance, .mobile-top-bar .balance {
     color: #fff;
-    font-size: 14px;
+    font-size: 11px; /* Smaller font */
+    white-space: nowrap;
 }
 
 .btn-settings {
     background-color: #374151;
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 6px 10px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 12px; /* Smaller font */
     cursor: pointer;
 }
 
-
-
+.mobile-top-bar .claim-btn, .mobile-top-bar a, .mobile-top-bar button {
+    padding: 6px 10px;
+    font-size: 11px;
+}
 /* ===== Accessibility ===== */
 /* Hide desktop elements on mobile */
 @media (max-width: 768px) {
