@@ -426,12 +426,16 @@ def game_status(room_id):
 
         # 2. If it's the bot's turn, play it now
         if game.is_bot_game and game.active_turn_id == 0:
-            # Bot may chain multiple turns (hold-on / suspend cards)
-            max_chain = 10  # Safety limit to prevent infinite loops
-            for _ in range(max_chain):
-                bot_won = handle_bot_turn_http(game)
-                if bot_won or game.active_turn_id != 0:
-                    break
+            # Add artificial delay: don't let bot play instantly if its turn just started.
+            # Give the UI at least 1.5 seconds to show the player's last move.
+            turn_time_elapsed = 15.0 - (game.game_state.get("turn_deadline", 0) - time.time())
+            if turn_time_elapsed >= 1.5:
+                # Bot may chain multiple turns (hold-on / suspend cards)
+                max_chain = 10  # Safety limit to prevent infinite loops
+                for _ in range(max_chain):
+                    bot_won = handle_bot_turn_http(game)
+                    if bot_won or game.active_turn_id != 0:
+                        break
 
     # Re-read state after any modifications
     state = game.game_state
@@ -474,6 +478,8 @@ def game_status(room_id):
         "draw_deck_count": len(state.get("deck", [])) if state.get("deck") is not None else 0,
         "winner_id": game.winner_id,
         "is_bot_game": game.is_bot_game,
+        "turn_deadline": state.get("turn_deadline", 0),
+        "server_time": time.time(),
         "updated_at": game.updated_at.isoformat() if game.updated_at else ""
     }
     return payload

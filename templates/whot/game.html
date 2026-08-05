@@ -720,7 +720,7 @@
         document.getElementById("oppTurnBadge").style.display = !isMyTurn ? "inline-block" : "none";
         
         // 2. Start Turn Timer countdown
-        resetTurnTimer(isMyTurn);
+        resetTurnTimer(isMyTurn, state.turn_deadline, state.server_time);
 
         // 3. Update stats and logs
         document.getElementById("oppCardCountText").innerText = state.opp_card_count;
@@ -945,6 +945,7 @@
             .then(r => r.json())
             .then(data => {
                 if (data.error) showToast(data.error, "error");
+                else pollGameStatus();
             })
             .catch(err => console.error("Play card error:", err));
         }
@@ -960,6 +961,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.error) showToast(data.error, "error");
+            else pollGameStatus();
         })
         .catch(err => console.error("Whot call error:", err));
         selectedPlayIndex = null;
@@ -974,15 +976,21 @@
         .then(r => r.json())
         .then(data => {
             if (data.error) showToast(data.error, "error");
+            else pollGameStatus();
         })
         .catch(err => console.error("Draw card error:", err));
     }
 
-    function resetTurnTimer(isMyTurn) {
+    function resetTurnTimer(isMyTurn, deadline, serverTime) {
         clearInterval(turnTimer);
         const timerEl = document.getElementById("timerText");
         
-        countdownSecs = 15;
+        if (deadline && serverTime) {
+            countdownSecs = Math.max(0, Math.floor(deadline - serverTime));
+        } else {
+            countdownSecs = 15;
+        }
+
         timerEl.innerText = `${countdownSecs}s`;
         
         if (isMyTurn) {
@@ -993,14 +1001,12 @@
         
         turnTimer = setInterval(() => {
             countdownSecs--;
+            if (countdownSecs < 0) countdownSecs = 0;
             timerEl.innerText = `${countdownSecs}s`;
             
             if (countdownSecs <= 0) {
                 clearInterval(turnTimer);
-                if (isMyTurn) {
-                    // Force a draw automatically if it's our turn
-                    triggerDraw();
-                }
+                // Server handles auto-draw timeouts on poll, so no need to triggerDraw() client-side anymore
             }
         }, 1000);
     }
