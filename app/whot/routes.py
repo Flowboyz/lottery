@@ -15,6 +15,10 @@ whot_bp = Blueprint("whot", __name__, url_prefix="/whot")
 @whot_bp.route("/")
 @login_required
 def index():
+    if get_setting("WHOT_ENABLED", "1") == "0":
+        flash("Whot is temporarily disabled by admin.", "warning")
+        return redirect(url_for("game.home"))
+
     if get_setting("MAINTENANCE_MODE", "off") == "on":
         flash("Whot is temporarily paused for maintenance.", "warning")
         return redirect(url_for("game.home"))
@@ -45,6 +49,10 @@ def index():
 @whot_bp.route("/game/<string:room_id>")
 @login_required
 def game_room(room_id):
+    if get_setting("WHOT_ENABLED", "1") == "0":
+        flash("Whot is temporarily disabled by admin.", "warning")
+        return redirect(url_for("game.home"))
+
     if get_setting("MAINTENANCE_MODE", "off") == "on":
         flash("Whot is temporarily paused for maintenance.", "warning")
         return redirect(url_for("game.home"))
@@ -91,6 +99,9 @@ def game_room(room_id):
 @csrf.exempt
 @login_required
 def create_challenge_link():
+    if get_setting("WHOT_ENABLED", "1") == "0":
+        return {"error": "Whot is temporarily disabled by admin."}, 400
+
     if current_user.balance < 500:
         return {"error": "Minimum balance of ₦500 required to host a challenge."}, 400
 
@@ -132,6 +143,10 @@ def create_challenge_link():
 
 @whot_bp.route("/challenge/join/<string:room_id>")
 def join_challenge_link(room_id):
+    if get_setting("WHOT_ENABLED", "1") == "0":
+        flash("Whot is temporarily disabled by admin.", "warning")
+        return redirect(url_for("game.home"))
+
     game = WhotGame.query.filter_by(room_id=room_id).first()
     if not game:
         flash("Invitation link not found or expired.", "error")

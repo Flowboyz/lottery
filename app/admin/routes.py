@@ -644,6 +644,9 @@ def game_settings():
             "LUDO_PAYOUT_SEVEN":      ("Ludo Lucky 7 Payout Multiplier",  request.form.get("ludo_payout_seven")),
             "MAINTENANCE_MODE": ("Maintenance Mode", "on" if request.form.get("maintenance_mode") == "on" else "off"),
             "DEMO_MODE": ("Demo Mode Notice", "on" if request.form.get("demo_mode") == "on" else "off"),
+            # Whot
+            "WHOT_ENABLED":            ("Whot Enabled (1=yes, 0=no)", request.form.get("whot_enabled")),
+            "WHOT_COMMISSION_PERCENT": ("Whot Commission %",         request.form.get("whot_commission_percent")),
         }
 
         for key, (label, value) in settings_map.items():
@@ -680,6 +683,7 @@ def game_settings():
         "LUDO_ENABLED": 1, "LUDO_MIN_BET": 50, "LUDO_MAX_BET": 50000,
         "LUDO_PAYOUT_UNDER_OVER": 1.9, "LUDO_PAYOUT_SEVEN": 5.5,
         "DEMO_MODE": "on",
+        "WHOT_ENABLED": 1, "WHOT_COMMISSION_PERCENT": 5,
     }
     for key, default in defaults.items():
         settings[key] = get_setting(key, default)
