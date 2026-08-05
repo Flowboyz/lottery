@@ -794,13 +794,14 @@
             icon: "⚠️",
             isDanger: true,
             onConfirm: () => {
-                fetch(`/whot/game/${roomId}/forfeit`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" }
-                })
+                fetch(`/whot/game/${roomId}/forfeit`, { method: "POST" })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.error) showToast(data.error, "error");
+                    if (data.status === "forfeited") {
+                        window.location.href = "/whot/";
+                    } else {
+                        showToast(data.error || "Failed to forfeit.", "error");
+                    }
                 })
                 .catch(err => console.error("Forfeit error:", err));
             }
