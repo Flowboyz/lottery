@@ -783,6 +783,8 @@
     pollGameStatus();
     pollInterval = setInterval(pollGameStatus, 1500);
 
+    // Additional socket listeners (guarded, best-effort)
+    if (socket) {
         socket.on("game_error", (data) => {
             showToast(data.message, "error");
         });
