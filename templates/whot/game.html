@@ -607,53 +607,70 @@
         }
 
         socket.on("whot_negotiate_state", (state) => {
-            // Show negotiation screen and hide game felt
-            document.getElementById("gamePlayBoard").style.display = "none";
-            document.getElementById("negotiationBoard").style.display = "flex";
+            handleNegotiationUpdate(state);
+        });
 
-            // Update P1 details
-            document.getElementById("negP1Name").innerText = state.p1_username;
-            document.getElementById("negP1Bal").innerText = `Bal: ₦${state.p1_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-            document.getElementById("negP1PropText").innerText = state.p1_proposal ? `₦${state.p1_proposal.toLocaleString()}` : "Pending...";
+        socket.on("whot_state", (state) => {
+            handleGameplayUpdate(state);
+        });
 
-            // Update P2 details
-            if (!state.p2_id) {
-                document.getElementById("negP2Name").innerText = "Waiting for Friend...";
-                document.getElementById("negP2Bal").innerText = "Bal: --";
-                document.getElementById("negP2PropText").innerText = "Pending...";
-                
-                // Show invite link section
-                const inviteSection = document.getElementById("gameInviteLinkSection");
-                if (inviteSection) {
-                    inviteSection.style.display = "block";
-                    const inviteInput = document.getElementById("gameInviteInput");
-                    if (inviteInput) {
-                        inviteInput.value = `${window.location.origin}/whot/challenge/join/${roomId}`;
-                    }
-                }
-            } else {
-                document.getElementById("negP2Name").innerText = state.p2_username;
-                document.getElementById("negP2Bal").innerText = `Bal: ₦${state.p2_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-                document.getElementById("negP2PropText").innerText = state.p2_proposal ? `₦${state.p2_proposal.toLocaleString()}` : "Pending...";
-                
-                // Hide invite link section
-                const inviteSection = document.getElementById("gameInviteLinkSection");
-                if (inviteSection) {
-                    inviteSection.style.display = "none";
+        socket.on("opponent_left", (data) => {
+            showToast(data.message, "error");
+            setTimeout(() => {
+                window.location.href = "/whot/";
+            }, 2000);
+        });
+    }
+
+    function handleNegotiationUpdate(state) {
+        // Show negotiation screen and hide game felt
+        document.getElementById("gamePlayBoard").style.display = "none";
+        document.getElementById("negotiationBoard").style.display = "flex";
+
+        // Update P1 details
+        document.getElementById("negP1Name").innerText = state.p1_username;
+        document.getElementById("negP1Bal").innerText = `Bal: ₦${state.p1_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        document.getElementById("negP1PropText").innerText = state.p1_proposal ? `₦${state.p1_proposal.toLocaleString()}` : "Pending...";
+
+        // Update P2 details
+        if (!state.p2_id) {
+            document.getElementById("negP2Name").innerText = "Waiting for Friend...";
+            document.getElementById("negP2Bal").innerText = "Bal: --";
+            document.getElementById("negP2PropText").innerText = "Pending...";
+            
+            // Show invite link section
+            const inviteSection = document.getElementById("gameInviteLinkSection");
+            if (inviteSection) {
+                inviteSection.style.display = "block";
+                const inviteInput = document.getElementById("gameInviteInput");
+                if (inviteInput) {
+                    inviteInput.value = `${window.location.origin}/whot/challenge/join/${roomId}`;
                 }
             }
+        } else {
+            document.getElementById("negP2Name").innerText = state.p2_username;
+            document.getElementById("negP2Bal").innerText = `Bal: ₦${state.p2_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById("negP2PropText").innerText = state.p2_proposal ? `₦${state.p2_proposal.toLocaleString()}` : "Pending...";
+            
+            // Hide invite link section
+            const inviteSection = document.getElementById("gameInviteLinkSection");
+            if (inviteSection) {
+                inviteSection.style.display = "none";
+            }
+        }
 
-            // Update action logs
-            document.getElementById("negActionLog").innerText = state.last_action;
+        // Update action logs
+        document.getElementById("negActionLog").innerText = state.last_action;
 
-            // Determine if options should be disabled based on balance limit checks
-            const myBal = (myUserId === state.p1_id) ? state.p1_balance : state.p2_balance;
-            const oppBal = (myUserId === state.p1_id) ? state.p2_balance : state.p1_balance;
-            const minAllowed = Math.min(myBal, oppBal);
+        // Determine if options should be disabled based on balance limit checks
+        const myBal = (myUserId === state.p1_id) ? state.p1_balance : state.p2_balance;
+        const oppBal = (myUserId === state.p1_id) ? state.p2_balance : state.p1_balance;
+        const minAllowed = Math.min(myBal, oppBal);
 
-            // Grey out option buttons if stake exceeds either player's balance
-            [500, 1000, 2000, 5000].forEach(stake => {
-                const btn = document.getElementById(`negBtn${stake}`);
+        // Grey out option buttons if stake exceeds either player's balance
+        [500, 1000, 2000, 5000].forEach(stake => {
+            const btn = document.getElementById(`negBtn${stake}`);
+            if (btn) {
                 if (stake > minAllowed) {
                     btn.disabled = true;
                     btn.style.opacity = "0.3";
@@ -665,79 +682,106 @@
                     btn.style.cursor = "pointer";
                     btn.innerText = `₦${stake.toLocaleString()}`;
                 }
-            });
-
-            // Highlight chosen stake button
-            const myProp = (myUserId === state.p1_id) ? state.p1_proposal : state.p2_proposal;
-            document.querySelectorAll(".neg-stake-btn").forEach(btn => btn.classList.remove("selected"));
-            if (myProp) {
-                const activeBtn = document.getElementById(`negBtn${myProp}`);
-                if (activeBtn) activeBtn.classList.add("selected");
             }
         });
 
-        socket.on("whot_state", (state) => {
-            // Agreed/Active: Hide negotiation board, show game board
-            document.getElementById("negotiationBoard").style.display = "none";
-            document.getElementById("gamePlayBoard").style.display = "flex";
+        // Highlight chosen stake button
+        const myProp = (myUserId === state.p1_id) ? state.p1_proposal : state.p2_proposal;
+        document.querySelectorAll(".neg-stake-btn").forEach(btn => btn.classList.remove("selected"));
+        if (myProp) {
+            const activeBtn = document.getElementById(`negBtn${myProp}`);
+            if (activeBtn) activeBtn.classList.add("selected");
+        }
+    }
 
-            // Trigger corresponding Whot game audio sound effect
-            handleActionSound(state);
+    function handleGameplayUpdate(state) {
+        // Agreed/Active: Hide negotiation board, show game board
+        document.getElementById("negotiationBoard").style.display = "none";
+        document.getElementById("gamePlayBoard").style.display = "flex";
 
-            // 1. Update turns, lights, and badges
-            const isMyTurn = (state.active_turn_id === myUserId);
-            if (state.active_turn_id !== activeTurnId) {
-                if (isMyTurn) {
-                    showToast("🟢 Your Turn to Play!");
-                } else {
-                    showToast("🔴 Opponent's Turn...");
+        // Trigger corresponding Whot game audio sound effect
+        handleActionSound(state);
+
+        // 1. Update turns, lights, and badges
+        const isMyTurn = (state.active_turn_id === myUserId);
+        if (state.active_turn_id !== activeTurnId) {
+            if (isMyTurn) {
+                showToast("🟢 Your Turn to Play!");
+            } else {
+                showToast("🔴 Opponent's Turn...");
+            }
+        }
+        activeTurnId = state.active_turn_id;
+        
+        document.getElementById("myTurnLight").className = isMyTurn ? "turn-light active" : "turn-light";
+        document.getElementById("oppTurnLight").className = !isMyTurn ? "turn-light active" : "turn-light";
+        
+        document.getElementById("myTurnBadge").style.display = isMyTurn ? "inline-block" : "none";
+        document.getElementById("oppTurnBadge").style.display = !isMyTurn ? "inline-block" : "none";
+        
+        // 2. Start Turn Timer countdown
+        resetTurnTimer(isMyTurn);
+
+        // 3. Update stats and logs
+        document.getElementById("oppCardCountText").innerText = state.opp_card_count;
+        document.getElementById("deckCountText").innerText = state.draw_deck_count;
+        document.getElementById("actionLogText").innerText = state.last_action;
+
+        // 4. Update Whot Called Shape alert
+        const alertBox = document.getElementById("calledSuitAlert");
+        if (state.called_suit) {
+            document.getElementById("calledSuitText").innerText = state.called_suit;
+            alertBox.style.display = "block";
+        } else {
+            alertBox.style.display = "none";
+        }
+
+        // 5. Render Discard pile card on top
+        renderDiscardTopCard(state.top_card);
+
+        // 6. Render Player Hand
+        renderPlayerHand(state.my_hand);
+
+        // 7. Check Game Over
+        if (state.status === "completed") {
+            clearInterval(turnTimer);
+            showToast(state.last_action, state.winner_id === myUserId ? "success" : "info");
+            showGameOver(state);
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // HTTP Polling Fallback Loop (1.5s)
+    // Guarantees real-time sync across multi-process WSGI workers
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let lastActionLog = null;
+    let pollInterval = null;
+
+    async function pollGameStatus() {
+        try {
+            const res = await fetch(`/whot/game/${roomId}/status`);
+            if (res.status === 200) {
+                const state = await res.json();
+                
+                // Track update fingerprint
+                const stateKey = `${state.status}_${state.last_action}_${state.active_turn_id}`;
+                if (stateKey !== lastActionLog) {
+                    lastActionLog = stateKey;
+                    if (state.status === "negotiating") {
+                        handleNegotiationUpdate(state);
+                    } else {
+                        handleGameplayUpdate(state);
+                    }
                 }
             }
-            activeTurnId = state.active_turn_id;
-            
-            document.getElementById("myTurnLight").className = isMyTurn ? "turn-light active" : "turn-light";
-            document.getElementById("oppTurnLight").className = !isMyTurn ? "turn-light active" : "turn-light";
-            
-            document.getElementById("myTurnBadge").style.display = isMyTurn ? "inline-block" : "none";
-            document.getElementById("oppTurnBadge").style.display = !isMyTurn ? "inline-block" : "none";
-            
-            // 2. Start Turn Timer countdown
-            resetTurnTimer(isMyTurn);
+        } catch (e) {
+            console.warn("[Whot Poll] Network status query failed:", e);
+        }
+    }
 
-            // 3. Update stats and logs
-            document.getElementById("oppCardCountText").innerText = state.opp_card_count;
-            document.getElementById("deckCountText").innerText = state.draw_deck_count;
-            document.getElementById("actionLogText").innerText = state.last_action;
-
-            // 4. Update Whot Called Shape alert
-            const alertBox = document.getElementById("calledSuitAlert");
-            if (state.called_suit) {
-                document.getElementById("calledSuitText").innerText = state.called_suit;
-                alertBox.style.display = "block";
-            } else {
-                alertBox.style.display = "none";
-            }
-
-            // 5. Render Discard pile card on top
-            renderDiscardTopCard(state.top_card);
-
-            // 6. Render Player Hand
-            renderPlayerHand(state.my_hand);
-
-            // 7. Check Game Over
-            if (state.status === "completed") {
-                clearInterval(turnTimer);
-                showToast(state.last_action, state.winner_id === myUserId ? "success" : "info");
-                showGameOver(state);
-            }
-        });
-
-        socket.on("opponent_left", (data) => {
-            showToast(data.message, "error");
-            setTimeout(() => {
-                window.location.href = "/whot/";
-            }, 2000);
-        });
+    // Initialize immediate poll & start interval
+    pollGameStatus();
+    pollInterval = setInterval(pollGameStatus, 1500);
 
         socket.on("game_error", (data) => {
             showToast(data.message, "error");

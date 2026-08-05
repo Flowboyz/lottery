@@ -204,3 +204,58 @@ def join_challenge_link(room_id):
         }, room=game.room_id)
 
     return redirect(url_for("whot.game_room", room_id=room_id))
+
+
+@whot_bp.route("/game/<string:room_id>/status")
+@login_required
+def game_status(room_id):
+    game = WhotGame.query.filter_by(room_id=room_id).first()
+    if not game:
+        return {"error": "Game not found"}, 404
+
+    if game.player1_id != current_user.id and game.player2_id != current_user.id:
+        return {"error": "Unauthorized"}, 403
+
+    state = game.game_state
+
+    # Negotiation phase status
+    if game.status == "negotiating":
+        payload = {
+            "status": game.status,
+            "p1_id": state.get("p1_id"),
+            "p2_id": state.get("p2_id"),
+            "p1_username": state.get("p1_username"),
+            "p2_username": state.get("p2_username"),
+            "p1_balance": state.get("p1_balance", 0.0),
+            "p2_balance": state.get("p2_balance", 0.0),
+            "p1_proposal": state.get("p1_proposal"),
+            "p2_proposal": state.get("p2_proposal"),
+            "last_action": state.get("last_action"),
+            "updated_at": game.updated_at.isoformat() if game.updated_at else ""
+        }
+        return payload
+
+    # Active/Completed/Forfeited phase status
+    is_p1 = (game.player1_id == current_user.id)
+    my_hand = state.get("p1_hand", []) if is_p1 else state.get("p2_hand", [])
+    opp_hand = state.get("p2_hand", []) if is_p1 else state.get("p1_hand", [])
+    opp_card_count = len(opp_hand) if opp_hand else 0
+
+    payload = {
+        "status": game.status,
+        "stake": game.stake,
+        "pool": game.pool,
+        "active_turn_id": game.active_turn_id,
+        "my_hand": my_hand,
+        "opp_card_count": opp_card_count,
+        "top_card": state.get("discard_pile", [None])[-1] if state.get("discard_pile") else None,
+        "called_suit": state.get("called_suit"),
+        "active_penalty_picks": state.get("active_penalty_picks", 0),
+        "penalty_type": state.get("penalty_type"),
+        "last_action": state.get("last_action"),
+        "draw_deck_count": len(state.get("deck", [])) if state.get("deck") is not None else 0,
+        "winner_id": game.winner_id,
+        "is_bot_game": game.is_bot_game,
+        "updated_at": game.updated_at.isoformat() if game.updated_at else ""
+    }
+    return payload
