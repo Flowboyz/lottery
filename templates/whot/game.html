@@ -755,9 +755,11 @@
     // Guarantees real-time sync across multi-process WSGI workers
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     let lastActionLog = null;
-    let pollInterval = null;
+    let pollTimeout = null;
 
     async function pollGameStatus() {
+        if (pollTimeout) clearTimeout(pollTimeout);
+        
         try {
             const res = await fetch(`/whot/game/${roomId}/status?t=${Date.now()}`);
             if (res.status === 200) {
@@ -773,15 +775,23 @@
                         handleGameplayUpdate(state);
                     }
                 }
+                
+                // Continue polling if not completed
+                if (state.status !== "completed") {
+                    pollTimeout = setTimeout(pollGameStatus, 1500);
+                }
+            } else {
+                // Recover from 500s or timeouts
+                pollTimeout = setTimeout(pollGameStatus, 3000);
             }
         } catch (e) {
             console.warn("[Whot Poll] Network status query failed:", e);
+            pollTimeout = setTimeout(pollGameStatus, 3000);
         }
     }
 
-    // Initialize immediate poll & start interval
+    // Initialize immediate poll
     pollGameStatus();
-    pollInterval = setInterval(pollGameStatus, 1500);
 
     // Additional socket listeners (guarded, best-effort)
     if (socket) {
