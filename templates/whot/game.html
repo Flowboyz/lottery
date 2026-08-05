@@ -524,23 +524,10 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
 <script>
     const roomId = "{{ game.room_id }}";
     const myUserId = {{ current_user.id }};
-    
-    let socket;
-    try {
-        const socketTransports = (
-            window.location.hostname === 'localhost' || 
-            window.location.hostname === '127.0.0.1' || 
-            window.location.hostname.startsWith('192.168.') || 
-            window.location.hostname.endsWith('.local')
-        ) ? ['websocket', 'polling'] : ['polling'];
-        socket = io({ transports: socketTransports });
-    } catch (e) {
-        console.error("Socket.IO initialization error:", e);
-    }
 
     function showToast(message, type = "info") {
         let container = document.getElementById("toastContainer");
@@ -597,30 +584,6 @@
     let selectedPlayIndex = null;
     let turnTimer = null;
     let countdownSecs = 15;
-
-    // Join room channel
-    if (socket) {
-        try {
-            socket.emit("join_whot_room", { room_id: roomId });
-        } catch (err) {
-            console.error("Failed to join Whot room socket:", err);
-        }
-
-        socket.on("whot_negotiate_state", (state) => {
-            handleNegotiationUpdate(state);
-        });
-
-        socket.on("whot_state", (state) => {
-            handleGameplayUpdate(state);
-        });
-
-        socket.on("opponent_left", (data) => {
-            showToast(data.message, "error");
-            setTimeout(() => {
-                window.location.href = "/whot/";
-            }, 2000);
-        });
-    }
 
     function handleNegotiationUpdate(state) {
         // Show negotiation screen and hide game felt
@@ -793,24 +756,7 @@
     // Initialize immediate poll
     pollGameStatus();
 
-    // Additional socket listeners (guarded, best-effort)
-    if (socket) {
-        socket.on("game_error", (data) => {
-            showToast(data.message, "error");
-        });
 
-        socket.on("game_paused", (data) => {
-            document.getElementById("gamePausedOverlay").style.display = "flex";
-            document.getElementById("gamePausedMessage").innerText = data.message;
-            clearInterval(turnTimer);
-            document.getElementById("timerText").innerText = "Paused";
-        });
-
-        socket.on("game_resumed", (data) => {
-            document.getElementById("gamePausedOverlay").style.display = "none";
-            showToast(data.message);
-        });
-    }
 
     function proposeNegStake(stake) {
         fetch(`/whot/game/${roomId}/propose_stake`, {
