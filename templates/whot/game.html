@@ -759,7 +759,7 @@
 
     async function pollGameStatus() {
         try {
-            const res = await fetch(`/whot/game/${roomId}/status`);
+            const res = await fetch(`/whot/game/${roomId}/status?t=${Date.now()}`);
             if (res.status === 200) {
                 const state = await res.json();
                 
