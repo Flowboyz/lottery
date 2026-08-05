@@ -592,7 +592,7 @@
 
         // Update P1 details
         document.getElementById("negP1Name").innerText = state.p1_username;
-        document.getElementById("negP1Bal").innerText = `Bal: ₦${state.p1_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        document.getElementById("negP1Bal").innerText = "Bal: Hidden";
         document.getElementById("negP1PropText").innerText = state.p1_proposal ? `₦${state.p1_proposal.toLocaleString()}` : "Pending...";
 
         // Update P2 details
@@ -612,7 +612,7 @@
             }
         } else {
             document.getElementById("negP2Name").innerText = state.p2_username;
-            document.getElementById("negP2Bal").innerText = `Bal: ₦${state.p2_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById("negP2Bal").innerText = "Bal: Hidden";
             document.getElementById("negP2PropText").innerText = state.p2_proposal ? `₦${state.p2_proposal.toLocaleString()}` : "Pending...";
             
             // Hide invite link section

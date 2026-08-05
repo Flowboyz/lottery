@@ -448,8 +448,6 @@ def game_status(room_id):
             "p2_id": state.get("p2_id"),
             "p1_username": state.get("p1_username"),
             "p2_username": state.get("p2_username"),
-            "p1_balance": state.get("p1_balance", 0.0),
-            "p2_balance": state.get("p2_balance", 0.0),
             "p1_proposal": state.get("p1_proposal"),
             "p2_proposal": state.get("p2_proposal"),
             "last_action": state.get("last_action"),
