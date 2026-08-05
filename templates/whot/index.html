@@ -388,13 +388,29 @@
         startBtn.innerText = "Select Stake to Play Bot 🎮";
         startBtn.style.opacity = "0.6";
 
-        if (socket) {
-            try {
-                socket.emit("join_matchmaking");
-            } catch (err) {
-                console.error("Failed to emit join_matchmaking:", err);
-            }
-        }
+        // Join matchmaking via HTTP
+        fetch("/whot/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" } })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(data.error, "error");
+                    document.getElementById("matchModal").style.display = "none";
+                    return;
+                }
+                if (data.status === "matched") {
+                    clearInterval(matchmakerTimer);
+                    clearInterval(matchPollInterval);
+                    window.location.href = `/whot/game/${data.room_id}`;
+                    return;
+                }
+                // Start polling for match status
+                startMatchPolling();
+            })
+            .catch(err => {
+                console.error("Matchmaking join error:", err);
+                showToast("Failed to join matchmaking.", "error");
+                document.getElementById("matchModal").style.display = "none";
+            });
         
         // Start countdown
         secondsRemaining = 15;
@@ -407,11 +423,33 @@
             
             if (secondsRemaining <= 0) {
                 clearInterval(matchmakerTimer);
+                clearInterval(matchPollInterval);
+                // Cancel the waiting matchmaking game
+                fetch("/whot/matchmaking/cancel", { method: "POST", headers: { "Content-Type": "application/json" } }).catch(() => {});
                 // Offer bot fallback
                 document.getElementById("searchingState").style.display = "none";
                 document.getElementById("botOfferState").style.display = "block";
             }
         }, 1000);
+    }
+
+    let matchPollInterval = null;
+    function startMatchPolling() {
+        clearInterval(matchPollInterval);
+        matchPollInterval = setInterval(() => {
+            fetch("/whot/matchmaking/status")
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === "matched") {
+                        clearInterval(matchmakerTimer);
+                        clearInterval(matchPollInterval);
+                        window.location.href = `/whot/game/${data.room_id}`;
+                    } else if (data.status === "expired" || data.status === "none") {
+                        clearInterval(matchPollInterval);
+                    }
+                })
+                .catch(err => console.warn("Match poll error:", err));
+        }, 1500);
     }
 
     function selectBotStake(amount) {
@@ -427,42 +465,73 @@
 
     function cancelMatchmaking() {
         clearInterval(matchmakerTimer);
-        if (socket) {
-            try {
-                socket.emit("cancel_matchmaking");
-            } catch (err) {
-                console.error("Failed to cancel matchmaking:", err);
-            }
-        }
+        clearInterval(matchPollInterval);
+        fetch("/whot/matchmaking/cancel", { method: "POST", headers: { "Content-Type": "application/json" } }).catch(() => {});
         document.getElementById("matchModal").style.display = "none";
     }
 
     function acceptBotGame() {
         if (!selectedBotStakeAmount) return;
         clearInterval(matchmakerTimer);
-        if (socket) {
-            try {
-                socket.emit("join_bot_game", { stake: selectedBotStakeAmount });
-            } catch (err) {
-                console.error("Failed to accept bot game:", err);
+        clearInterval(matchPollInterval);
+
+        const btn = document.getElementById("startBotGameBtn");
+        btn.disabled = true;
+        btn.innerText = "Starting...";
+
+        fetch("/whot/bot/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stake: selectedBotStakeAmount })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                showToast(data.error, "error");
+                btn.disabled = false;
+                btn.innerText = `Play Bot (Stake ₦${selectedBotStakeAmount.toLocaleString()}) 🎮`;
+                return;
             }
-        }
+            if (data.room_id) {
+                window.location.href = `/whot/game/${data.room_id}`;
+            }
+        })
+        .catch(err => {
+            console.error("Bot game error:", err);
+            showToast("Failed to start bot game.", "error");
+            btn.disabled = false;
+            btn.innerText = `Play Bot (Stake ₦${selectedBotStakeAmount.toLocaleString()}) 🎮`;
+        });
     }
 
-    // Friend Challenge triggers
+    // Friend Challenge triggers (HTTP-based)
     function sendFriendChallenge() {
         const email = document.getElementById("friendEmailInput").value.trim();
         if (!email) {
             showToast("Please enter an email address to challenge.", "error");
             return;
         }
-        if (socket) {
-            try {
-                socket.emit("send_friend_challenge", { friend_email: email });
-            } catch (err) {
-                console.error("Failed to send challenge:", err);
+
+        fetch("/whot/challenge/friend", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ friend_email: email })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                showToast(data.error, "error");
+                return;
             }
-        }
+            showToast(`Challenge sent to ${data.friend_username}! Redirecting...`, "success");
+            setTimeout(() => {
+                window.location.href = `/whot/game/${data.room_id}`;
+            }, 1500);
+        })
+        .catch(err => {
+            console.error("Friend challenge error:", err);
+            showToast("Failed to send challenge.", "error");
+        });
     }
 
     function acceptFriendChallenge() {
@@ -472,16 +541,27 @@
     }
 
     function declineFriendChallenge() {
-        if (activeChallengeRoomId && socket) {
-            try {
-                socket.emit("decline_friend_challenge", { room_id: activeChallengeRoomId });
-            } catch (err) {
-                console.error("Failed to decline challenge:", err);
-            }
+        if (activeChallengeRoomId) {
+            // Cancel the game via a simple redirect-less approach
+            fetch(`/whot/game/${activeChallengeRoomId}/status`).catch(() => {});
         }
         document.getElementById("challengeReceivedModal").style.display = "none";
         activeChallengeRoomId = null;
     }
+
+    // Poll for pending friend challenges every 5 seconds (DB-backed, cross-process reliable)
+    setInterval(() => {
+        fetch("/whot/challenge/pending")
+            .then(r => r.json())
+            .then(data => {
+                if (data.has_challenge) {
+                    activeChallengeRoomId = data.room_id;
+                    document.getElementById("challengerUsernameText").innerText = data.challenger;
+                    document.getElementById("challengeReceivedModal").style.display = "flex";
+                }
+            })
+            .catch(() => {});
+    }, 5000);
 
     function generateInviteLink() {
         fetch("/whot/challenge/create", {
@@ -541,19 +621,8 @@
         }
     }
 
-    // Socket listeners
+    // Socket listeners (kept for friend challenges only)
     if (socket) {
-        socket.on("match_found", (data) => {
-            clearInterval(matchmakerTimer);
-            window.location.href = `/whot/game/${data.room_id}`;
-        });
-
-        socket.on("match_error", (data) => {
-            clearInterval(matchmakerTimer);
-            showToast(data.message, "error");
-            document.getElementById("matchModal").style.display = "none";
-        });
-
         socket.on("whot_challenge_received", (data) => {
             activeChallengeRoomId = data.room_id;
             document.getElementById("challengerUsernameText").innerText = data.challenger;
