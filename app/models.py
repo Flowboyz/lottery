@@ -12,6 +12,24 @@ from app.extensions import db
 
 
 # ---------------------------------------------------------------------------
+# Whot Challenge (Direct matchmaking)
+# ---------------------------------------------------------------------------
+class WhotChallenge(db.Model):
+    __tablename__ = "whot_challenges"
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True) # Null if public lobby
+    stake = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default="pending")  # pending, accepted, declined, expired
+    room_id = db.Column(db.String(50), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    sender = db.relationship("User", foreign_keys=[sender_id])
+    receiver = db.relationship("User", foreign_keys=[receiver_id])
+
+
+# ---------------------------------------------------------------------------
 # User
 # ---------------------------------------------------------------------------
 class User(UserMixin, db.Model):
@@ -51,6 +69,7 @@ class User(UserMixin, db.Model):
     last_login_ip = db.Column(db.String(45), nullable=True)
     last_play_time = db.Column(db.Integer, nullable=True)
     last_claim_time = db.Column(db.Integer, nullable=True)
+    last_active = db.Column(db.DateTime, nullable=True)  # Tracks global online status
 
     # Referral
     referral_code = db.Column(db.String(10), unique=True, nullable=True)

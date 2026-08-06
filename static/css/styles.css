@@ -1961,9 +1961,13 @@ select:focus-visible {
 
 /* ---------- Mobile (default) ---------- */
 @media (max-width: 768px) {
+    /* Compact Game Hub on mobile */
+    .game-card-desc { display: none; }
+    .game-card { padding: 16px 12px; gap: 4px; }
+    .game-card-icon { font-size: 32px; }
     .top-bar {
         flex-wrap: wrap;
-        padding: 12px 14px;
+        padding: calc(env(safe-area-inset-top, 12px) + 12px) 14px 12px 14px;
         gap: 10px;
     }
     .left-controls {
@@ -2035,6 +2039,9 @@ select:focus-visible {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
+    .hero h1 { font-size: 26px; }
+    .hero p { font-size: 13.5px; }
+
     .light-mode .footer-nav { background: var(--bg-secondary); }
 
     /* Sidebar brand mark — drawn purely via CSS ::before on footer-nav */

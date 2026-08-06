@@ -1,5 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Whot - Ditto Dinky{% endblock %}
+{% block extra_css %}
+<style>
+@media (max-width: 768px) {
+    .page-subtitle { display: none; }
+    .balance-box { margin-bottom: 12px !important; padding: 8px 12px !important; }
+    .whot-lobby { padding: 10px 0 !important; border-bottom: none !important; }
+    .lobby-cards-logo { transform: scale(0.65); margin-bottom: 0px !important; height: 60px !important; }
+    #findMatchBtn { padding: 12px !important; font-size: 14px !important; }
+    
+    .bot-section { margin-top: 12px !important; padding: 12px !important; }
+    .bot-section p { display: none; }
+    .bot-section button { padding: 10px !important; }
+    
+    .challenge-section { margin-top: 12px !important; padding: 12px !important; }
+    .challenge-section p { display: none; }
+    .challenge-section input { padding: 8px !important; }
+    .challenge-section button { padding: 8px 12px !important; }
+}
+</style>
+{% endblock %}
 {% block content %}
 <div class="content page-content">
     <div class="page-card">
@@ -7,7 +27,7 @@
         <p class="page-subtitle">Standard Nigerian Whot. Connect with players and negotiate stakes before starting!</p>
 
         <!-- Balance Info -->
-        <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="balance-box" style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 14px; color: var(--text-muted);">Your Balance</span>
             <strong style="font-size: 18px; color: var(--accent-primary);">₦{{ "{:,.2f}".format(balance) }}</strong>
         </div>
@@ -92,8 +112,18 @@
             <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Minimum balance required: ₦500</p>
         </div>
 
+        <!-- Ditto Dinky Bot (Free Practice) Section -->
+        <div class="bot-section" style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 18px; border-radius: 12px; margin-top: 24px; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -10px; right: -10px; font-size: 60px; opacity: 0.05;">🤖</div>
+            <h3 style="font-size: 15px; margin-bottom: 8px; color: var(--accent-gold); display: flex; align-items: center; justify-content: center; gap: 6px;">🤖 Play with Ditto Dinky Bot</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Want to practice? Play a free offline match against our computer bot!</p>
+            <button id="botMatchBtn" onclick="startBotGame()" style="background: rgba(255,193,7,0.1); color: var(--accent-gold); border: 1px solid var(--accent-gold); font-weight: bold; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; width: 100%; max-width: 320px;">
+                Play Free Practice Match
+            </button>
+        </div>
+
         <!-- Direct Friend Challenge Section -->
-        <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 18px; border-radius: 12px; margin-top: 24px; text-align: center;">
+        <div class="challenge-section" style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 18px; border-radius: 12px; margin-top: 24px; text-align: center;">
             <h3 style="font-size: 15px; margin-bottom: 8px; color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 6px;">⚔️ Challenge a Friend</h3>
             <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Enter your friend's email address to invite them to a game</p>
             <div style="display: flex; gap: 8px; max-width: 320px; margin: 0 auto; margin-bottom: 16px;">
@@ -123,6 +153,37 @@
             </div>
         </div>
 
+        <!-- Public Lobby & Leaderboard Section -->
+        <div class="lobby-section" style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 18px; border-radius: 12px; margin-top: 24px;">
+            <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 6px;">🏆 Public Lobby</h3>
+            <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-bottom: 16px;">Top players currently on Ditto Dinky</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                {% for item in lobby_players %}
+                {% set player = item.user %}
+                {% set wins = item.wins %}
+                {% set is_online = player.last_active and (now - player.last_active).total_seconds() < 300 %}
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); padding: 10px 14px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{ '#28a745; box-shadow: 0 0 6px #28a745;' if is_online else '#6c757d' }}"></span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: bold; font-size: 13px; color: var(--text-primary);">{{ player.username }}</span>
+                            <span style="font-size: 11px; color: var(--text-muted);">
+                                {{ wins }} Win{{ 's' if wins != 1 else '' }} • {{ 'Online' if is_online else 'Offline' }}
+                            </span>
+                        </div>
+                    </div>
+                    <button onclick="openLobbyChallengeModal({{ player.id }}, '{{ player.username }}')" style="background: var(--accent-primary-soft); color: var(--accent-primary); border: 1px solid var(--accent-primary); padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; transition: all 0.2s;">
+                        ⚔️ Challenge
+                    </button>
+                </div>
+                {% endfor %}
+                {% if not lobby_players %}
+                <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 10px;">No players available.</div>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- History section -->
         <div style="margin-top: 32px;">
             <h3 style="margin-bottom: 12px; font-size: 16px;">🕒 Your Whot History</h3>
@@ -142,7 +203,7 @@
                         <tr>
                             <td>
                                 {% if g.is_bot_game %}
-                                🤖 Computer Bot
+                                🤖 Ditto Dinky Bot
                                 {% else %}
                                 👤 {{ g.player2.username if g.player1_id == current_user.id else g.player1.username }}
                                 {% endif %}
@@ -182,6 +243,26 @@
     </div>
 </div>
 
+<!-- Lobby Challenge Modal -->
+<div id="lobbyChallengeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 24px; border-radius: 16px; width: 100%; max-width: 320px; text-align: center; animation: slideDown 0.3s ease-out;">
+        <h3 style="font-size: 16px; margin-bottom: 8px;">Challenge <span id="lobbyOpponentName" style="color: var(--accent-primary);"></span></h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Select your stake for this match:</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px;">
+            <button class="lobby-stake-btn" onclick="selectLobbyStake(500)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦500</button>
+            <button class="lobby-stake-btn" onclick="selectLobbyStake(1000)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦1,000</button>
+            <button class="lobby-stake-btn" onclick="selectLobbyStake(2000)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦2,000</button>
+            <button class="lobby-stake-btn" onclick="selectLobbyStake(5000)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦5,000</button>
+        </div>
+        
+        <div style="display: flex; gap: 8px;">
+            <button onclick="closeLobbyChallengeModal()" style="flex: 1; background: transparent; color: var(--text-muted); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 8px; cursor: pointer;">Cancel</button>
+            <button id="sendLobbyChallengeBtn" onclick="submitLobbyChallenge()" disabled style="flex: 1; background: var(--accent-primary); color: var(--text-primary); border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; opacity: 0.6;">Send</button>
+        </div>
+    </div>
+</div>
+
 <!-- Matchmaking Modal Overlay -->
 <div id="matchModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
     <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 24px; border-radius: 16px; width: 100%; max-width: 400px; text-align: center;">
@@ -199,22 +280,14 @@
 
         <div id="botOfferState" style="display: none;">
             <div style="font-size: 40px; margin-bottom: 12px;">🤖</div>
-            <h3 style="font-size: 18px; margin-bottom: 8px;">No Opponents Found</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Select stake to play against the Computer Bot:</p>
+            <h3 style="font-size: 18px; margin-bottom: 8px;">No Active Players Found</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">There's nobody in the matchmaking pool right now. You can wait, or play a free practice match!</p>
             
-            <!-- Bot Stake Select Grid -->
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px;">
-                <button class="bot-stake-option" onclick="selectBotStake(500)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦500</button>
-                <button class="bot-stake-option" onclick="selectBotStake(1000)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦1,000</button>
-                <button class="bot-stake-option" onclick="selectBotStake(2000)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦2,000</button>
-                <button class="bot-stake-option" onclick="selectBotStake(5000)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-weight: bold;">₦5,000</button>
-            </div>
-
             <div style="display: flex; flex-direction: column; gap: 8px;">
-                <button id="startBotGameBtn" onclick="acceptBotGame()" disabled style="background: var(--accent-primary); color: var(--text-primary); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; opacity: 0.6; margin-bottom: 4px;">
-                    Select Stake to Play Bot 🎮
+                <button id="startBotGameBtn" onclick="document.getElementById('matchModal').style.display='none'; startBotGame();" style="background: var(--accent-primary); color: var(--text-primary); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 4px;">
+                    Play Free Practice Match 🎮
                 </button>
-                <button onclick="startMatchmaking()" style="background: var(--accent-primary); color: var(--text-primary); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 4px;">
+                <button onclick="startMatchmaking()" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--border-subtle); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 4px;">
                     Keep Searching for Players 🔍
                 </button>
                 <button onclick="cancelMatchmaking()" style="background: transparent; color: var(--text-muted); border: none; padding: 10px; cursor: pointer;">
@@ -230,16 +303,26 @@
     <div style="background: var(--bg-card); border: 2px solid var(--border-subtle); padding: 24px; border-radius: 16px; width: 100%; max-width: 380px; text-align: center;">
         <div style="font-size: 48px; margin-bottom: 12px;">⚔️</div>
         <h3 style="font-size: 18px; margin-bottom: 8px; color: white;">Whot Challenge Received!</h3>
-        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">
             <strong id="challengerUsernameText" style="color: var(--text-primary);">Friend</strong> has challenged you to a game of Whot!
         </p>
         
-        <div style="display: flex; gap: 10px;">
-            <button onclick="acceptFriendChallenge()" style="flex: 1; background: var(--accent-primary); color: var(--text-primary); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">
-                Accept 🎮
-            </button>
-            <button onclick="declineFriendChallenge()" style="flex: 1; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--border-subtle); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">
-                Decline ❌
+        <div id="challengeReceivedStake" style="background: rgba(40,167,69,0.15); border: 1px solid rgba(40,167,69,0.4); color: #28a745; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: 800; margin-bottom: 24px;">
+            Stake: ₦---
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 10px;">
+                <button onclick="acceptFriendChallenge()" style="flex: 1; background: var(--accent-primary); color: var(--text-primary); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    Accept 🎮
+                </button>
+                <button onclick="declineFriendChallenge()" style="flex: 1; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--border-subtle); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    Decline ❌
+                </button>
+            </div>
+            
+            <button onclick="declineAndCounterChallenge()" style="width: 100%; background: transparent; color: var(--accent-primary); border: 1px dashed var(--accent-primary); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                Decline & Counter-Challenge 🔄
             </button>
         </div>
     </div>
@@ -380,7 +463,7 @@
         document.getElementById("botOfferState").style.display = "none";
         document.getElementById("matchModal").style.display = "flex";
         
-        // Reset selections
+
         selectedBotStakeAmount = null;
         document.querySelectorAll(".bot-stake-option").forEach(b => b.classList.remove("selected"));
         const startBtn = document.getElementById("startBotGameBtn");
@@ -388,7 +471,8 @@
         startBtn.innerText = "Select Stake to Play Bot 🎮";
         startBtn.style.opacity = "0.6";
 
-        // Join matchmaking via HTTP
+
+    // Join matchmaking via HTTP
         fetch("/whot/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" } })
             .then(r => r.json())
             .then(data => {
@@ -452,16 +536,7 @@
         }, 1500);
     }
 
-    function selectBotStake(amount) {
-        document.querySelectorAll(".bot-stake-option").forEach(b => b.classList.remove("selected"));
-        event.currentTarget.classList.add("selected");
-        
-        selectedBotStakeAmount = amount;
-        const startBtn = document.getElementById("startBotGameBtn");
-        startBtn.disabled = false;
-        startBtn.innerText = `Play Bot (Stake ₦${amount.toLocaleString()}) 🎮`;
-        startBtn.style.opacity = "1";
-    }
+    // Removed old selectBotStake logic
 
     function cancelMatchmaking() {
         clearInterval(matchmakerTimer);
@@ -470,26 +545,22 @@
         document.getElementById("matchModal").style.display = "none";
     }
 
-    function acceptBotGame() {
-        if (!selectedBotStakeAmount) return;
-        clearInterval(matchmakerTimer);
-        clearInterval(matchPollInterval);
-
-        const btn = document.getElementById("startBotGameBtn");
+    function startBotGame() {
+        const btn = document.getElementById("botMatchBtn");
         btn.disabled = true;
-        btn.innerText = "Starting...";
+        btn.innerText = "Starting Practice Match...";
 
         fetch("/whot/bot/start", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ stake: selectedBotStakeAmount })
+            body: JSON.stringify({ stake: 0 })
         })
         .then(r => r.json())
         .then(data => {
             if (data.error) {
                 showToast(data.error, "error");
                 btn.disabled = false;
-                btn.innerText = `Play Bot (Stake ₦${selectedBotStakeAmount.toLocaleString()}) 🎮`;
+                btn.innerText = "Play Free Practice Match";
                 return;
             }
             if (data.room_id) {
@@ -498,9 +569,9 @@
         })
         .catch(err => {
             console.error("Bot game error:", err);
-            showToast("Failed to start bot game.", "error");
+            showToast("Failed to start practice match.", "error");
             btn.disabled = false;
-            btn.innerText = `Play Bot (Stake ₦${selectedBotStakeAmount.toLocaleString()}) 🎮`;
+            btn.innerText = "Play Free Practice Match";
         });
     }
 
@@ -512,10 +583,10 @@
             return;
         }
 
-        fetch("/whot/challenge/friend", {
+        fetch("/whot/challenge/direct", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ friend_email: email })
+            body: JSON.stringify({ email: email, stake: 500 }) // Defaulting to ₦500 for now
         })
         .then(r => r.json())
         .then(data => {
@@ -523,10 +594,12 @@
                 showToast(data.error, "error");
                 return;
             }
-            showToast(`Challenge sent to ${data.friend_username}! Redirecting...`, "success");
-            setTimeout(() => {
-                window.location.href = `/whot/game/${data.room_id}`;
-            }, 1500);
+            if (data.offline) {
+                showToast("Challenge sent! User is offline so we emailed them.", "success");
+            } else {
+                showToast("Challenge sent! They will see a popup shortly.", "success");
+            }
+            document.getElementById("friendEmailInput").value = "";
         })
         .catch(err => {
             console.error("Friend challenge error:", err);
@@ -534,29 +607,72 @@
         });
     }
 
+    let activeChallengeId = null;
+    let activeChallengerId = null;
+    let activeChallengerUsername = null;
+
+    let ignoredChallengeIds = new Set();
+
     function acceptFriendChallenge() {
-        if (activeChallengeRoomId) {
-            window.location.href = `/whot/game/${activeChallengeRoomId}`;
+        if (activeChallengeId) {
+            window.location.href = `/whot/challenge/accept/${activeChallengeId}`;
         }
     }
 
     function declineFriendChallenge() {
-        if (activeChallengeRoomId) {
-            // Cancel the game via a simple redirect-less approach
-            fetch(`/whot/game/${activeChallengeRoomId}/status`).catch(() => {});
+        if (activeChallengeId) {
+            ignoredChallengeIds.add(activeChallengeId);
+            fetch(`/whot/challenge/decline/${activeChallengeId}`, { method: "POST" }).catch(() => {});
         }
         document.getElementById("challengeReceivedModal").style.display = "none";
-        activeChallengeRoomId = null;
+        activeChallengeId = null;
+        activeChallengerId = null;
+        activeChallengerUsername = null;
+    }
+    
+    function declineAndCounterChallenge() {
+        if (activeChallengeId && activeChallengerId && activeChallengerUsername) {
+            ignoredChallengeIds.add(activeChallengeId);
+            fetch(`/whot/challenge/decline/${activeChallengeId}`, { method: "POST" }).catch(() => {});
+            document.getElementById("challengeReceivedModal").style.display = "none";
+            
+            // Open the counter-challenge modal against them
+            openLobbyChallengeModal(activeChallengerId, activeChallengerUsername);
+        }
+        activeChallengeId = null;
+        activeChallengerId = null;
+        activeChallengerUsername = null;
     }
 
     // Poll for pending friend challenges every 5 seconds (DB-backed, cross-process reliable)
     setInterval(() => {
+        if (document.getElementById("challengeReceivedModal").style.display === "flex") return; // Don't interrupt if already showing one
+        
         fetch("/whot/challenge/pending")
             .then(r => r.json())
             .then(data => {
-                if (data.has_challenge) {
-                    activeChallengeRoomId = data.room_id;
+                if (data.has_active_game && data.room_id) {
+                    // Instantly redirect sender (or anyone) into their active game
+                    window.location.href = `/whot/game/${data.room_id}`;
+                    return;
+                }
+                
+                if (data.declined) {
+                    showToast(`${data.declined_by} declined your challenge.`, "error");
+                    return;
+                }
+                
+                if (data.has_challenge && !ignoredChallengeIds.has(data.challenge_id)) {
+                    activeChallengeId = data.challenge_id;
+                    activeChallengerId = data.challenger_id;
+                    activeChallengerUsername = data.challenger;
+                    
                     document.getElementById("challengerUsernameText").innerText = data.challenger;
+                    
+                    // Update stake display if it exists in the UI (optional, but good)
+                    const stakeInfo = document.getElementById("challengeReceivedStake");
+                    if (stakeInfo && data.stake) stakeInfo.innerText = `Stake: ₦${data.stake}`;
+                    
                     document.getElementById("challengeReceivedModal").style.display = "flex";
                 }
             })
@@ -624,9 +740,91 @@
     // Socket listeners (kept for friend challenges only)
     if (socket) {
         socket.on("whot_challenge_received", (data) => {
-            activeChallengeRoomId = data.room_id;
+            activeChallengeId = data.challenge_id;
             document.getElementById("challengerUsernameText").innerText = data.challenger;
             document.getElementById("challengeReceivedModal").style.display = "flex";
+        });
+    }
+
+    // Lobby Challenge Logic
+    let activeLobbyUserId = null;
+    let activeLobbyStake = null;
+
+    function openLobbyChallengeModal(userId, username) {
+        activeLobbyUserId = userId;
+        activeLobbyStake = null;
+        document.getElementById("lobbyOpponentName").innerText = username;
+        
+        document.querySelectorAll(".lobby-stake-btn").forEach(b => {
+            b.style.background = "var(--bg-card)";
+            b.style.color = "var(--text-primary)";
+        });
+        
+        const btn = document.getElementById("sendLobbyChallengeBtn");
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        
+        document.getElementById("lobbyChallengeModal").style.display = "flex";
+    }
+
+    function closeLobbyChallengeModal() {
+        document.getElementById("lobbyChallengeModal").style.display = "none";
+        activeLobbyUserId = null;
+    }
+
+    function selectLobbyStake(amount) {
+        activeLobbyStake = amount;
+        document.querySelectorAll(".lobby-stake-btn").forEach(b => {
+            b.style.background = "var(--bg-card)";
+            b.style.color = "var(--text-primary)";
+        });
+        
+        // Find the button directly and apply styles (stripping commas for amounts > 999)
+        document.querySelectorAll(`.lobby-stake-btn`).forEach(b => {
+            const cleanText = b.innerText.replace(/,/g, '');
+            if(cleanText.includes(amount.toString())) {
+                b.style.background = "var(--accent-primary)";
+                b.style.color = "#000";
+            }
+        });
+        
+        const btn = document.getElementById("sendLobbyChallengeBtn");
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    }
+
+    function submitLobbyChallenge() {
+        if (!activeLobbyUserId || !activeLobbyStake) return;
+        
+        const btn = document.getElementById("sendLobbyChallengeBtn");
+        btn.innerText = "Sending...";
+        btn.disabled = true;
+        
+        fetch("/whot/challenge/direct", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: activeLobbyUserId, stake: activeLobbyStake })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                showToast(data.error, "error");
+                btn.innerText = "Send";
+                btn.disabled = false;
+                return;
+            }
+            if (data.offline) {
+                showToast("Challenge sent! User is offline so we emailed them.", "success");
+            } else {
+                showToast("Challenge sent! They will see a popup shortly.", "success");
+            }
+            closeLobbyChallengeModal();
+        })
+        .catch(err => {
+            console.error("Lobby challenge error:", err);
+            showToast("Failed to send challenge.", "error");
+            btn.innerText = "Send";
+            btn.disabled = false;
         });
     }
 </script>

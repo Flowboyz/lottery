@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 
 from app.extensions import db, csrf
-from app.models import WhotGame, User
+from app.models import WhotGame, User, WhotChallenge
 from app.utils import get_setting, credit_wallet, notify_user, debit_wallet, log_audit
 from app.whot import whot_engine
 import random
@@ -16,6 +16,120 @@ import time
 whot_bp = Blueprint("whot", __name__, url_prefix="/whot")
 
 STALE_TIMEOUT_SECONDS = 600  # 10 minutes
+
+@whot_bp.route("/api/ping")
+@login_required
+def api_ping():
+    """Background polling route to track online status and check for incoming challenges."""
+    # 1. Update online status
+    current_user.last_active = datetime.utcnow()
+    
+    # 2. Check for pending direct challenges
+    incoming_challenge = WhotChallenge.query.filter_by(
+        receiver_id=current_user.id, 
+        status="pending"
+    ).first()
+    
+    challenge_data = None
+    if incoming_challenge:
+        challenge_data = {
+            "id": incoming_challenge.id,
+            "sender_name": incoming_challenge.sender.username,
+            "stake": incoming_challenge.stake
+        }
+        
+    db.session.commit()
+    return jsonify({"success": True, "challenge": challenge_data})
+
+
+@whot_bp.route("/challenge/accept/<int:challenge_id>")
+@login_required
+def accept_challenge(challenge_id):
+    challenge = WhotChallenge.query.get_or_404(challenge_id)
+    if challenge.receiver_id != current_user.id:
+        flash("Unauthorized", "error")
+        return redirect(url_for("whot.index"))
+        
+    if challenge.status != "pending":
+        flash("This challenge is no longer available.", "warning")
+        return redirect(url_for("whot.index"))
+        
+    if current_user.balance < challenge.stake:
+        flash("Insufficient balance to accept this challenge.", "error")
+        return redirect(url_for("whot.index"))
+        
+    # Accept challenge and create the actual WhotGame
+    challenge.status = "accepted"
+    room_id = f"whot_ch_{int(time.time())}_{random.randint(1000, 9999)}"
+    challenge.room_id = room_id
+    
+    # Debit both users (sender was already debited when creating, so debit receiver now)
+    if challenge.stake > 0:
+        debit_wallet(current_user, challenge.stake, "GAME", description=f"Whot challenge accepted (Room {room_id})")
+        
+    deck = whot_engine.create_deck()
+    p1_hand = [deck.pop() for _ in range(5)]
+    p2_hand = [deck.pop() for _ in range(5)]
+
+    discard_pile = []
+    while deck:
+        first_card = deck.pop()
+        if first_card["value"] not in (1, 2, 5, 8, 14, 20):
+            discard_pile = [first_card]
+            break
+        else:
+            deck.insert(0, first_card)
+
+    state = {
+        "deck": deck,
+        "discard_pile": discard_pile,
+        "p1_hand": p1_hand,
+        "p2_hand": p2_hand,
+        "active_turn_id": challenge.sender_id,
+        "status": "active",
+        "last_action": "Match started! Player 1's turn.",
+        "turn_deadline": time.time() + 15.0,
+        "penalty_type": None,
+        "active_penalty_picks": 0
+    }
+        
+    total_wagered = challenge.stake * 2
+    commission = total_wagered * 0.10
+    pool = total_wagered - commission
+
+    game = WhotGame(
+        room_id=room_id,
+        player1_id=challenge.sender_id,
+        player2_id=challenge.receiver_id,
+        stake=challenge.stake,
+        pool=pool,
+        commission=commission,
+        status="active",
+        active_turn_id=challenge.sender_id,
+        game_state=state
+    )
+    db.session.add(game)
+    db.session.commit()
+    return redirect(url_for("whot.game_room", room_id=room_id))
+
+
+@whot_bp.route("/challenge/decline/<int:challenge_id>", methods=["POST"])
+@csrf.exempt
+@login_required
+def decline_challenge(challenge_id):
+    challenge = WhotChallenge.query.get_or_404(challenge_id)
+    if challenge.receiver_id != current_user.id:
+        return jsonify({"error": "Unauthorized"}), 403
+        
+    challenge.status = "declined"
+    
+    # Refund sender
+    if challenge.stake > 0:
+        credit_wallet(challenge.sender, challenge.stake, "REFUND", description="Whot challenge declined")
+        notify_user(challenge.sender_id, "Challenge Declined", f"{current_user.username} declined your Whot challenge. ₦{challenge.stake} refunded.", "info")
+        
+    db.session.commit()
+    return jsonify({"success": True})
 
 
 def cleanup_stale_whot_games(user_id):
@@ -75,8 +189,12 @@ def index():
     # Auto-expire stale games and refund trapped stakes
     cleanup_stale_whot_games(current_user.id)
 
-    # Load active user history
-    history = WhotGame.query.filter(
+    # Load active user history (Eager load users to fix N+1 query lag)
+    from sqlalchemy.orm import joinedload
+    history = WhotGame.query.options(
+        joinedload(WhotGame.player1),
+        joinedload(WhotGame.player2)
+    ).filter(
         (WhotGame.player1_id == current_user.id) | (WhotGame.player2_id == current_user.id)
     ).order_by(WhotGame.created_at.desc()).limit(10).all()
 
@@ -88,13 +206,48 @@ def index():
 
     # Stakes configurations
     stakes = [500, 1000, 2000, 5000]
+    
+    # Fetch Top 20 Active Users for the Public Lobby, Ranked by Wins
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    
+    active_limit = datetime.utcnow() - timedelta(minutes=5)
+    
+    # Optimization: Only count wins for players who are currently online
+    active_user_ids = db.session.query(User.id).filter(User.last_active >= active_limit).subquery()
+
+    whot_wins_sub = db.session.query(
+        WhotGame.winner_id,
+        func.count(WhotGame.id).label("wins")
+    ).filter(
+        WhotGame.status.in_(["completed", "forfeited"]),
+        WhotGame.winner_id.in_(active_user_ids)
+    ).group_by(WhotGame.winner_id).subquery()
+
+    lobby_players_query = db.session.query(
+        User,
+        func.coalesce(whot_wins_sub.c.wins, 0).label("wins")
+    ).outerjoin(
+        whot_wins_sub, User.id == whot_wins_sub.c.winner_id
+    ).filter(
+        User.id != current_user.id,
+        User.last_active >= active_limit
+    ).order_by(
+        func.coalesce(whot_wins_sub.c.wins, 0).desc(),
+        User.balance.desc()
+    ).limit(20).all()
+    
+    # We map the results into a list of dicts to keep the template simple
+    lobby_players = [{"user": row[0], "wins": row[1]} for row in lobby_players_query]
 
     return render_template(
         "whot/index.html",
         stakes=stakes,
         history=history,
         active_game=active_game,
-        balance=current_user.balance
+        balance=current_user.balance,
+        lobby_players=lobby_players,
+        now=datetime.utcnow()
     )
 
 
@@ -131,7 +284,7 @@ def game_room(room_id):
 
     opponent = None
     if game.is_bot_game:
-        opponent = {"username": "Computer Bot", "id": 0}
+        opponent = {"username": "Ditto Dinky Bot", "id": 0}
     else:
         opp_user = game.player2 if game.player1_id == current_user.id else game.player1
         if opp_user:
@@ -145,6 +298,70 @@ def game_room(room_id):
         opponent=opponent,
         is_p1=(game.player1_id == current_user.id)
     )
+
+@whot_bp.route("/challenge/direct", methods=["POST"])
+@csrf.exempt
+@login_required
+def direct_challenge():
+    if get_setting("WHOT_ENABLED", "1") == "0":
+        return jsonify({"error": "Whot is temporarily disabled by admin."}), 400
+        
+    data = request.get_json() or {}
+    email = data.get("email", "").strip()
+    user_id = data.get("user_id")
+    stake = int(data.get("stake", 500))
+    
+    if not email and not user_id:
+        return jsonify({"error": "Please provide an opponent's email or ID."}), 400
+        
+    if current_user.balance < stake:
+        return jsonify({"error": "Insufficient balance to host this challenge."}), 400
+        
+    if user_id:
+        opponent = User.query.get(user_id)
+    else:
+        opponent = User.query.filter_by(email=email).first()
+        
+    if not opponent:
+        return jsonify({"error": "No user found."}), 404
+        
+    if opponent.id == current_user.id:
+        return jsonify({"error": "You cannot challenge yourself."}), 400
+        
+    # Debit the sender immediately to lock the funds
+    debit_wallet(current_user, stake, "GAME", description=f"Whot challenge creation deposit")
+    
+    # Create the challenge
+    challenge = WhotChallenge(
+        sender_id=current_user.id,
+        receiver_id=opponent.id,
+        stake=stake,
+        status="pending"
+    )
+    db.session.add(challenge)
+    db.session.commit()
+    
+    print(f"[DEBUG] Created challenge {challenge.id} from {current_user.username} to {opponent.username} for NGN {stake}")
+    
+    # Check if opponent is offline (hasn't pinged in last 2 minutes)
+    is_offline = True
+    if opponent.last_active:
+        from datetime import datetime
+        seconds_since_active = (datetime.utcnow() - opponent.last_active).total_seconds()
+        if seconds_since_active < 120:
+            is_offline = False
+            
+    if is_offline:
+        # Send an email
+        msg_body = f"Hello {opponent.username}!\n\n{current_user.username} has challenged you to a game of Whot for ₦{stake:,.0f} on Ditto Dinky.\n\nLog in now to accept the challenge: https://zamy.com.ng\n\nGood luck!"
+        # Try to send email safely
+        try:
+            from app.utils import send_email
+            send_email(opponent.email, "⚔️ You have a new Whot Challenge!", msg_body)
+        except Exception as e:
+            print("Failed to send challenge email:", e)
+            
+    return jsonify({"success": True, "message": "Challenge sent successfully!", "offline": is_offline})
 
 
 @whot_bp.route("/challenge/create", methods=["POST"])
@@ -302,7 +519,7 @@ def handle_bot_turn_http(game):
     if play_idx is not None:
         card = bot_hand.pop(play_idx)
         state["discard_pile"].append(card)
-        action_text = f"Computer Bot played {card['suit']} {card['value']}."
+        action_text = f"Ditto Dinky Bot played {card['suit']} {card['value']}."
 
         val = card["value"]
         if val == 1 or val == 8:
@@ -333,7 +550,7 @@ def handle_bot_turn_http(game):
             # Bot wins
             game.status = "completed"
             game.winner_id = None
-            state["last_action"] = "Game Over! Computer Bot won the match."
+            state["last_action"] = "Game Over! Ditto Dinky Bot won the match."
             game.game_state = state
             db.session.commit()
             return True
@@ -345,13 +562,13 @@ def handle_bot_turn_http(game):
                 if state["deck"]:
                     drawn.append(state["deck"].pop())
             bot_hand.extend(drawn)
-            action_text = f"Computer Bot drew {penalty_picks} penalty cards."
+            action_text = f"Ditto Dinky Bot drew {penalty_picks} penalty cards."
             state["active_penalty_picks"] = 0
             state["penalty_type"] = None
         else:
             if state["deck"]:
                 bot_hand.append(state["deck"].pop())
-                action_text = "Computer Bot went to market (drew 1 card)."
+                action_text = "Ditto Dinky Bot went to market (drew 1 card)."
 
     game.active_turn_id = next_turn_id
     state["last_action"] = action_text
@@ -376,7 +593,7 @@ def handle_turn_timeout_http(game):
     verify_deck_size_http(state)
 
     p1_name = state.get("p1_username") or "Player"
-    p2_name = state.get("p2_username") or "Computer Bot"
+    p2_name = state.get("p2_username") or "Ditto Dinky Bot"
     active_name = p1_name if is_p1_turn else p2_name
 
     action_text = ""
@@ -707,23 +924,52 @@ def challenge_friend():
 @whot_bp.route("/challenge/pending")
 @login_required
 def pending_challenges():
-    """Check if there are any pending challenges for this user (for lobby polling)."""
-    pending = WhotGame.query.filter(
-        WhotGame.player2_id == current_user.id,
-        WhotGame.status == "negotiating",
-        WhotGame.room_id.like("whot_challenge_%")
+    """Check if there are any pending challenges for this user or newly active games (for lobby polling)."""
+    # 1. Check for newly accepted/active games for this user to auto-redirect them
+    active = WhotGame.query.filter(
+        ((WhotGame.player1_id == current_user.id) | (WhotGame.player2_id == current_user.id)),
+        WhotGame.status.in_(["active", "negotiating"])
     ).order_by(WhotGame.id.desc()).first()
 
-    if pending:
-        state = pending.game_state
-        challenger_name = state.get("p1_username", "Someone")
+    if active:
         return jsonify({
-            "has_challenge": True,
-            "room_id": pending.room_id,
-            "challenger": challenger_name
+            "has_active_game": True,
+            "room_id": active.room_id
         })
 
-    return jsonify({"has_challenge": False})
+    # 2. Check for incoming pending challenges
+    pending = WhotChallenge.query.filter_by(
+        receiver_id=current_user.id,
+        status="pending"
+    ).order_by(WhotChallenge.id.desc()).first()
+
+    if pending:
+        print(f"[DEBUG] Found pending challenge for {current_user.username}: {pending.id} from {pending.sender.username}")
+        return jsonify({
+            "has_challenge": True,
+            "challenge_id": pending.id,
+            "challenger": pending.sender.username,
+            "challenger_id": pending.sender.id,
+            "stake": pending.stake
+        })
+
+    # 3. Check for challenges sent by this user that were declined recently
+    declined = WhotChallenge.query.filter_by(
+        sender_id=current_user.id,
+        status="declined"
+    ).order_by(WhotChallenge.id.desc()).first()
+
+    if declined:
+        declined.status = "declined_acknowledged"
+        db.session.commit()
+        return jsonify({
+            "has_challenge": False,
+            "has_active_game": False,
+            "declined": True,
+            "declined_by": declined.receiver.username
+        })
+
+    return jsonify({"has_challenge": False, "has_active_game": False})
 
 
 # ────────────────────────── HTTP BOT GAME ──────────────────────────
@@ -732,26 +978,22 @@ def pending_challenges():
 @csrf.exempt
 @login_required
 def start_bot_game():
-    """Start a game against the Computer Bot via HTTP."""
+    """Start a game against the Ditto Dinky Bot via HTTP."""
     if get_setting("WHOT_ENABLED", "1") == "0":
         return jsonify({"error": "Whot is temporarily disabled by admin."}), 400
 
     data = request.get_json() or {}
     try:
-        stake = int(data.get("stake", 500))
+        stake = int(data.get("stake", 0))
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid stake amount."}), 400
 
-    if stake not in [500, 1000, 2000, 5000]:
-        return jsonify({"error": "Unsupported stake tier."}), 400
-
-    if current_user.balance < stake:
-        return jsonify({"error": "Insufficient wallet balance."}), 400
+    if stake != 0:
+        return jsonify({"error": "Practice matches against Ditto Dinky Bot are always free (₦0)."}), 400
 
     room_id = f"whot_bot_{int(time.time())}_{random.randint(1000, 9999)}"
 
-    # Debit stake
-    debit_wallet(current_user, stake, "GAME", description=f"Whot Bot stake (Room {room_id})")
+    # NO WALLET DEBIT for free bot games
 
     # Set up deck & deal cards
     deck = whot_engine.create_deck()
@@ -777,12 +1019,12 @@ def start_bot_game():
         "called_suit": None,
         "p1_id": current_user.id,
         "p2_id": 0,
-        "last_action": f"Match started against Computer Bot! Your turn.",
+        "last_action": f"Match started against Ditto Dinky Bot! Your turn.",
         "turn_deadline": time.time() + 15.0
     }
 
     total_wagered = stake * 2
-    commission = total_wagered * 0.05
+    commission = total_wagered * 0.10
     pool = total_wagered - commission
 
     game = WhotGame(
@@ -879,7 +1121,7 @@ def http_propose_stake(room_id):
         state["turn_deadline"] = time.time() + 15.0
 
         total_wagered = final_stake * 2
-        commission = total_wagered * 0.05
+        commission = total_wagered * 0.10
         pool = total_wagered - commission
 
         game.status = "active"
@@ -1076,7 +1318,7 @@ def http_forfeit_game(room_id):
 
     if winner_id == 0:
         game.winner_id = None
-        state["last_action"] = f"Game Over! {current_user.username} forfeited the match. Computer Bot wins."
+        state["last_action"] = f"Game Over! {current_user.username} forfeited the match. Ditto Dinky Bot wins."
     else:
         game.winner_id = winner_id
         winner = User.query.get(winner_id)

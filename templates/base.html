@@ -6,7 +6,6 @@
     <title>{% block title %}DITTO DINKY{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     {% block extra_css %}{% endblock %}
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body.is-tg-webapp .support-fab {
             display: none !important;
@@ -18,12 +17,6 @@
     </style>
 </head>
 <body>
-    <script>
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-            document.body.classList.add('is-tg-webapp');
-            window.Telegram.WebApp.expand();
-        }
-    </script>
     {% if current_user.is_authenticated %}
     <!-- Top Bar -->
     <div class="top-bar">
@@ -186,6 +179,99 @@
                     }
                 });
             }
+            
+            {% if current_user.is_authenticated %}
+            // Global Online Presence & Notification Poller
+            let currentChallengeToast = null;
+            
+            function checkPing() {
+                fetch("/whot/api/ping")
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.challenge) {
+                            showChallengePopup(data.challenge);
+                        }
+                    })
+                    .catch(err => console.error("Ping error:", err));
+            }
+
+            function showChallengePopup(challenge) {
+                if (currentChallengeToast) return; // Already showing
+                
+                const toast = document.createElement('div');
+                toast.style.position = 'fixed';
+                toast.style.top = '80px';
+                toast.style.left = '50%';
+                toast.style.transform = 'translateX(-50%)';
+                toast.style.background = 'var(--bg-elevated)';
+                toast.style.border = '1px solid var(--accent-primary)';
+                toast.style.boxShadow = '0 10px 30px rgba(0,212,170,0.3)';
+                toast.style.borderRadius = '12px';
+                toast.style.padding = '16px 20px';
+                toast.style.zIndex = '9999';
+                toast.style.display = 'flex';
+                toast.style.flexDirection = 'column';
+                toast.style.gap = '12px';
+                toast.style.width = '90%';
+                toast.style.maxWidth = '350px';
+                toast.style.textAlign = 'center';
+                toast.style.animation = 'slideDown 0.3s ease-out';
+                
+                toast.innerHTML = `
+                    <div style="font-weight: bold; font-size: 15px; color: var(--text-primary);">⚔️ Incoming Whot Challenge!</div>
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        <strong style="color: var(--accent-primary);">${challenge.sender_name}</strong> challenged you to a game (₦${challenge.stake.toLocaleString()}).
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 4px;">
+                        <button onclick="acceptChallenge(${challenge.id})" style="flex: 1; background: var(--accent-primary); border: none; padding: 8px; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer;">Accept</button>
+                        <button onclick="declineChallenge(${challenge.id})" style="flex: 1; background: rgba(255,50,50,0.1); border: 1px solid rgba(255,50,50,0.3); padding: 8px; border-radius: 6px; color: #ff4444; font-weight: bold; cursor: pointer;">Decline</button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                currentChallengeToast = toast;
+                
+                // Add slideDown keyframe if not exists
+                if (!document.getElementById('toastKeyframes')) {
+                    const style = document.createElement('style');
+                    style.id = 'toastKeyframes';
+                    style.innerHTML = `@keyframes slideDown { from { top: -50px; opacity: 0; } to { top: 80px; opacity: 1; } }`;
+                    document.head.appendChild(style);
+                }
+            }
+
+            window.acceptChallenge = function(id) {
+                window.location.href = `/whot/challenge/accept/${id}`;
+            };
+            
+            window.declineChallenge = function(id) {
+                fetch(`/whot/challenge/decline/${id}`, { method: 'POST' })
+                    .then(() => {
+                        if (currentChallengeToast) {
+                            currentChallengeToast.remove();
+                            currentChallengeToast = null;
+                        }
+                    });
+            };
+
+            // Poll every 20 seconds
+            setInterval(checkPing, 20000);
+            setTimeout(checkPing, 2000); // Initial check after 2s
+            {% endif %}
+        });
+    </script>
+
+    <!-- Telegram SDK loaded asynchronously at the bottom to prevent render blocking -->
+    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Check for Telegram WebApp environment
+            setTimeout(() => {
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+                    document.body.classList.add('is-tg-webapp');
+                    window.Telegram.WebApp.expand();
+                }
+            }, 500); // slight delay to ensure async script loaded
         });
     </script>
 </body>

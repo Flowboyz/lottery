@@ -286,7 +286,7 @@ def handle_join_bot_game(data=None):
     }
 
     total_wagered = stake * 2
-    commission = total_wagered * 0.05
+    commission = total_wagered * 0.10
     pool = total_wagered - commission
 
     game = WhotGame(
@@ -421,7 +421,7 @@ def handle_propose_stake(data=None):
 
         # Setup WhotGame totals
         total_wagered = final_stake * 2
-        commission = total_wagered * 0.05
+        commission = total_wagered * 0.10
         pool = total_wagered - commission
 
         game.status = "active"

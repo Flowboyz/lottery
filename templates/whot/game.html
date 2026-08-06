@@ -420,6 +420,13 @@
                 </div>
             </div>
 
+            <!-- Win Amount Banner -->
+            <div style="display: flex; justify-content: center; margin-top: -4px;">
+                <div id="gameWinAmountBadge" style="background: rgba(40, 167, 69, 0.15); border: 1px solid rgba(40, 167, 69, 0.4); color: #28a745; padding: 4px 16px; border-radius: 12px; font-weight: 800; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                    WIN: ₦---
+                </div>
+            </div>
+
             <!-- Center Discard & Draw pile -->
             <div class="board-center">
                 <!-- Active Shape Indicator if Whot Wild Card played -->
@@ -667,6 +674,10 @@
         document.getElementById("oppCardCountText").innerText = state.opp_card_count;
         document.getElementById("deckCountText").innerText = state.draw_deck_count;
         document.getElementById("actionLogText").innerText = state.last_action;
+        
+        if (state.pool) {
+            document.getElementById("gameWinAmountBadge").innerText = `WIN: ₦${state.pool.toLocaleString()}`;
+        }
 
         // 4. Update Whot Called Shape alert
         const alertBox = document.getElementById("calledSuitAlert");
@@ -683,11 +694,29 @@
         // 6. Render Player Hand
         renderPlayerHand(state.my_hand);
 
-        // 7. Check Game Over
+        // 7. Check Game Over or Cancelled
         if (state.status === "completed") {
             clearInterval(turnTimer);
             showToast(state.last_action, state.winner_id === myUserId ? "success" : "info");
             showGameOver(state);
+        } else if (state.status === "cancelled") {
+            clearInterval(turnTimer);
+            showCustomConfirm({
+                title: "Game Cancelled",
+                message: state.last_action || "The match was cancelled because the opponent left.",
+                icon: "⚠️",
+                onConfirm: () => {
+                    window.location.href = "/whot/";
+                }
+            });
+            // Hide the cancel button to force them to click OK (Yes button)
+            const cancelBtn = document.getElementById("confirmCancelBtn");
+            if (cancelBtn) cancelBtn.style.display = "none";
+            
+            // Auto redirect after 5 seconds if they don't click
+            setTimeout(() => {
+                window.location.href = "/whot/";
+            }, 5000);
         }
     }
 
@@ -717,8 +746,8 @@
                     }
                 }
                 
-                // Continue polling if not completed
-                if (state.status !== "completed") {
+                // Continue polling if not completed or cancelled
+                if (state.status !== "completed" && state.status !== "cancelled") {
                     pollTimeout = setTimeout(pollGameStatus, 1500);
                 }
             } else {
