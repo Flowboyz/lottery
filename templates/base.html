@@ -14,6 +14,15 @@
         body.is-tg-webapp .content {
             padding-bottom: 80px !important;
         }
+        
+        /* Telegram WebApp Native Header Fix (iOS Notch + Telegram Header) */
+        body.is-tg-webapp {
+            --tg-top-padding: calc(env(safe-area-inset-top, 20px) + 40px);
+            --topbar-h: calc(56px + var(--tg-top-padding));
+        }
+        body.is-tg-webapp .top-bar {
+            padding-top: var(--tg-top-padding) !important;
+        }
     </style>
 </head>
 <body>
